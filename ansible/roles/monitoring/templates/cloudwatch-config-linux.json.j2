@@ -1,0 +1,98 @@
+{
+  "agent": {
+    "metrics_collection_interval": {{ cloudwatch_metrics_collection_interval }},
+    "run_as_user": "root",
+    "logfile": "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log"
+  },
+  "metrics": {
+    "namespace": "{{ cloudwatch_namespace }}",
+    "metrics_collected": {
+      "cpu": {
+        "resources": ["*"],
+        "measurement": [
+          "cpu_usage_idle",
+          "cpu_usage_iowait",
+          "cpu_usage_user",
+          "cpu_usage_system",
+          "cpu_usage_steal"
+        ],
+        "totalcpu": true,
+        "metrics_collection_interval": {{ cloudwatch_metrics_collection_interval }}
+      },
+      "mem": {
+        "measurement": [
+          "mem_used_percent",
+          "mem_total",
+          "mem_used",
+          "mem_available"
+        ],
+        "metrics_collection_interval": {{ cloudwatch_metrics_collection_interval }}
+      },
+      "disk": {
+        "resources": ["*"],
+        "measurement": [
+          "used_percent",
+          "total",
+          "used",
+          "free"
+        ],
+        "ignore_file_system_types": ["sysfs", "devtmpfs", "tmpfs", "devfs"],
+        "metrics_collection_interval": {{ cloudwatch_metrics_collection_interval }}
+      },
+      "swap": {
+        "measurement": [
+          "swap_used_percent",
+          "swap_used",
+          "swap_free"
+        ],
+        "metrics_collection_interval": {{ cloudwatch_metrics_collection_interval }}
+      },
+      "diskio": {
+        "resources": ["*"],
+        "measurement": [
+          "io_time",
+          "reads",
+          "writes",
+          "read_bytes",
+          "write_bytes"
+        ],
+        "metrics_collection_interval": {{ cloudwatch_metrics_collection_interval }}
+      },
+      "net": {
+        "resources": ["*"],
+        "measurement": [
+          "bytes_sent",
+          "bytes_recv",
+          "packets_sent",
+          "packets_recv",
+          "err_in",
+          "err_out"
+        ],
+        "metrics_collection_interval": {{ cloudwatch_metrics_collection_interval }}
+      }
+    },
+    "append_dimensions": {
+      "InstanceId": "${aws:InstanceId}",
+      "InstanceType": "${aws:InstanceType}",
+      "AutoScalingGroupName": "${aws:AutoScalingGroupName}"
+    }
+  },
+  "logs": {
+    "logs_collected": {
+      "files": {
+        "collect_list": [
+{% for log_path in monitored_linux_logs %}
+          {
+            "file_path": "{{ log_path }}",
+            "log_group_name": "{{ cloudwatch_log_group_prefix }}/{{ inventory_hostname }}/{{ log_path | basename }}",
+            "log_stream_name": "{instance_id}",
+            "retention_in_days": {{ cloudwatch_log_retention_days }},
+            "timezone": "UTC"
+          }{{ "," if not loop.last else "" }}
+{% endfor %}
+        ]
+      }
+    },
+    "force_flush_interval": 15
+  }
+}

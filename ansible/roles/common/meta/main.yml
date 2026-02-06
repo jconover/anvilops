@@ -1,0 +1,30 @@
+---
+# ansible/roles/common/meta/main.yml
+
+galaxy_info:
+  author: AnvilOps
+  company: AnvilOps
+  description: Common baseline configuration for all AnvilOps-managed servers (Linux and Windows)
+  license: MIT
+  min_ansible_version: "2.15"
+  platforms:
+    - name: EL
+      versions:
+        - "8"
+        - "9"
+    - name: Ubuntu
+      versions:
+        - jammy
+        - noble
+    - name: Windows
+      versions:
+        - "2019"
+        - "2022"
+  galaxy_tags:
+    - common
+    - baseline
+    - anvilops
+    - linux
+    - windows
+
+dependencies: []

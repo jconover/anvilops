@@ -1,0 +1,32 @@
+---
+# ansible/roles/monitoring/meta/main.yml
+
+galaxy_info:
+  author: AnvilOps
+  company: AnvilOps
+  description: CloudWatch agent installation and monitoring configuration for AnvilOps-managed servers
+  license: MIT
+  min_ansible_version: "2.15"
+  platforms:
+    - name: EL
+      versions:
+        - "8"
+        - "9"
+    - name: Ubuntu
+      versions:
+        - jammy
+        - noble
+    - name: Windows
+      versions:
+        - "2019"
+        - "2022"
+  galaxy_tags:
+    - monitoring
+    - cloudwatch
+    - observability
+    - linux
+    - windows
+    - anvilops
+
+dependencies:
+  - role: common

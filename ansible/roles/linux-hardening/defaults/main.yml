@@ -1,0 +1,55 @@
+---
+# ansible/roles/linux-hardening/defaults/main.yml
+# CIS benchmark-inspired Linux hardening defaults
+
+# SSH hardening
+ssh_permit_root_login: "no"
+ssh_password_authentication: "no"
+ssh_max_auth_tries: 3
+ssh_client_alive_interval: 300
+ssh_client_alive_count_max: 2
+ssh_port: 22
+ssh_protocol: 2
+ssh_log_level: "VERBOSE"
+ssh_x11_forwarding: "no"
+ssh_max_sessions: 4
+ssh_allowed_groups: []
+
+# Sysctl / kernel hardening
+sysctl_settings:
+  net.core.somaxconn: 65535
+  vm.swappiness: 10
+  fs.file-max: 2097152
+  net.ipv4.tcp_syncookies: 1
+  net.ipv4.conf.all.rp_filter: 1
+  net.ipv4.conf.default.accept_redirects: 0
+  net.ipv4.conf.all.accept_redirects: 0
+  kernel.randomize_va_space: 2
+
+# Firewall
+firewall_allowed_services:
+  - ssh
+
+# Auditd
+auditd_enabled: true
+
+# Filesystems to disable
+disabled_filesystems:
+  - cramfs
+  - freevxfs
+  - jffs2
+  - hfs
+  - hfsplus
+  - udf
+
+# Packages to remove
+unnecessary_packages:
+  - telnet
+  - rsh
+  - tftp
+
+# Password / login policy
+pass_max_days: 90
+pass_min_days: 7
+pass_warn_age: 14
+umask_value: "027"

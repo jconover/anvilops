@@ -1,0 +1,92 @@
+---
+# ansible/roles/monitoring/tasks/windows.yml
+# CloudWatch agent installation and configuration for Windows
+
+# ---------------------------------------------------------------------------
+# Download CloudWatch Agent
+# ---------------------------------------------------------------------------
+- name: Ensure staging directory exists
+  ansible.windows.win_file:
+    path: "{{ cloudwatch_staging_dir_windows }}"
+    state: directory
+  tags:
+    - monitoring
+    - install
+
+- name: Download CloudWatch agent MSI
+  ansible.windows.win_get_url:
+    url: "{{ cloudwatch_agent_download_url_windows }}"
+    dest: "{{ cloudwatch_staging_dir_windows }}\\amazon-cloudwatch-agent.msi"
+  tags:
+    - monitoring
+    - install
+
+# ---------------------------------------------------------------------------
+# Install CloudWatch Agent
+# ---------------------------------------------------------------------------
+- name: Install CloudWatch agent silently
+  ansible.windows.win_package:
+    path: "{{ cloudwatch_staging_dir_windows }}\\amazon-cloudwatch-agent.msi"
+    state: present
+    arguments: /quiet /norestart
+  tags:
+    - monitoring
+    - install
+
+# ---------------------------------------------------------------------------
+# Deploy CloudWatch Agent Configuration
+# ---------------------------------------------------------------------------
+- name: Ensure CloudWatch agent config directory exists
+  ansible.windows.win_file:
+    path: "C:\\ProgramData\\Amazon\\AmazonCloudWatchAgent"
+    state: directory
+  tags:
+    - monitoring
+    - configuration
+
+- name: Deploy CloudWatch agent configuration (Windows)
+  ansible.windows.win_template:
+    src: cloudwatch-config-windows.json.j2
+    dest: "{{ cloudwatch_config_path_windows }}"
+  notify: restart cloudwatch agent windows
+  tags:
+    - monitoring
+    - configuration
+
+# ---------------------------------------------------------------------------
+# Start and Enable CloudWatch Agent
+# ---------------------------------------------------------------------------
+- name: Load CloudWatch agent configuration
+  ansible.windows.win_powershell:
+    script: |
+      $cwCtl = "C:\Program Files\Amazon\AmazonCloudWatchAgent\amazon-cloudwatch-agent-ctl.ps1"
+      if (Test-Path $cwCtl) {
+          & $cwCtl -a fetch-config -m ec2 -s -c "file:{{ cloudwatch_config_path_windows }}"
+          $Ansible.Changed = $true
+      } else {
+          $Ansible.Changed = $false
+          $Ansible.Result = "CloudWatch agent control script not found"
+      }
+  tags:
+    - monitoring
+    - configuration
+
+- name: Ensure CloudWatch agent service is started
+  ansible.windows.win_service:
+    name: "{{ cloudwatch_service_name_windows }}"
+    state: started
+    start_mode: auto
+  tags:
+    - monitoring
+    - service
+
+# ---------------------------------------------------------------------------
+# Cleanup staging files
+# ---------------------------------------------------------------------------
+- name: Remove downloaded CloudWatch agent MSI
+  ansible.windows.win_file:
+    path: "{{ cloudwatch_staging_dir_windows }}\\amazon-cloudwatch-agent.msi"
+    state: absent
+  tags:
+    - monitoring
+    - cleanup

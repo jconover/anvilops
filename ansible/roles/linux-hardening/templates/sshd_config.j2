@@ -1,0 +1,79 @@
+# {{ ansible_managed }}
+# Hardened SSH configuration - CIS benchmark inspired
+# Deployed by AnvilOps Ansible
+
+# Protocol and port
+Port {{ ssh_port }}
+Protocol {{ ssh_protocol }}
+AddressFamily any
+ListenAddress 0.0.0.0
+
+# Host keys
+HostKey /etc/ssh/ssh_host_rsa_key
+HostKey /etc/ssh/ssh_host_ecdsa_key
+HostKey /etc/ssh/ssh_host_ed25519_key
+
+# Logging
+SyslogFacility AUTH
+LogLevel {{ ssh_log_level }}
+
+# Authentication
+LoginGraceTime 60
+PermitRootLogin {{ ssh_permit_root_login }}
+StrictModes yes
+MaxAuthTries {{ ssh_max_auth_tries }}
+MaxSessions {{ ssh_max_sessions }}
+
+PubkeyAuthentication yes
+AuthorizedKeysFile .ssh/authorized_keys
+
+PasswordAuthentication {{ ssh_password_authentication }}
+PermitEmptyPasswords no
+ChallengeResponseAuthentication no
+
+# Kerberos
+KerberosAuthentication no
+
+# GSSAPI
+GSSAPIAuthentication no
+
+# PAM
+UsePAM yes
+
+# Forwarding and tunneling
+AllowAgentForwarding no
+AllowTcpForwarding no
+GatewayPorts no
+X11Forwarding {{ ssh_x11_forwarding }}
+PermitTunnel no
+
+# Display
+PrintMotd yes
+PrintLastLog yes
+Banner /etc/motd
+
+# Keepalive and timeouts
+TCPKeepAlive yes
+ClientAliveInterval {{ ssh_client_alive_interval }}
+ClientAliveCountMax {{ ssh_client_alive_count_max }}
+
+# Misc security
+PermitUserEnvironment no
+UseDNS no
+MaxStartups 10:30:60
+IgnoreRhosts yes
+HostbasedAuthentication no
+DisableForwarding yes
+
+# Allowed ciphers - strong only
+Ciphers aes256-gcm@openssh.com,chacha20-poly1305@openssh.com,aes256-ctr,aes128-gcm@openssh.com,aes128-ctr
+MACs hmac-sha2-512-etm@openssh.com,hmac-sha2-256-etm@openssh.com,hmac-sha2-512,hmac-sha2-256
+KexAlgorithms curve25519-sha256,curve25519-sha256@libssh.org,diffie-hellman-group16-sha512,diffie-hellman-group18-sha512
+
+{% if ssh_allowed_groups %}
+# Restrict SSH access to specific groups
+AllowGroups {{ ssh_allowed_groups | join(' ') }}
+{% endif %}
+
+# Subsystem
+Subsystem sftp /usr/libexec/openssh/sftp-server

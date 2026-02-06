@@ -1,0 +1,41 @@
+---
+# ansible/roles/monitoring/defaults/main.yml
+# CloudWatch agent and monitoring setup defaults
+
+# CloudWatch agent
+cloudwatch_agent_version: "latest"
+cloudwatch_agent_download_url_linux: "https://s3.amazonaws.com/amazoncloudwatch-agent/amazon_linux/amd64/latest/amazon-cloudwatch-agent.rpm"
+cloudwatch_agent_download_url_debian: "https://s3.amazonaws.com/amazoncloudwatch-agent/debian/amd64/latest/amazon-cloudwatch-agent.deb"
+cloudwatch_agent_download_url_windows: "https://s3.amazonaws.com/amazoncloudwatch-agent/windows/amd64/latest/amazon-cloudwatch-agent.msi"
+
+# CloudWatch configuration
+cloudwatch_log_group_prefix: "/anvilops"
+cloudwatch_metrics_collection_interval: 60
+cloudwatch_log_retention_days: 30
+
+# Linux log files to monitor
+monitored_linux_logs:
+  - /var/log/messages
+  - /var/log/secure
+  - /var/log/audit/audit.log
+
+# Windows event logs to monitor
+monitored_windows_logs:
+  - System
+  - Application
+  - Security
+
+# CloudWatch agent config paths
+cloudwatch_config_path_linux: "/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json"
+cloudwatch_config_path_windows: "C:\\ProgramData\\Amazon\\AmazonCloudWatchAgent\\amazon-cloudwatch-agent.json"
+
+# CloudWatch agent service names
+cloudwatch_service_name_linux: "amazon-cloudwatch-agent"
+cloudwatch_service_name_windows: "AmazonCloudWatchAgent"
+
+# Staging directories
+cloudwatch_staging_dir_linux: "/tmp"
+cloudwatch_staging_dir_windows: "C:\\Temp"
+
+# CloudWatch namespace
+cloudwatch_namespace: "AnvilOps/Servers"

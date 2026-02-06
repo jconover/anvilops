@@ -1,0 +1,373 @@
+---
+# =============================================================================
+# AnvilOps — Puppet Agent Bootstrap Playbook
+# =============================================================================
+# Purpose:  Installs and enrolls the Puppet agent on provisioned servers,
+#           preparing them for Day 2+ continuous compliance enforcement via
+#           Puppet Enterprise. Handles both Linux and Windows.
+#
+# Execution: Runs via AWX job template as the final step in the provisioning
+#            pipeline (after base config, software install, and agent deploy).
+#
+# Extra vars (required):
+#   - puppet_server:      FQDN of the Puppet Enterprise server
+#
+# Extra vars (optional):
+#   - puppet_environment: Puppet environment (default: server_environment)
+#   - puppet_certname:    Certificate name (default: inventory_hostname)
+#   - puppet_version:     Puppet agent version (default: latest)
+#   - puppet_ca_server:   CA server if different from puppet_server
+#   - puppet_waitforcert: Seconds to wait for cert signing (default: 120)
+#
+# Tags: repo, install, configure, enroll, service
+# =============================================================================
+
+- name: AnvilOps Puppet Agent Bootstrap
+  hosts: all
+  become: true
+  gather_facts: true
+
+  vars:
+    puppet_environment: "{{ server_environment | default('production') }}"
+    puppet_certname: "{{ inventory_hostname }}"
+    puppet_version: "latest"
+    puppet_ca_server: "{{ puppet_server }}"
+    puppet_waitforcert: 120
+    puppet_collection: "puppet8"
+
+  tasks:
+    # =========================================================================
+    # Validation
+    # =========================================================================
+    - name: Validate required extra vars
+      ansible.builtin.assert:
+        that:
+          - puppet_server is defined and puppet_server | length > 0
+        fail_msg: >
+          Missing required variable 'puppet_server'. Provide the FQDN of the
+          Puppet Enterprise server as an extra var.
+        success_msg: "Puppet server: {{ puppet_server }}"
+      tags:
+        - repo
+        - install
+
+    # =========================================================================
+    # LINUX — Add Puppet Repository
+    # =========================================================================
+    - name: Add Puppet repository (Linux)
+      when: ansible_os_family in ['RedHat', 'Debian']
+      block:
+        - name: Add Puppet repository (RHEL)
+          ansible.builtin.yum:
+            name: "https://yum.puppet.com/{{ puppet_collection }}-release-el-{{ ansible_distribution_major_version }}.noarch.rpm"
+            state: present
+            disable_gpg_check: true
+          when: ansible_os_family == "RedHat"
+
+        - name: Download Puppet repository package (Debian)
+          ansible.builtin.get_url:
+            url: "https://apt.puppet.com/{{ puppet_collection }}-release-{{ ansible_distribution_release }}.deb"
+            dest: "/tmp/{{ puppet_collection }}-release.deb"
+            mode: "0644"
+          when: ansible_os_family == "Debian"
+
+        - name: Install Puppet repository package (Debian)
+          ansible.builtin.apt:
+            deb: "/tmp/{{ puppet_collection }}-release.deb"
+            state: present
+          when: ansible_os_family == "Debian"
+
+        - name: Update package cache after adding Puppet repo (Debian)
+          ansible.builtin.apt:
+            update_cache: true
+          when: ansible_os_family == "Debian"
+      tags:
+        - repo
+
+    # =========================================================================
+    # LINUX — Install Puppet Agent
+    # =========================================================================
+    - name: Install Puppet Agent (Linux)
+      when: ansible_os_family in ['RedHat', 'Debian']
+      block:
+        - name: Install puppet-agent package (RHEL)
+          ansible.builtin.yum:
+            name: puppet-agent
+            state: "{{ 'latest' if puppet_version == 'latest' else 'present' }}"
+          when: ansible_os_family == "RedHat"
+
+        - name: Install puppet-agent package (Debian)
+          ansible.builtin.apt:
+            name: puppet-agent
+            state: "{{ 'latest' if puppet_version == 'latest' else 'present' }}"
+          when: ansible_os_family == "Debian"
+
+        - name: Add Puppet binaries to PATH
+          ansible.builtin.copy:
+            content: |
+              export PATH=$PATH:/opt/puppetlabs/bin:/opt/puppetlabs/puppet/bin
+            dest: /etc/profile.d/puppet.sh
+            owner: root
+            group: root
+            mode: "0644"
+
+        - name: Verify Puppet agent installation (Linux)
+          ansible.builtin.command: /opt/puppetlabs/bin/puppet --version
+          register: puppet_version_linux
+          changed_when: false
+
+        - name: Display Puppet agent version (Linux)
+          ansible.builtin.debug:
+            msg: "Puppet agent version: {{ puppet_version_linux.stdout }}"
+      tags:
+        - install
+
+    # =========================================================================
+    # LINUX — Configure Puppet Agent
+    # =========================================================================
+    - name: Configure Puppet Agent (Linux)
+      when: ansible_os_family in ['RedHat', 'Debian']
+      block:
+        - name: Ensure Puppet configuration directory exists
+          ansible.builtin.file:
+            path: /etc/puppetlabs/puppet
+            state: directory
+            owner: root
+            group: root
+            mode: "0755"
+
+        - name: Deploy puppet.conf (Linux)
+          ansible.builtin.copy:
+            content: |
+              # Managed by AnvilOps — do not edit manually
+              [main]
+              server = {{ puppet_server }}
+              ca_server = {{ puppet_ca_server }}
+              certname = {{ puppet_certname }}
+              environment = {{ puppet_environment }}
+              runinterval = 1800
+              waitforcert = {{ puppet_waitforcert }}
+
+              [agent]
+              report = true
+              graph = false
+              pluginsync = true
+              show_diff = false
+              splay = true
+              splaylimit = 300
+            dest: /etc/puppetlabs/puppet/puppet.conf
+            owner: root
+            group: root
+            mode: "0644"
+          notify: Restart Puppet Agent Linux
+      tags:
+        - configure
+
+    # =========================================================================
+    # LINUX — Initial Puppet Run (certificate enrollment)
+    # =========================================================================
+    - name: Run initial Puppet agent for certificate enrollment (Linux)
+      when: ansible_os_family in ['RedHat', 'Debian']
+      block:
+        - name: Check if Puppet certificate already exists (Linux)
+          ansible.builtin.stat:
+            path: "/etc/puppetlabs/puppet/ssl/certs/{{ puppet_certname }}.pem"
+          register: puppet_cert_linux
+
+        - name: Run Puppet agent initial enrollment (Linux)
+          ansible.builtin.command: >
+            /opt/puppetlabs/bin/puppet agent --test
+            --waitforcert {{ puppet_waitforcert }}
+            --server {{ puppet_server }}
+            --certname {{ puppet_certname }}
+            --environment {{ puppet_environment }}
+          register: puppet_run_linux
+          # Exit code 0 = no changes, 2 = changes applied, both are success
+          failed_when: puppet_run_linux.rc not in [0, 2]
+          changed_when: puppet_run_linux.rc == 2
+          when: not puppet_cert_linux.stat.exists
+          timeout: 300
+
+        - name: Display initial Puppet run output (Linux)
+          ansible.builtin.debug:
+            msg: "{{ puppet_run_linux.stdout_lines | default(['Puppet certificate already exists — skipping initial run']) }}"
+      rescue:
+        - name: Puppet enrollment failed (Linux) — log and continue
+          ansible.builtin.debug:
+            msg: >
+              WARNING: Puppet agent initial enrollment did not complete
+              successfully on {{ inventory_hostname }}. This may be normal
+              if auto-signing is not configured. The Puppet CA administrator
+              must sign the certificate request for {{ puppet_certname }}.
+              Error: {{ puppet_run_linux.stderr | default('unknown') }}
+      tags:
+        - enroll
+
+    # =========================================================================
+    # LINUX — Enable Puppet Service
+    # =========================================================================
+    - name: Enable Puppet Agent service (Linux)
+      when: ansible_os_family in ['RedHat', 'Debian']
+      ansible.builtin.systemd:
+        name: puppet
+        state: started
+        enabled: true
+      tags:
+        - service
+
+    # =========================================================================
+    # WINDOWS — Download and Install Puppet Agent
+    # =========================================================================
+    - name: Install Puppet Agent (Windows)
+      when: ansible_os_family == 'Windows'
+      block:
+        - name: Check if Puppet is already installed (Windows)
+          ansible.windows.win_service:
+            name: puppet
+          register: puppet_svc_win
+          failed_when: false
+
+        - name: Ensure C:\Temp directory exists
+          ansible.windows.win_file:
+            path: 'C:\Temp'
+            state: directory
+
+        - name: Download Puppet Agent MSI (Windows)
+          ansible.windows.win_get_url:
+            url: "https://downloads.puppet.com/windows/puppet8/puppet-agent-x64-latest.msi"
+            dest: 'C:\Temp\puppet-agent.msi'
+          when: puppet_svc_win.state is not defined
+
+        - name: Install Puppet Agent MSI (Windows)
+          ansible.windows.win_package:
+            path: 'C:\Temp\puppet-agent.msi'
+            arguments: >-
+              /qn
+              PUPPET_MASTER_SERVER={{ puppet_server }}
+              PUPPET_CA_SERVER={{ puppet_ca_server }}
+              PUPPET_AGENT_CERTNAME={{ puppet_certname }}
+              PUPPET_AGENT_ENVIRONMENT={{ puppet_environment }}
+            state: present
+          register: puppet_install_win
+          when: puppet_svc_win.state is not defined
+
+        - name: Add Puppet to system PATH (Windows)
+          ansible.windows.win_path:
+            elements:
+              - 'C:\Program Files\Puppet Labs\Puppet\bin'
+            scope: machine
+            state: present
+
+        - name: Verify Puppet installation (Windows)
+          ansible.windows.win_shell: |
+            & "C:\Program Files\Puppet Labs\Puppet\bin\puppet.bat" --version
+          register: puppet_version_win
+          changed_when: false
+
+        - name: Display Puppet agent version (Windows)
+          ansible.builtin.debug:
+            msg: "Puppet agent version: {{ puppet_version_win.stdout | trim }}"
+      tags:
+        - install
+
+    # =========================================================================
+    # WINDOWS — Configure Puppet Agent
+    # =========================================================================
+    - name: Configure Puppet Agent (Windows)
+      when: ansible_os_family == 'Windows'
+      block:
+        - name: Ensure Puppet configuration directory exists (Windows)
+          ansible.windows.win_file:
+            path: 'C:\ProgramData\PuppetLabs\puppet\etc'
+            state: directory
+
+        - name: Deploy puppet.conf (Windows)
+          ansible.windows.win_copy:
+            content: |
+              # Managed by AnvilOps — do not edit manually
+              [main]
+              server = {{ puppet_server }}
+              ca_server = {{ puppet_ca_server }}
+              certname = {{ puppet_certname }}
+              environment = {{ puppet_environment }}
+              runinterval = 1800
+              waitforcert = {{ puppet_waitforcert }}
+
+              [agent]
+              report = true
+              graph = false
+              pluginsync = true
+              show_diff = false
+              splay = true
+              splaylimit = 300
+            dest: 'C:\ProgramData\PuppetLabs\puppet\etc\puppet.conf'
+          notify: Restart Puppet Agent Windows
+      tags:
+        - configure
+
+    # =========================================================================
+    # WINDOWS — Initial Puppet Run (certificate enrollment)
+    # =========================================================================
+    - name: Run initial Puppet agent for certificate enrollment (Windows)
+      when: ansible_os_family == 'Windows'
+      block:
+        - name: Check if Puppet certificate already exists (Windows)
+          ansible.windows.win_stat:
+            path: 'C:\ProgramData\PuppetLabs\puppet\etc\ssl\certs\{{ puppet_certname }}.pem'
+          register: puppet_cert_win
+
+        - name: Run Puppet agent initial enrollment (Windows)
+          ansible.windows.win_shell: |
+            & "C:\Program Files\Puppet Labs\Puppet\bin\puppet.bat" agent --test `
+              --waitforcert {{ puppet_waitforcert }} `
+              --server {{ puppet_server }} `
+              --certname {{ puppet_certname }} `
+              --environment {{ puppet_environment }}
+            exit $LASTEXITCODE
+          register: puppet_run_win
+          failed_when: puppet_run_win.rc not in [0, 2]
+          changed_when: puppet_run_win.rc == 2
+          when: not puppet_cert_win.stat.exists
+          timeout: 300
+
+        - name: Display initial Puppet run output (Windows)
+          ansible.builtin.debug:
+            msg: "{{ puppet_run_win.stdout_lines | default(['Puppet certificate already exists — skipping initial run']) }}"
+      rescue:
+        - name: Puppet enrollment failed (Windows) — log and continue
+          ansible.builtin.debug:
+            msg: >
+              WARNING: Puppet agent initial enrollment did not complete
+              successfully on {{ inventory_hostname }}. The Puppet CA
+              administrator must sign the certificate request for
+              {{ puppet_certname }}.
+      tags:
+        - enroll
+
+    # =========================================================================
+    # WINDOWS — Enable Puppet Service
+    # =========================================================================
+    - name: Enable Puppet Agent service (Windows)
+      when: ansible_os_family == 'Windows'
+      ansible.windows.win_service:
+        name: puppet
+        start_mode: auto
+        state: started
+      tags:
+        - service
+
+  # ===========================================================================
+  # Handlers
+  # ===========================================================================
+  handlers:
+    - name: Restart Puppet Agent Linux
+      ansible.builtin.systemd:
+        name: puppet
+        state: restarted
+      when: ansible_os_family != 'Windows'
+
+    - name: Restart Puppet Agent Windows
+      ansible.windows.win_service:
+        name: puppet
+        state: restarted
+      when: ansible_os_family == 'Windows'

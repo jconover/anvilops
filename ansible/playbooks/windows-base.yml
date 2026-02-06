@@ -1,0 +1,343 @@
+---
+# =============================================================================
+# AnvilOps — Windows Base Configuration Playbook
+# =============================================================================
+# Purpose:  Day 1 post-provision baseline for all Windows servers managed by
+#           AnvilOps. Configures hostname, timezone, Windows Updates, Chocolatey,
+#           WinRM, firewall, RDP, service accounts, SSM agent, and hardening.
+#
+# Execution: Runs via AWX job template after Terraform provisions the EC2
+#            instance. Designed to be idempotent — safe to re-run at any time.
+#
+# Extra vars (optional):
+#   - server_hostname: override hostname (default: inventory_hostname)
+#   - timezone: override timezone (default: UTC)
+#
+# Tags: hostname, timezone, updates, chocolatey, winrm, firewall, rdp,
+#       users, ssm, power, services, pagefile
+# =============================================================================
+
+- name: AnvilOps Windows Base Configuration
+  hosts: all
+  gather_facts: true
+
+  vars:
+    server_hostname: "{{ inventory_hostname }}"
+    timezone: "UTC"
+
+  tasks:
+    # =========================================================================
+    # Hostname
+    # =========================================================================
+    - name: Set computer hostname
+      ansible.windows.win_hostname:
+        name: "{{ server_hostname }}"
+      register: hostname_result
+      tags:
+        - hostname
+
+    - name: Reboot after hostname change if required
+      ansible.windows.win_reboot:
+        reboot_timeout: 600
+        post_reboot_delay: 30
+      when: hostname_result.reboot_required | default(false)
+      tags:
+        - hostname
+
+    # =========================================================================
+    # Timezone
+    # =========================================================================
+    - name: Set timezone to {{ timezone }}
+      community.windows.win_timezone:
+        timezone: "{{ timezone }}"
+      tags:
+        - timezone
+
+    # =========================================================================
+    # Windows Updates
+    # =========================================================================
+    - name: Install Windows security and critical updates
+      block:
+        - name: Search and install Windows Updates
+          ansible.windows.win_updates:
+            category_names: "{{ windows_update_category }}"
+            state: installed
+            reboot: true
+            reboot_timeout: 1800
+          register: update_result
+
+        - name: Report updates installed
+          ansible.builtin.debug:
+            msg: "Installed {{ update_result.installed_update_count | default(0) }} updates. Reboot required: {{ update_result.reboot_required | default(false) }}"
+      rescue:
+        - name: Windows Update failed — log warning and continue
+          ansible.builtin.debug:
+            msg: "WARNING: Windows Update encountered an error. Manual review may be required."
+      tags:
+        - updates
+
+    # =========================================================================
+    # Chocolatey Package Manager
+    # =========================================================================
+    - name: Install Chocolatey
+      chocolatey.chocolatey.win_chocolatey:
+        name: chocolatey
+        state: present
+      tags:
+        - chocolatey
+
+    - name: Install essential tools via Chocolatey
+      chocolatey.chocolatey.win_chocolatey:
+        name: "{{ item }}"
+        state: present
+      loop:
+        - 7zip
+        - notepadplusplus
+        - sysinternals
+      tags:
+        - chocolatey
+
+    # =========================================================================
+    # WinRM over HTTPS
+    # =========================================================================
+    - name: Ensure WinRM HTTPS listener exists
+      ansible.windows.win_shell: |
+        $cert = New-SelfSignedCertificate -DnsName $env:COMPUTERNAME -CertStoreLocation Cert:\LocalMachine\My
+        $thumbprint = $cert.Thumbprint
+
+        # Remove existing HTTPS listener if any
+        Get-ChildItem WSMan:\localhost\Listener | Where-Object { $_.Keys -contains "Transport=HTTPS" } | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+
+        # Create new HTTPS listener
+        New-Item -Path WSMan:\localhost\Listener -Transport HTTPS -Address * -CertificateThumbprint $thumbprint -Force
+
+        # Set WinRM service settings
+        Set-Item WSMan:\localhost\MaxTimeoutms 1800000
+        Set-Item WSMan:\localhost\Shell\MaxMemoryPerShellMB {{ winrm_max_memory_per_shell | default(1024) }}
+      register: winrm_result
+      changed_when: winrm_result.rc == 0
+      failed_when: false
+      tags:
+        - winrm
+
+    - name: Ensure WinRM service is running
+      ansible.windows.win_service:
+        name: WinRM
+        start_mode: auto
+        state: started
+      tags:
+        - winrm
+
+    # =========================================================================
+    # Windows Firewall
+    # =========================================================================
+    - name: Configure Windows Firewall — Domain profile
+      community.windows.win_firewall:
+        profiles: domain
+        state: "{{ 'enabled' if firewall_profiles.domain else 'disabled' }}"
+      tags:
+        - firewall
+
+    - name: Configure Windows Firewall — Private profile
+      community.windows.win_firewall:
+        profiles: private
+        state: "{{ 'enabled' if firewall_profiles.private else 'disabled' }}"
+      tags:
+        - firewall
+
+    - name: Configure Windows Firewall — Public profile
+      community.windows.win_firewall:
+        profiles: public
+        state: "{{ 'enabled' if firewall_profiles.public else 'disabled' }}"
+      tags:
+        - firewall
+
+    - name: Allow WinRM HTTPS through firewall
+      community.windows.win_firewall_rule:
+        name: "AnvilOps - WinRM HTTPS"
+        localport: "{{ winrm_https_port | default(5986) }}"
+        action: allow
+        direction: in
+        protocol: tcp
+        state: present
+        enabled: true
+      tags:
+        - firewall
+
+    # =========================================================================
+    # PowerShell Remoting
+    # =========================================================================
+    - name: Enable PowerShell remoting
+      ansible.windows.win_shell: |
+        Enable-PSRemoting -Force -SkipNetworkProfileCheck
+      changed_when: false
+      tags:
+        - winrm
+
+    # =========================================================================
+    # Service account
+    # =========================================================================
+    - name: Create anvilops local admin account
+      ansible.windows.win_user:
+        name: "{{ anvilops_service_account }}"
+        password: "{{ anvilops_windows_password | default(lookup('password', '/dev/null length=32 chars=ascii_letters,digits,punctuation')) }}"
+        password_never_expires: true
+        user_cannot_change_password: true
+        account_disabled: false
+        groups:
+          - Administrators
+        state: present
+      no_log: true
+      tags:
+        - users
+
+    - name: Ensure anvilops account description is set
+      ansible.windows.win_shell: |
+        $user = [ADSI]"WinNT://./$env:COMPUTERNAME/{{ anvilops_service_account }},user"
+        $user.Description = "AnvilOps Service Account - Managed by automation"
+        $user.SetInfo()
+      changed_when: false
+      failed_when: false
+      tags:
+        - users
+
+    # =========================================================================
+    # RDP
+    # =========================================================================
+    - name: Enable Remote Desktop
+      ansible.windows.win_regedit:
+        path: HKLM:\System\CurrentControlSet\Control\Terminal Server
+        name: fDenyTSConnections
+        data: 0
+        type: dword
+      when: rdp_enabled | default(true)
+      tags:
+        - rdp
+
+    - name: Require Network Level Authentication for RDP
+      ansible.windows.win_regedit:
+        path: HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp
+        name: UserAuthentication
+        data: 1
+        type: dword
+      when: rdp_nla_required | default(true)
+      tags:
+        - rdp
+
+    - name: Allow RDP through Windows Firewall
+      community.windows.win_firewall_rule:
+        name: "AnvilOps - Remote Desktop (TCP)"
+        localport: 3389
+        action: allow
+        direction: in
+        protocol: tcp
+        state: present
+        enabled: true
+      when: rdp_enabled | default(true)
+      tags:
+        - rdp
+
+    # =========================================================================
+    # Windows Event Forwarding
+    # =========================================================================
+    - name: Enable Windows Event Collector service
+      ansible.windows.win_service:
+        name: Wecsvc
+        start_mode: auto
+        state: started
+      tags:
+        - events
+
+    - name: Configure Windows Event Forwarding subscription manager
+      ansible.windows.win_shell: |
+        wecutil qc /q:true
+      register: wef_result
+      changed_when: false
+      failed_when: false
+      tags:
+        - events
+
+    # =========================================================================
+    # SSM Agent
+    # =========================================================================
+    - name: Ensure AWS SSM Agent is running
+      ansible.windows.win_service:
+        name: AmazonSSMAgent
+        start_mode: auto
+        state: started
+      tags:
+        - ssm
+
+    # =========================================================================
+    # Power Plan
+    # =========================================================================
+    - name: Set power plan to High Performance
+      ansible.windows.win_shell: |
+        $highPerfGuid = (powercfg /list | Select-String "High performance").ToString().Split()[3]
+        if ($highPerfGuid) {
+          powercfg /setactive $highPerfGuid
+          Write-Output "Set power plan to High Performance ($highPerfGuid)"
+        } else {
+          Write-Output "High Performance plan not found — skipping"
+        }
+      register: power_result
+      changed_when: "'Set power plan' in power_result.stdout"
+      tags:
+        - power
+
+    # =========================================================================
+    # Disable unnecessary services
+    # =========================================================================
+    - name: Disable unnecessary services for hardening
+      ansible.windows.win_service:
+        name: "{{ item }}"
+        start_mode: disabled
+        state: stopped
+      loop: "{{ disabled_services }}"
+      failed_when: false
+      tags:
+        - services
+
+    # =========================================================================
+    # Pagefile configuration
+    # =========================================================================
+    - name: Set pagefile to system managed
+      ansible.windows.win_shell: |
+        $cs = Get-WmiObject -Class Win32_ComputerSystem
+        if (-not $cs.AutomaticManagedPagefile) {
+          $cs.AutomaticManagedPagefile = $true
+          $cs.Put() | Out-Null
+          Write-Output "changed"
+        } else {
+          Write-Output "ok"
+        }
+      register: pagefile_result
+      changed_when: "'changed' in pagefile_result.stdout"
+      tags:
+        - pagefile
+
+    # =========================================================================
+    # MOTD / Login banner
+    # =========================================================================
+    - name: Set interactive logon message title
+      ansible.windows.win_regedit:
+        path: HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System
+        name: legalnoticecaption
+        data: "AnvilOps Managed Server"
+        type: string
+      tags:
+        - motd
+
+    - name: Set interactive logon message text
+      ansible.windows.win_regedit:
+        path: HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System
+        name: legalnoticetext
+        data: |
+          This server is managed by AnvilOps.
+          Hostname: {{ server_hostname }}
+          Environment: {{ server_environment | default('unknown') }}
+          Role: {{ server_role | default('generic') }}
+          Manual changes may be overwritten by automation.
+        type: string
+      tags:
+        - motd

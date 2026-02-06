@@ -1,0 +1,37 @@
+---
+# ansible/roles/sql-server/defaults/main.yml
+# SQL Server pre-requisites and configuration defaults
+
+# Drive layout
+sql_data_drive: "D:"
+sql_log_drive: "E:"
+sql_tempdb_drive: "D:"
+sql_backup_drive: "F:"
+
+# SQL Server configuration
+sql_max_memory_mb: "auto"
+sql_port: 1433
+sql_collation: "SQL_Latin1_General_CP1_CI_AS"
+
+# SQL Server instance name
+sql_instance_name: "MSSQLSERVER"
+
+# SQL Server service names
+sql_service_name: "MSSQLSERVER"
+sql_agent_service_name: "SQLSERVERAGENT"
+
+# Directory structure
+sql_data_directory: "{{ sql_data_drive }}\\SQLData"
+sql_log_directory: "{{ sql_log_drive }}\\SQLLogs"
+sql_tempdb_directory: "{{ sql_tempdb_drive }}\\SQLTempDB"
+sql_backup_directory: "{{ sql_backup_drive }}\\SQLBackup"
+
+# Chocolatey package manager
+install_ssms: true
+ssms_package_name: "sql-server-management-studio"
+
+# OS memory reserved for OS (MB)
+sql_os_reserved_memory_mb: 4096
+
+# TempDB configuration
+sql_tempdb_max_files: 8

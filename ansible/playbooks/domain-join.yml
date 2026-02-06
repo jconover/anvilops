@@ -1,0 +1,257 @@
+---
+# =============================================================================
+# AnvilOps — Active Directory Domain Join Playbook
+# =============================================================================
+# Purpose:  Joins Windows servers to an Active Directory domain, moves the
+#           computer object to the specified OU, and adds it to required AD
+#           groups. Includes pre-flight DNS checks and post-join verification.
+#
+# Execution: Runs via AWX job template. Windows-only playbook.
+#
+# Extra vars (required — supplied from AWX vault / AnvilOps API):
+#   - ad_domain:    FQDN of the AD domain (e.g., corp.example.com)
+#   - ad_ou:        Target OU distinguished name
+#                   (e.g., OU=Servers,DC=corp,DC=example,DC=com)
+#   - ad_user:      Domain join service account (user@domain or DOMAIN\user)
+#   - ad_password:  Password for domain join account (from AWX vault)
+#
+# Extra vars (optional):
+#   - ad_groups:    List of AD groups to add the computer to
+#   - ad_dc:        Preferred domain controller FQDN
+#
+# Tags: dns, join, ou, groups, verify
+# =============================================================================
+
+- name: AnvilOps Active Directory Domain Join
+  hosts: all
+  gather_facts: true
+
+  vars:
+    ad_groups: []
+    ad_dc: ""
+
+  tasks:
+    # =========================================================================
+    # Pre-flight validation
+    # =========================================================================
+    - name: Validate required extra vars are provided
+      ansible.builtin.assert:
+        that:
+          - ad_domain is defined and ad_domain | length > 0
+          - ad_ou is defined and ad_ou | length > 0
+          - ad_user is defined and ad_user | length > 0
+          - ad_password is defined and ad_password | length > 0
+        fail_msg: >
+          Missing required extra variables. Ensure ad_domain, ad_ou, ad_user,
+          and ad_password are supplied via AWX job template extra vars.
+        success_msg: "All required domain join variables are present."
+      tags:
+        - dns
+        - join
+
+    # =========================================================================
+    # DNS pre-checks
+    # =========================================================================
+    - name: Verify DNS resolution for domain
+      ansible.windows.win_shell: |
+        try {
+          $result = Resolve-DnsName -Name "{{ ad_domain }}" -Type A -ErrorAction Stop
+          Write-Output "DNS resolution successful: $($result.IPAddress -join ', ')"
+        } catch {
+          Write-Error "DNS resolution FAILED for {{ ad_domain }}: $_"
+          exit 1
+        }
+      register: dns_check
+      tags:
+        - dns
+
+    - name: Display DNS resolution result
+      ansible.builtin.debug:
+        msg: "{{ dns_check.stdout_lines }}"
+      tags:
+        - dns
+
+    - name: Verify domain controller is reachable
+      ansible.windows.win_shell: |
+        $dc = "{{ ad_dc if ad_dc | length > 0 else ad_domain }}"
+        $result = Test-Connection -ComputerName $dc -Count 2 -Quiet
+        if ($result) {
+          Write-Output "Domain controller $dc is reachable"
+        } else {
+          Write-Error "Cannot reach domain controller $dc"
+          exit 1
+        }
+      register: dc_check
+      tags:
+        - dns
+
+    # =========================================================================
+    # Configure DNS to use domain controllers
+    # =========================================================================
+    - name: Get primary network adapter
+      ansible.windows.win_shell: |
+        $adapter = Get-NetAdapter | Where-Object { $_.Status -eq 'Up' } | Select-Object -First 1
+        Write-Output $adapter.InterfaceIndex
+      register: adapter_index
+      changed_when: false
+      tags:
+        - dns
+
+    - name: Set DNS servers to domain controllers
+      ansible.windows.win_shell: |
+        # Resolve domain to find DC IP addresses for DNS
+        $dcIPs = (Resolve-DnsName -Name "{{ ad_domain }}" -Type A).IPAddress
+        Set-DnsClientServerAddress -InterfaceIndex {{ adapter_index.stdout | trim }} -ServerAddresses $dcIPs
+        Write-Output "DNS servers set to: $($dcIPs -join ', ')"
+      register: dns_set
+      tags:
+        - dns
+
+    - name: Display DNS configuration
+      ansible.builtin.debug:
+        msg: "{{ dns_set.stdout_lines }}"
+      tags:
+        - dns
+
+    # =========================================================================
+    # Domain Join
+    # =========================================================================
+    - name: Join computer to Active Directory domain
+      block:
+        - name: Check current domain membership
+          ansible.windows.win_shell: |
+            $cs = Get-WmiObject -Class Win32_ComputerSystem
+            Write-Output "$($cs.PartOfDomain)|$($cs.Domain)"
+          register: domain_status
+          changed_when: false
+
+        - name: Join domain using microsoft.ad.membership
+          microsoft.ad.membership:
+            dns_domain_name: "{{ ad_domain }}"
+            domain_admin_user: "{{ ad_user }}"
+            domain_admin_password: "{{ ad_password }}"
+            domain_ou_path: "{{ ad_ou }}"
+            hostname: "{{ inventory_hostname }}"
+            state: domain
+            reboot: true
+          register: join_result
+          when: >
+            not (domain_status.stdout | trim).startswith('True|' ~ ad_domain)
+          no_log: true
+
+        - name: Report domain join status
+          ansible.builtin.debug:
+            msg: >
+              Domain join {{ 'completed successfully — reboot triggered'
+              if join_result.changed | default(false)
+              else 'skipped — already a member of ' ~ ad_domain }}
+      rescue:
+        - name: Domain join failed — capture error
+          ansible.builtin.fail:
+            msg: >
+              Domain join FAILED for {{ inventory_hostname }}.
+              Error: {{ ansible_failed_result.msg | default('Unknown error') }}.
+              Verify credentials, network connectivity, and OU path.
+      tags:
+        - join
+
+    # =========================================================================
+    # Move to specified OU (if join placed it elsewhere)
+    # =========================================================================
+    - name: Verify computer is in the correct OU
+      ansible.windows.win_shell: |
+        $searcher = [adsisearcher]"(&(objectCategory=computer)(cn=$env:COMPUTERNAME))"
+        $result = $searcher.FindOne()
+        if ($result) {
+          $dn = $result.Properties.distinguishedname[0]
+          $currentOU = ($dn -split ',', 2)[1]
+          Write-Output $currentOU
+        } else {
+          Write-Output "NOT_FOUND"
+        }
+      register: current_ou
+      changed_when: false
+      tags:
+        - ou
+
+    - name: Move computer to target OU if needed
+      ansible.windows.win_shell: |
+        $computerDN = ([adsisearcher]"(&(objectCategory=computer)(cn=$env:COMPUTERNAME))").FindOne().Properties.distinguishedname[0]
+        $targetOU = [ADSI]"LDAP://{{ ad_ou }}"
+        $computer = [ADSI]"LDAP://$computerDN"
+        $computer.psbase.MoveTo($targetOU)
+        Write-Output "Moved $computerDN to {{ ad_ou }}"
+      when:
+        - current_ou.stdout | trim != "NOT_FOUND"
+        - ad_ou not in (current_ou.stdout | trim)
+      register: move_result
+      tags:
+        - ou
+
+    # =========================================================================
+    # Add to AD groups
+    # =========================================================================
+    - name: Add computer to required AD groups
+      microsoft.ad.group:
+        name: "{{ item }}"
+        members:
+          add:
+            - "{{ inventory_hostname }}$"
+        state: present
+      loop: "{{ ad_groups }}"
+      when: ad_groups | length > 0
+      tags:
+        - groups
+
+    # =========================================================================
+    # Post-join verification
+    # =========================================================================
+    - name: Verify domain membership
+      ansible.windows.win_shell: |
+        $cs = Get-WmiObject -Class Win32_ComputerSystem
+        $result = @{
+          PartOfDomain = $cs.PartOfDomain
+          Domain = $cs.Domain
+          DNSHostName = $cs.DNSHostName
+        }
+        $result | ConvertTo-Json
+      register: verify_result
+      changed_when: false
+      tags:
+        - verify
+
+    - name: Display domain membership verification
+      ansible.builtin.debug:
+        msg: "{{ verify_result.stdout | from_json }}"
+      tags:
+        - verify
+
+    - name: Assert server is domain-joined
+      ansible.builtin.assert:
+        that:
+          - (verify_result.stdout | from_json).PartOfDomain == true
+        fail_msg: "Server is NOT joined to the domain after join attempt."
+        success_msg: "Server successfully joined to {{ (verify_result.stdout | from_json).Domain }}"
+      tags:
+        - verify
+
+    - name: Test domain authentication
+      ansible.windows.win_shell: |
+        try {
+          $context = New-Object System.DirectoryServices.ActiveDirectory.DirectoryContext('Domain', '{{ ad_domain }}')
+          $domain = [System.DirectoryServices.ActiveDirectory.Domain]::GetDomain($context)
+          Write-Output "Domain authentication successful. Domain: $($domain.Name), DC: $($domain.PdcRoleOwner.Name)"
+        } catch {
+          Write-Warning "Domain authentication test failed: $_"
+        }
+      register: auth_test
+      changed_when: false
+      failed_when: false
+      tags:
+        - verify
+
+    - name: Display authentication test result
+      ansible.builtin.debug:
+        msg: "{{ auth_test.stdout_lines }}"
+      tags:
+        - verify

@@ -1,0 +1,41 @@
+---
+# AnvilOps Linux-specific variables
+# Applied to all hosts in the 'linux' or 'platform_linux' group.
+
+ansible_connection: ssh
+ansible_port: 22
+ansible_become: true
+ansible_become_method: sudo
+
+# Package manager settings
+auto_update_security: true
+epel_enabled: true
+
+# SSH hardening
+ssh_permit_root_login: "no"
+ssh_password_authentication: "no"
+ssh_max_auth_tries: 3
+ssh_client_alive_interval: 300
+ssh_client_alive_count_max: 2
+
+# Essential packages to install on every Linux host
+linux_base_packages:
+  - curl
+  - wget
+  - vim
+  - htop
+  - jq
+  - unzip
+  - git
+  - python3-pip
+  - chrony
+  - rsyslog
+
+# Sysctl tuning parameters
+sysctl_settings:
+  net.core.somaxconn: 65535
+  vm.swappiness: 10
+  fs.file-max: 2097152
+  net.ipv4.tcp_tw_reuse: 1
+  net.ipv4.ip_local_port_range: "1024 65535"
+  net.core.netdev_max_backlog: 5000

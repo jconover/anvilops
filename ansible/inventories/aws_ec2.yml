@@ -1,0 +1,41 @@
+---
+# AnvilOps dynamic AWS EC2 inventory
+# Uses the amazon.aws.aws_ec2 inventory plugin to discover managed instances.
+# Credentials are provided via IAM role or environment variables — never hardcoded.
+
+plugin: amazon.aws.aws_ec2
+
+regions:
+  - us-east-1
+  - us-west-2
+
+filters:
+  "tag:ManagedBy":
+    - AnvilOps
+
+keyed_groups:
+  # Group by environment tag (e.g., env_production, env_staging, env_dev)
+  - key: tags.Environment
+    prefix: env
+    separator: "_"
+
+  # Group by OS family tag (e.g., os_windows, os_linux)
+  - key: tags.OSFamily
+    prefix: os
+    separator: "_"
+
+  # Group by platform (e.g., platform_windows, platform_linux)
+  - key: platform
+    prefix: platform
+
+  # Group by server role tag (e.g., role_web, role_app, role_db)
+  - key: tags.Role
+    prefix: role
+    separator: "_"
+
+hostnames:
+  - private-ip-address
+
+compose:
+  ansible_host: private_ip_address
+  ansible_connection: "'winrm' if platform == 'windows' else 'ssh'"

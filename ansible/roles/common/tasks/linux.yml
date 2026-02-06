@@ -1,0 +1,105 @@
+---
+# ansible/roles/common/tasks/linux.yml
+# Common Linux tasks for all managed servers
+
+- name: Set hostname
+  ansible.builtin.hostname:
+    name: "{{ inventory_hostname }}"
+  tags:
+    - common
+    - hostname
+
+- name: Set timezone to {{ timezone }}
+  ansible.builtin.timezone:
+    name: "{{ timezone }}"
+  tags:
+    - common
+    - timezone
+
+- name: Configure /etc/motd with AnvilOps banner
+  ansible.builtin.copy:
+    content: |
+      ======================================================================
+      {{ motd_banner }}
+
+      Hostname: {{ inventory_hostname }}
+      Managed:  {{ anvilops_managed }}
+      ======================================================================
+    dest: /etc/motd
+    owner: root
+    group: root
+    mode: "0644"
+  tags:
+    - common
+    - motd
+
+- name: Create anvilops service account
+  ansible.builtin.user:
+    name: "{{ anvilops_service_user }}"
+    system: true
+    shell: /sbin/nologin
+    home: "/home/{{ anvilops_service_user }}"
+    create_home: true
+    comment: "AnvilOps Service Account"
+    state: present
+  tags:
+    - common
+    - service-account
+
+- name: Add anvilops user to sudoers with NOPASSWD
+  ansible.builtin.copy:
+    content: |
+      # AnvilOps service account - managed by Ansible
+      {{ anvilops_service_user }} ALL=(ALL) NOPASSWD: ALL
+    dest: "/etc/sudoers.d/{{ anvilops_service_user }}"
+    owner: root
+    group: root
+    mode: "0440"
+    validate: "visudo -cf %s"
+  tags:
+    - common
+    - service-account
+    - sudoers
+
+- name: Install base packages (RedHat)
+  ansible.builtin.dnf:
+    name: "{{ common_linux_packages }}"
+    state: present
+  when: ansible_os_family == 'RedHat'
+  tags:
+    - common
+    - packages
+
+- name: Install base packages (Debian)
+  ansible.builtin.apt:
+    name: "{{ common_linux_packages }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+  when: ansible_os_family == 'Debian'
+  tags:
+    - common
+    - packages
+
+- name: Configure NTP servers in chrony
+  ansible.builtin.template:
+    src: chrony.conf.j2
+    dest: /etc/chrony.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: restart chronyd
+  when: ansible_os_family == 'RedHat'
+  tags:
+    - common
+    - ntp
+
+- name: Ensure chronyd is enabled and started
+  ansible.builtin.service:
+    name: chronyd
+    state: started
+    enabled: true
+  when: ansible_os_family == 'RedHat'
+  tags:
+    - common
+    - ntp

@@ -1,0 +1,312 @@
+---
+# ansible/roles/sql-server/tasks/main.yml
+# SQL Server pre-requisites and post-install configuration
+# Note: Actual SQL Server installation should be done via AMI pre-bake or dedicated installer
+
+# ---------------------------------------------------------------------------
+# Create SQL Data Directories
+# ---------------------------------------------------------------------------
+- name: Create SQL Server data directory
+  ansible.windows.win_file:
+    path: "{{ sql_data_directory }}"
+    state: directory
+  tags:
+    - sql-server
+    - directories
+
+- name: Create SQL Server log directory
+  ansible.windows.win_file:
+    path: "{{ sql_log_directory }}"
+    state: directory
+  tags:
+    - sql-server
+    - directories
+
+- name: Create SQL Server TempDB directory
+  ansible.windows.win_file:
+    path: "{{ sql_tempdb_directory }}"
+    state: directory
+  tags:
+    - sql-server
+    - directories
+
+- name: Create SQL Server backup directory
+  ansible.windows.win_file:
+    path: "{{ sql_backup_directory }}"
+    state: directory
+  tags:
+    - sql-server
+    - directories
+
+# ---------------------------------------------------------------------------
+# Install Prerequisites
+# ---------------------------------------------------------------------------
+- name: Install .NET Framework 4.8
+  ansible.windows.win_feature:
+    name: NET-Framework-45-Core
+    state: present
+    include_management_tools: true
+  register: dotnet_install_result
+  tags:
+    - sql-server
+    - prerequisites
+
+- name: Reboot after .NET Framework installation if required
+  ansible.windows.win_reboot:
+    reboot_timeout: 600
+    msg: "Rebooting after .NET Framework installation"
+  when: dotnet_install_result.reboot_required | default(false)
+  tags:
+    - sql-server
+    - prerequisites
+
+# ---------------------------------------------------------------------------
+# Install Chocolatey (if not present)
+# ---------------------------------------------------------------------------
+- name: Ensure Chocolatey is installed
+  ansible.windows.win_powershell:
+    script: |
+      if (-not (Get-Command choco -ErrorAction SilentlyContinue)) {
+          Set-ExecutionPolicy Bypass -Scope Process -Force
+          [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
+          Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+          $Ansible.Changed = $true
+      } else {
+          $Ansible.Changed = $false
+      }
+  when: install_ssms
+  tags:
+    - sql-server
+    - prerequisites
+    - chocolatey
+
+# ---------------------------------------------------------------------------
+# Install SSMS
+# ---------------------------------------------------------------------------
+- name: Install SQL Server Management Studio via Chocolatey
+  chocolatey.chocolatey.win_chocolatey:
+    name: "{{ ssms_package_name }}"
+    state: present
+  when: install_ssms
+  tags:
+    - sql-server
+    - ssms
+
+# ---------------------------------------------------------------------------
+# Firewall - SQL Server Port
+# ---------------------------------------------------------------------------
+- name: Open SQL Server port {{ sql_port }} in Windows Firewall
+  community.windows.win_firewall_rule:
+    name: "AnvilOps - SQL Server (TCP-In)"
+    localport: "{{ sql_port }}"
+    protocol: tcp
+    direction: in
+    action: allow
+    enabled: true
+    state: present
+    profiles:
+      - domain
+      - private
+  tags:
+    - sql-server
+    - firewall
+
+- name: Open SQL Server Browser port (UDP 1434)
+  community.windows.win_firewall_rule:
+    name: "AnvilOps - SQL Server Browser (UDP-In)"
+    localport: 1434
+    protocol: udp
+    direction: in
+    action: allow
+    enabled: true
+    state: present
+    profiles:
+      - domain
+      - private
+  tags:
+    - sql-server
+    - firewall
+
+# ---------------------------------------------------------------------------
+# SQL Server Configuration (post-install, requires SQL Server on the AMI)
+# ---------------------------------------------------------------------------
+- name: Check if SQL Server service exists
+  ansible.windows.win_service_info:
+    name: "{{ sql_service_name }}"
+  register: sql_service_info
+  tags:
+    - sql-server
+    - configuration
+
+- name: Calculate SQL Server max memory
+  ansible.windows.win_powershell:
+    script: |
+      $totalMemMB = [math]::Round((Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory / 1MB)
+      $maxMem = $totalMemMB - {{ sql_os_reserved_memory_mb }}
+      if ($maxMem -lt 1024) { $maxMem = 1024 }
+      $Ansible.Result = @{ max_memory = $maxMem; total_memory = $totalMemMB }
+      $Ansible.Changed = $false
+  register: memory_calc
+  when:
+    - sql_service_info.exists | default(false)
+    - sql_max_memory_mb == "auto"
+  tags:
+    - sql-server
+    - configuration
+    - memory
+
+- name: Set SQL Server max memory configuration
+  ansible.windows.win_powershell:
+    script: |
+      $maxMem = {{ memory_calc.output[0].max_memory | default(sql_max_memory_mb) }}
+      try {
+          Invoke-Sqlcmd -Query "
+              EXEC sp_configure 'show advanced options', 1;
+              RECONFIGURE;
+              EXEC sp_configure 'max server memory (MB)', $maxMem;
+              RECONFIGURE;
+          " -ServerInstance "localhost"
+          $Ansible.Changed = $true
+      } catch {
+          $Ansible.Failed = $true
+          $Ansible.Result = $_.Exception.Message
+      }
+  when:
+    - sql_service_info.exists | default(false)
+  notify: restart SQL Server
+  tags:
+    - sql-server
+    - configuration
+    - memory
+
+- name: Enable TCP/IP protocol for SQL Server
+  ansible.windows.win_powershell:
+    script: |
+      try {
+          [System.Reflection.Assembly]::LoadWithPartialName("Microsoft.SqlServer.SqlWmiManagement") | Out-Null
+          $wmi = New-Object Microsoft.SqlServer.Management.Smo.Wmi.ManagedComputer
+          $tcp = $wmi.ServerInstances['{{ sql_instance_name }}'].ServerProtocols['Tcp']
+          if (-not $tcp.IsEnabled) {
+              $tcp.IsEnabled = $true
+              $tcp.Alter()
+              $Ansible.Changed = $true
+          } else {
+              $Ansible.Changed = $false
+          }
+      } catch {
+          # SMO may not be available; fall back to registry
+          $regPath = "HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server\MSSQL*\MSSQLServer\SuperSocketNetLib\Tcp"
+          $paths = Get-Item -Path $regPath -ErrorAction SilentlyContinue
+          if ($paths) {
+              foreach ($path in $paths) {
+                  $current = Get-ItemProperty -Path $path.PSPath -Name "Enabled" -ErrorAction SilentlyContinue
+                  if ($current.Enabled -ne 1) {
+                      Set-ItemProperty -Path $path.PSPath -Name "Enabled" -Value 1
+                      $Ansible.Changed = $true
+                  }
+              }
+          }
+          if (-not $Ansible.Changed) { $Ansible.Changed = $false }
+      }
+  when:
+    - sql_service_info.exists | default(false)
+  notify: restart SQL Server
+  tags:
+    - sql-server
+    - configuration
+    - network
+
+- name: Get CPU count for TempDB configuration
+  ansible.windows.win_powershell:
+    script: |
+      $cpuCount = (Get-CimInstance Win32_Processor | Measure-Object -Property NumberOfLogicalProcessors -Sum).Sum
+      $fileCount = [math]::Min($cpuCount, {{ sql_tempdb_max_files }})
+      if ($fileCount -lt 1) { $fileCount = 1 }
+      $Ansible.Result = @{ cpu_count = $cpuCount; tempdb_files = $fileCount }
+      $Ansible.Changed = $false
+  register: cpu_info
+  when:
+    - sql_service_info.exists | default(false)
+  tags:
+    - sql-server
+    - configuration
+    - tempdb
+
+- name: Configure TempDB with multiple data files
+  ansible.windows.win_powershell:
+    script: |
+      $targetFiles = {{ cpu_info.output[0].tempdb_files | default(4) }}
+      $tempdbDir = "{{ sql_tempdb_directory }}"
+
+      try {
+          # Get current TempDB file count
+          $currentFiles = Invoke-Sqlcmd -Query "
+              SELECT COUNT(*) as cnt FROM sys.master_files WHERE database_id = 2 AND type = 0
+          " -ServerInstance "localhost"
+
+          $currentCount = $currentFiles.cnt
+          $Ansible.Changed = $false
+
+          for ($i = $currentCount + 1; $i -le $targetFiles; $i++) {
+              $fileName = "tempdev$i"
+              $filePath = "$tempdbDir\$fileName.ndf"
+              Invoke-Sqlcmd -Query "
+                  ALTER DATABASE [tempdb] ADD FILE (
+                      NAME = N'$fileName',
+                      FILENAME = N'$filePath',
+                      SIZE = 256MB,
+                      FILEGROWTH = 256MB
+                  )
+              " -ServerInstance "localhost"
+              $Ansible.Changed = $true
+          }
+      } catch {
+          $Ansible.Failed = $true
+          $Ansible.Result = $_.Exception.Message
+      }
+  when:
+    - sql_service_info.exists | default(false)
+    - cpu_info.output is defined
+  tags:
+    - sql-server
+    - configuration
+    - tempdb
+
+- name: Set default backup directory
+  ansible.windows.win_powershell:
+    script: |
+      try {
+          $regPath = (Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server\Instance Names\SQL" -ErrorAction Stop)."{{ sql_instance_name }}"
+          $backupPath = "HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server\$regPath\MSSQLServer"
+          $current = (Get-ItemProperty -Path $backupPath -Name "BackupDirectory" -ErrorAction SilentlyContinue).BackupDirectory
+          if ($current -ne "{{ sql_backup_directory }}") {
+              Set-ItemProperty -Path $backupPath -Name "BackupDirectory" -Value "{{ sql_backup_directory }}"
+              $Ansible.Changed = $true
+          } else {
+              $Ansible.Changed = $false
+          }
+      } catch {
+          $Ansible.Changed = $false
+          $Ansible.Result = "SQL Server instance registry not found - skipping backup directory configuration"
+      }
+  when:
+    - sql_service_info.exists | default(false)
+  tags:
+    - sql-server
+    - configuration
+    - backup
+
+# ---------------------------------------------------------------------------
+# Ensure SQL Server Agent is running
+# ---------------------------------------------------------------------------
+- name: Ensure SQL Server Agent service is started
+  ansible.windows.win_service:
+    name: "{{ sql_agent_service_name }}"
+    state: started
+    start_mode: auto
+  when:
+    - sql_service_info.exists | default(false)
+  failed_when: false
+  tags:
+    - sql-server
+    - service

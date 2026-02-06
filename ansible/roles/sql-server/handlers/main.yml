@@ -1,0 +1,8 @@
+---
+# ansible/roles/sql-server/handlers/main.yml
+
+- name: restart SQL Server
+  ansible.windows.win_service:
+    name: "{{ sql_service_name | default('MSSQLSERVER') }}"
+    state: restarted
+  listen: restart SQL Server

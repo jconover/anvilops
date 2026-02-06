@@ -1,0 +1,29 @@
+---
+# AnvilOps managed server configuration — common variables for all hosts.
+# These values apply to both Linux and Windows unless overridden in
+# platform-specific group_vars files.
+
+anvilops_managed: true
+
+# NTP configuration
+ntp_servers:
+  - 169.254.169.123  # AWS Time Sync Service
+
+# DNS configuration
+dns_servers:
+  - 10.0.0.2  # VPC default DNS resolver
+
+# Agent versions — "latest" pulls the most recent stable release
+monitoring_agent_version: "latest"
+backup_agent_version: "latest"
+
+# AWS metadata
+aws_region: "{{ lookup('env', 'AWS_DEFAULT_REGION') | default('us-east-1') }}"
+
+# AnvilOps service account
+anvilops_service_account: "anvilops"
+
+# Tagging — passed as extra_vars from AWX job templates
+server_name: "{{ inventory_hostname }}"
+server_environment: "{{ hostvars[inventory_hostname].tags.Environment | default('dev') }}"
+server_role: "{{ hostvars[inventory_hostname].tags.Role | default('generic') }}"

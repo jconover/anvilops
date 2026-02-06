@@ -49,6 +49,8 @@ class ServerResponse(BaseModel):
     private_ip: str | None = None
     public_ip: str | None = None
     dns_name: str | None = None
+    awx_host_id: int | None = None
+    awx_job_ids: list | None = None
     created_at: datetime
     updated_at: datetime
 

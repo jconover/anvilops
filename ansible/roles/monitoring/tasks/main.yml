@@ -1,0 +1,24 @@
+---
+# ansible/roles/monitoring/tasks/main.yml
+# CloudWatch agent and monitoring setup - cross-platform
+
+- name: Display monitoring configuration notice
+  ansible.builtin.debug:
+    msg: "Configuring CloudWatch monitoring for {{ inventory_hostname }}"
+  tags:
+    - monitoring
+    - always
+
+- name: Include Linux monitoring tasks
+  ansible.builtin.include_tasks: linux.yml
+  when: ansible_os_family in ['RedHat', 'Debian']
+  tags:
+    - monitoring
+    - linux
+
+- name: Include Windows monitoring tasks
+  ansible.builtin.include_tasks: windows.yml
+  when: ansible_os_family == 'Windows'
+  tags:
+    - monitoring
+    - windows

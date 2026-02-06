@@ -1,0 +1,31 @@
+---
+# ansible/roles/common/tasks/main.yml
+# Common tasks for all servers - delegates to OS-specific task files
+
+- name: Display AnvilOps managed notice
+  ansible.builtin.debug:
+    msg: "Configuring server as AnvilOps-managed host"
+  tags:
+    - common
+    - always
+
+- name: Set anvilops_managed fact
+  ansible.builtin.set_fact:
+    anvilops_managed: "{{ anvilops_managed }}"
+  tags:
+    - common
+    - always
+
+- name: Include Linux-specific tasks
+  ansible.builtin.include_tasks: linux.yml
+  when: ansible_os_family in ['RedHat', 'Debian']
+  tags:
+    - common
+    - linux
+
+- name: Include Windows-specific tasks
+  ansible.builtin.include_tasks: windows.yml
+  when: ansible_os_family == 'Windows'
+  tags:
+    - common
+    - windows

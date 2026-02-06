@@ -1,0 +1,111 @@
+---
+# ansible/roles/monitoring/tasks/linux.yml
+# CloudWatch agent installation and configuration for Linux
+
+# ---------------------------------------------------------------------------
+# Download CloudWatch Agent
+# ---------------------------------------------------------------------------
+- name: Download CloudWatch agent (RedHat/Amazon Linux)
+  ansible.builtin.get_url:
+    url: "{{ cloudwatch_agent_download_url_linux }}"
+    dest: "{{ cloudwatch_staging_dir_linux }}/amazon-cloudwatch-agent.rpm"
+    mode: "0644"
+  when: ansible_os_family == 'RedHat'
+  tags:
+    - monitoring
+    - install
+
+- name: Download CloudWatch agent (Debian/Ubuntu)
+  ansible.builtin.get_url:
+    url: "{{ cloudwatch_agent_download_url_debian }}"
+    dest: "{{ cloudwatch_staging_dir_linux }}/amazon-cloudwatch-agent.deb"
+    mode: "0644"
+  when: ansible_os_family == 'Debian'
+  tags:
+    - monitoring
+    - install
+
+# ---------------------------------------------------------------------------
+# Install CloudWatch Agent
+# ---------------------------------------------------------------------------
+- name: Install CloudWatch agent (RedHat/Amazon Linux)
+  ansible.builtin.dnf:
+    name: "{{ cloudwatch_staging_dir_linux }}/amazon-cloudwatch-agent.rpm"
+    state: present
+    disable_gpg_check: true
+  when: ansible_os_family == 'RedHat'
+  tags:
+    - monitoring
+    - install
+
+- name: Install CloudWatch agent (Debian/Ubuntu)
+  ansible.builtin.apt:
+    deb: "{{ cloudwatch_staging_dir_linux }}/amazon-cloudwatch-agent.deb"
+    state: present
+  when: ansible_os_family == 'Debian'
+  tags:
+    - monitoring
+    - install
+
+# ---------------------------------------------------------------------------
+# Deploy CloudWatch Agent Configuration
+# ---------------------------------------------------------------------------
+- name: Ensure CloudWatch agent config directory exists
+  ansible.builtin.file:
+    path: "{{ cloudwatch_config_path_linux | dirname }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  tags:
+    - monitoring
+    - configuration
+
+- name: Deploy CloudWatch agent configuration (Linux)
+  ansible.builtin.template:
+    src: cloudwatch-config-linux.json.j2
+    dest: "{{ cloudwatch_config_path_linux }}"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: restart cloudwatch agent linux
+  tags:
+    - monitoring
+    - configuration
+
+# ---------------------------------------------------------------------------
+# Start and Enable CloudWatch Agent
+# ---------------------------------------------------------------------------
+- name: Load CloudWatch agent configuration
+  ansible.builtin.command:
+    cmd: >
+      /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl
+      -a fetch-config
+      -m ec2
+      -s
+      -c file:{{ cloudwatch_config_path_linux }}
+  register: cw_config_load
+  changed_when: "'Successfully fetched' in cw_config_load.stdout"
+  tags:
+    - monitoring
+    - configuration
+
+- name: Ensure CloudWatch agent service is enabled and started
+  ansible.builtin.service:
+    name: "{{ cloudwatch_service_name_linux }}"
+    state: started
+    enabled: true
+  tags:
+    - monitoring
+    - service
+
+# ---------------------------------------------------------------------------
+# Cleanup staging files
+# ---------------------------------------------------------------------------
+- name: Remove downloaded CloudWatch agent package
+  ansible.builtin.file:
+    path: "{{ cloudwatch_staging_dir_linux }}/amazon-cloudwatch-agent.{{ 'rpm' if ansible_os_family == 'RedHat' else 'deb' }}"
+    state: absent
+  tags:
+    - monitoring
+    - cleanup

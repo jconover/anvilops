@@ -1,0 +1,644 @@
+---
+# =============================================================================
+# AnvilOps — Software Installation Playbook
+# =============================================================================
+# Purpose:  Installs application software on provisioned servers based on a
+#           list of package identifiers. Cross-platform — supports both Linux
+#           (RHEL/Debian) and Windows via conditional task blocks.
+#
+# Execution: Runs via AWX job template. The software list is passed as an
+#            extra variable from the AnvilOps API/builder wizard.
+#
+# Extra vars (required):
+#   - software_packages:  List of software identifiers to install.
+#                         Example: ["nginx", "nodejs", "docker"]
+#
+# Supported packages:
+#   Linux:   nginx, nodejs, java, tomcat, docker, python
+#   Windows: iis, dotnet, sqlserver (stub), java, docker, vscode, git
+#
+# Tags: validation, nginx, nodejs, java, tomcat, docker, python,
+#       iis, dotnet, sqlserver, vscode, git
+# =============================================================================
+
+- name: AnvilOps Software Installation
+  hosts: all
+  become: true
+  gather_facts: true
+
+  vars:
+    software_packages: []
+
+  tasks:
+    # =========================================================================
+    # Validation
+    # =========================================================================
+    - name: Display software packages to install
+      ansible.builtin.debug:
+        msg: "Software packages requested: {{ software_packages }}"
+      tags:
+        - validation
+
+    - name: Validate software_packages is a non-empty list
+      ansible.builtin.assert:
+        that:
+          - software_packages is defined
+          - software_packages | length > 0
+        fail_msg: "No software packages specified. Pass 'software_packages' as an extra var list."
+        success_msg: "Will install {{ software_packages | length }} package(s)."
+      tags:
+        - validation
+
+    # =========================================================================
+    # LINUX — Nginx
+    # =========================================================================
+    - name: Install Nginx (Linux)
+      when:
+        - "'nginx' in software_packages"
+        - ansible_os_family in ['RedHat', 'Debian']
+      block:
+        - name: Install nginx package (RHEL)
+          ansible.builtin.yum:
+            name: nginx
+            state: present
+          when: ansible_os_family == "RedHat"
+
+        - name: Install nginx package (Debian)
+          ansible.builtin.apt:
+            name: nginx
+            state: present
+            update_cache: true
+          when: ansible_os_family == "Debian"
+
+        - name: Enable and start nginx
+          ansible.builtin.systemd:
+            name: nginx
+            state: started
+            enabled: true
+
+        - name: Open HTTP port 80 in firewall
+          ansible.posix.firewalld:
+            service: http
+            permanent: true
+            state: enabled
+            immediate: true
+          failed_when: false
+
+        - name: Open HTTPS port 443 in firewall
+          ansible.posix.firewalld:
+            service: https
+            permanent: true
+            state: enabled
+            immediate: true
+          failed_when: false
+      tags:
+        - nginx
+
+    # =========================================================================
+    # LINUX — Node.js 20.x
+    # =========================================================================
+    - name: Install Node.js 20.x (Linux)
+      when:
+        - "'nodejs' in software_packages"
+        - ansible_os_family in ['RedHat', 'Debian']
+      block:
+        - name: Add NodeSource 20.x repository (RHEL)
+          ansible.builtin.shell: |
+            curl -fsSL https://rpm.nodesource.com/setup_20.x | bash -
+          args:
+            creates: /etc/yum.repos.d/nodesource-el*.repo
+          when: ansible_os_family == "RedHat"
+
+        - name: Add NodeSource 20.x repository (Debian)
+          ansible.builtin.shell: |
+            curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+          args:
+            creates: /etc/apt/sources.list.d/nodesource.list
+          when: ansible_os_family == "Debian"
+
+        - name: Install nodejs package (RHEL)
+          ansible.builtin.yum:
+            name: nodejs
+            state: present
+          when: ansible_os_family == "RedHat"
+
+        - name: Install nodejs package (Debian)
+          ansible.builtin.apt:
+            name: nodejs
+            state: present
+            update_cache: true
+          when: ansible_os_family == "Debian"
+
+        - name: Verify Node.js installation
+          ansible.builtin.command: node --version
+          register: node_version
+          changed_when: false
+
+        - name: Display Node.js version
+          ansible.builtin.debug:
+            msg: "Node.js installed: {{ node_version.stdout }}"
+      tags:
+        - nodejs
+
+    # =========================================================================
+    # LINUX — Java (Amazon Corretto JDK 21)
+    # =========================================================================
+    - name: Install Java JDK 21 — Amazon Corretto (Linux)
+      when:
+        - "'java' in software_packages"
+        - ansible_os_family in ['RedHat', 'Debian']
+      block:
+        - name: Add Amazon Corretto repository (RHEL)
+          ansible.builtin.shell: |
+            rpm --import https://yum.corretto.aws/corretto.key
+            curl -Lo /etc/yum.repos.d/corretto.repo https://yum.corretto.aws/corretto.repo
+          args:
+            creates: /etc/yum.repos.d/corretto.repo
+          when: ansible_os_family == "RedHat"
+
+        - name: Add Amazon Corretto repository (Debian)
+          ansible.builtin.shell: |
+            wget -O - https://apt.corretto.aws/corretto.key | gpg --dearmor -o /usr/share/keyrings/corretto-keyring.gpg
+            echo "deb [signed-by=/usr/share/keyrings/corretto-keyring.gpg] https://apt.corretto.aws stable main" > /etc/apt/sources.list.d/corretto.list
+          args:
+            creates: /etc/apt/sources.list.d/corretto.list
+          when: ansible_os_family == "Debian"
+
+        - name: Install Amazon Corretto JDK 21 (RHEL)
+          ansible.builtin.yum:
+            name: java-21-amazon-corretto-devel
+            state: present
+          when: ansible_os_family == "RedHat"
+
+        - name: Install Amazon Corretto JDK 21 (Debian)
+          ansible.builtin.apt:
+            name: java-21-amazon-corretto-jdk
+            state: present
+            update_cache: true
+          when: ansible_os_family == "Debian"
+
+        - name: Set JAVA_HOME environment variable
+          ansible.builtin.copy:
+            content: |
+              export JAVA_HOME=/usr/lib/jvm/java-21-amazon-corretto
+              export PATH=$JAVA_HOME/bin:$PATH
+            dest: /etc/profile.d/java.sh
+            owner: root
+            group: root
+            mode: "0644"
+      tags:
+        - java
+
+    # =========================================================================
+    # LINUX — Tomcat 10
+    # =========================================================================
+    - name: Install Tomcat 10 (Linux)
+      when:
+        - "'tomcat' in software_packages"
+        - ansible_os_family in ['RedHat', 'Debian']
+      block:
+        - name: Ensure Java is installed for Tomcat
+          ansible.builtin.package:
+            name: java-21-amazon-corretto-devel
+            state: present
+          failed_when: false
+
+        - name: Create tomcat system user
+          ansible.builtin.user:
+            name: tomcat
+            system: true
+            shell: /sbin/nologin
+            home: /opt/tomcat
+            create_home: false
+
+        - name: Create Tomcat installation directory
+          ansible.builtin.file:
+            path: /opt/tomcat
+            state: directory
+            owner: tomcat
+            group: tomcat
+            mode: "0755"
+
+        - name: Download Tomcat 10
+          ansible.builtin.get_url:
+            url: "https://dlcdn.apache.org/tomcat/tomcat-10/v10.1.28/bin/apache-tomcat-10.1.28.tar.gz"
+            dest: /tmp/apache-tomcat-10.tar.gz
+            mode: "0644"
+
+        - name: Extract Tomcat
+          ansible.builtin.unarchive:
+            src: /tmp/apache-tomcat-10.tar.gz
+            dest: /opt/tomcat
+            remote_src: true
+            extra_opts: ["--strip-components=1"]
+            owner: tomcat
+            group: tomcat
+
+        - name: Create Tomcat systemd service
+          ansible.builtin.copy:
+            content: |
+              [Unit]
+              Description=Apache Tomcat 10 Web Application Server
+              After=network.target
+
+              [Service]
+              Type=forking
+              User=tomcat
+              Group=tomcat
+              Environment="JAVA_HOME=/usr/lib/jvm/java-21-amazon-corretto"
+              Environment="CATALINA_HOME=/opt/tomcat"
+              Environment="CATALINA_PID=/opt/tomcat/temp/tomcat.pid"
+              ExecStart=/opt/tomcat/bin/startup.sh
+              ExecStop=/opt/tomcat/bin/shutdown.sh
+              RestartSec=10
+              Restart=always
+
+              [Install]
+              WantedBy=multi-user.target
+            dest: /etc/systemd/system/tomcat.service
+            owner: root
+            group: root
+            mode: "0644"
+          notify: Reload systemd
+
+        - name: Enable and start Tomcat
+          ansible.builtin.systemd:
+            name: tomcat
+            state: started
+            enabled: true
+            daemon_reload: true
+
+        - name: Open Tomcat port 8080 in firewall
+          ansible.posix.firewalld:
+            port: 8080/tcp
+            permanent: true
+            state: enabled
+            immediate: true
+          failed_when: false
+      tags:
+        - tomcat
+
+    # =========================================================================
+    # LINUX — Docker CE
+    # =========================================================================
+    - name: Install Docker CE (Linux)
+      when:
+        - "'docker' in software_packages"
+        - ansible_os_family in ['RedHat', 'Debian']
+      block:
+        - name: Remove old Docker packages (RHEL)
+          ansible.builtin.yum:
+            name:
+              - docker
+              - docker-client
+              - docker-common
+              - docker-engine
+            state: absent
+          when: ansible_os_family == "RedHat"
+
+        - name: Install Docker prerequisites (RHEL)
+          ansible.builtin.yum:
+            name:
+              - yum-utils
+              - device-mapper-persistent-data
+              - lvm2
+            state: present
+          when: ansible_os_family == "RedHat"
+
+        - name: Add Docker repository (RHEL)
+          ansible.builtin.command: >
+            yum-config-manager --add-repo
+            https://download.docker.com/linux/centos/docker-ce.repo
+          args:
+            creates: /etc/yum.repos.d/docker-ce.repo
+          when: ansible_os_family == "RedHat"
+
+        - name: Install Docker CE (RHEL)
+          ansible.builtin.yum:
+            name:
+              - docker-ce
+              - docker-ce-cli
+              - containerd.io
+              - docker-compose-plugin
+            state: present
+          when: ansible_os_family == "RedHat"
+
+        - name: Install Docker prerequisites (Debian)
+          ansible.builtin.apt:
+            name:
+              - ca-certificates
+              - curl
+              - gnupg
+              - lsb-release
+            state: present
+            update_cache: true
+          when: ansible_os_family == "Debian"
+
+        - name: Add Docker GPG key (Debian)
+          ansible.builtin.shell: |
+            install -m 0755 -d /etc/apt/keyrings
+            curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+            chmod a+r /etc/apt/keyrings/docker.gpg
+          args:
+            creates: /etc/apt/keyrings/docker.gpg
+          when: ansible_os_family == "Debian"
+
+        - name: Add Docker repository (Debian)
+          ansible.builtin.shell: |
+            echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" > /etc/apt/sources.list.d/docker.list
+          args:
+            creates: /etc/apt/sources.list.d/docker.list
+          when: ansible_os_family == "Debian"
+
+        - name: Install Docker CE (Debian)
+          ansible.builtin.apt:
+            name:
+              - docker-ce
+              - docker-ce-cli
+              - containerd.io
+              - docker-compose-plugin
+            state: present
+            update_cache: true
+          when: ansible_os_family == "Debian"
+
+        - name: Add anvilops user to docker group
+          ansible.builtin.user:
+            name: "{{ anvilops_service_account }}"
+            groups: docker
+            append: true
+
+        - name: Enable and start Docker
+          ansible.builtin.systemd:
+            name: docker
+            state: started
+            enabled: true
+      tags:
+        - docker
+
+    # =========================================================================
+    # LINUX — Python 3.12
+    # =========================================================================
+    - name: Install Python 3.12 (Linux)
+      when:
+        - "'python' in software_packages"
+        - ansible_os_family in ['RedHat', 'Debian']
+      block:
+        - name: Install Python 3.12 (RHEL)
+          ansible.builtin.yum:
+            name:
+              - python3.12
+              - python3.12-pip
+              - python3.12-devel
+            state: present
+          when: ansible_os_family == "RedHat"
+
+        - name: Install Python 3.12 (Debian)
+          ansible.builtin.apt:
+            name:
+              - python3.12
+              - python3.12-venv
+              - python3-pip
+              - python3.12-dev
+            state: present
+            update_cache: true
+          when: ansible_os_family == "Debian"
+
+        - name: Verify Python installation
+          ansible.builtin.command: python3.12 --version
+          register: python_version
+          changed_when: false
+          failed_when: false
+
+        - name: Display Python version
+          ansible.builtin.debug:
+            msg: "Python installed: {{ python_version.stdout | default('Python 3.12 (version check skipped)') }}"
+      tags:
+        - python
+
+    # =========================================================================
+    # WINDOWS — IIS
+    # =========================================================================
+    - name: Install IIS (Windows)
+      when:
+        - "'iis' in software_packages"
+        - ansible_os_family == 'Windows'
+      block:
+        - name: Install IIS Web Server feature
+          ansible.windows.win_feature:
+            name:
+              - Web-Server
+              - Web-Common-Http
+              - Web-Asp-Net45
+              - Web-Net-Ext45
+              - Web-ISAPI-Ext
+              - Web-ISAPI-Filter
+              - Web-Mgmt-Console
+              - Web-Mgmt-Tools
+            state: present
+          register: iis_result
+
+        - name: Ensure W3SVC (IIS) is running
+          ansible.windows.win_service:
+            name: W3SVC
+            start_mode: auto
+            state: started
+
+        - name: Allow HTTP through Windows Firewall
+          community.windows.win_firewall_rule:
+            name: "AnvilOps - HTTP (80)"
+            localport: 80
+            action: allow
+            direction: in
+            protocol: tcp
+            state: present
+            enabled: true
+
+        - name: Allow HTTPS through Windows Firewall
+          community.windows.win_firewall_rule:
+            name: "AnvilOps - HTTPS (443)"
+            localport: 443
+            action: allow
+            direction: in
+            protocol: tcp
+            state: present
+            enabled: true
+
+        - name: Reboot if IIS installation requires it
+          ansible.windows.win_reboot:
+            reboot_timeout: 600
+          when: iis_result.reboot_required | default(false)
+      tags:
+        - iis
+
+    # =========================================================================
+    # WINDOWS — .NET 8 Runtime and SDK
+    # =========================================================================
+    - name: Install .NET 8 (Windows)
+      when:
+        - "'dotnet' in software_packages"
+        - ansible_os_family == 'Windows'
+      block:
+        - name: Install .NET 8 SDK via Chocolatey
+          chocolatey.chocolatey.win_chocolatey:
+            name: dotnet-sdk
+            version: "8.0"
+            state: present
+
+        - name: Install .NET 8 Runtime via Chocolatey
+          chocolatey.chocolatey.win_chocolatey:
+            name: dotnet-runtime
+            version: "8.0"
+            state: present
+
+        - name: Install ASP.NET Core Runtime via Chocolatey
+          chocolatey.chocolatey.win_chocolatey:
+            name: dotnet-aspnetruntime
+            version: "8.0"
+            state: present
+
+        - name: Verify .NET installation
+          ansible.windows.win_shell: dotnet --list-sdks
+          register: dotnet_version
+          changed_when: false
+
+        - name: Display .NET versions
+          ansible.builtin.debug:
+            msg: "{{ dotnet_version.stdout_lines }}"
+      tags:
+        - dotnet
+
+    # =========================================================================
+    # WINDOWS — SQL Server (stub)
+    # =========================================================================
+    - name: SQL Server installation notice (Windows)
+      when:
+        - "'sqlserver' in software_packages"
+        - ansible_os_family == 'Windows'
+      block:
+        - name: Log SQL Server installation notice
+          ansible.builtin.debug:
+            msg: >
+              SQL Server installation requires a dedicated playbook and template
+              due to complexity (instance configuration, memory settings, TempDB
+              layout, authentication mode, etc.). Use the sql-server-install AWX
+              job template instead. This placeholder confirms the request was
+              received for server {{ inventory_hostname }}.
+      tags:
+        - sqlserver
+
+    # =========================================================================
+    # WINDOWS — Java (Amazon Corretto JDK 21)
+    # =========================================================================
+    - name: Install Java JDK 21 — Amazon Corretto (Windows)
+      when:
+        - "'java' in software_packages"
+        - ansible_os_family == 'Windows'
+      block:
+        - name: Install Amazon Corretto 21 via Chocolatey
+          chocolatey.chocolatey.win_chocolatey:
+            name: corretto21jdk
+            state: present
+
+        - name: Set JAVA_HOME environment variable
+          ansible.windows.win_environment:
+            name: JAVA_HOME
+            value: 'C:\Program Files\Amazon Corretto\jdk21'
+            level: machine
+            state: present
+
+        - name: Verify Java installation
+          ansible.windows.win_shell: java -version 2>&1
+          register: java_version
+          changed_when: false
+
+        - name: Display Java version
+          ansible.builtin.debug:
+            msg: "{{ java_version.stdout_lines | default(java_version.stderr_lines) }}"
+      tags:
+        - java
+
+    # =========================================================================
+    # WINDOWS — Docker Desktop
+    # =========================================================================
+    - name: Install Docker Desktop (Windows)
+      when:
+        - "'docker' in software_packages"
+        - ansible_os_family == 'Windows'
+      block:
+        - name: Enable Containers Windows feature
+          ansible.windows.win_feature:
+            name: Containers
+            state: present
+          register: containers_feature
+
+        - name: Enable Hyper-V Windows feature
+          ansible.windows.win_feature:
+            name: Hyper-V
+            state: present
+            include_management_tools: true
+          register: hyperv_feature
+          failed_when: false
+
+        - name: Reboot if Windows features require it
+          ansible.windows.win_reboot:
+            reboot_timeout: 600
+          when: >
+            (containers_feature.reboot_required | default(false)) or
+            (hyperv_feature.reboot_required | default(false))
+
+        - name: Install Docker Desktop via Chocolatey
+          chocolatey.chocolatey.win_chocolatey:
+            name: docker-desktop
+            state: present
+      tags:
+        - docker
+
+    # =========================================================================
+    # WINDOWS — VS Code
+    # =========================================================================
+    - name: Install Visual Studio Code (Windows)
+      when:
+        - "'vscode' in software_packages"
+        - ansible_os_family == 'Windows'
+      block:
+        - name: Install VS Code via Chocolatey
+          chocolatey.chocolatey.win_chocolatey:
+            name: vscode
+            state: present
+            package_params: "/NoDesktopIcon"
+      tags:
+        - vscode
+
+    # =========================================================================
+    # WINDOWS — Git
+    # =========================================================================
+    - name: Install Git (Windows)
+      when:
+        - "'git' in software_packages"
+        - ansible_os_family == 'Windows'
+      block:
+        - name: Install Git via Chocolatey
+          chocolatey.chocolatey.win_chocolatey:
+            name: git
+            state: present
+            package_params: "/GitAndUnixToolsOnPath /NoGitLfs"
+
+        - name: Verify Git installation
+          ansible.windows.win_shell: git --version
+          register: git_version
+          changed_when: false
+
+        - name: Display Git version
+          ansible.builtin.debug:
+            msg: "{{ git_version.stdout }}"
+      tags:
+        - git
+
+  # ===========================================================================
+  # Handlers
+  # ===========================================================================
+  handlers:
+    - name: Reload systemd
+      ansible.builtin.systemd:
+        daemon_reload: true
+      when: ansible_os_family != 'Windows'

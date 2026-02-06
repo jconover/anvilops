@@ -79,6 +79,11 @@ class ServerRequest(Base):
         String(256), nullable=True
     )
 
+    # AWX metadata (populated after configuration)
+    awx_host_id: Mapped[Optional[int]] = mapped_column(nullable=True)
+    awx_inventory_id: Mapped[Optional[int]] = mapped_column(nullable=True)
+    awx_job_ids: Mapped[Optional[list]] = mapped_column(JSON, nullable=True)
+
     build_steps: Mapped[list["BuildStep"]] = relationship(
         "BuildStep",
         back_populates="server_request",

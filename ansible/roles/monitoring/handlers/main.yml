@@ -1,0 +1,22 @@
+---
+# ansible/roles/monitoring/handlers/main.yml
+
+- name: restart cloudwatch agent linux
+  ansible.builtin.command:
+    cmd: >
+      /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl
+      -a fetch-config
+      -m ec2
+      -s
+      -c file:{{ cloudwatch_config_path_linux }}
+  when: ansible_os_family in ['RedHat', 'Debian']
+  listen: restart cloudwatch agent linux
+
+- name: restart cloudwatch agent windows
+  ansible.windows.win_powershell:
+    script: |
+      $cwCtl = "C:\Program Files\Amazon\AmazonCloudWatchAgent\amazon-cloudwatch-agent-ctl.ps1"
+      & $cwCtl -a fetch-config -m ec2 -s -c "file:{{ cloudwatch_config_path_windows }}"
+      $Ansible.Changed = $true
+  when: ansible_os_family == 'Windows'
+  listen: restart cloudwatch agent windows

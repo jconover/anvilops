@@ -1,0 +1,42 @@
+---
+# AnvilOps Windows-specific variables
+# Applied to all hosts in the 'windows' or 'platform_windows' group.
+
+ansible_connection: winrm
+ansible_port: 5986
+ansible_winrm_transport: ntlm
+ansible_winrm_server_cert_validation: ignore
+ansible_become_method: runas
+
+# Windows Update settings
+wsus_server: ""  # Set to WSUS URL if using internal WSUS
+windows_update_category:
+  - SecurityUpdates
+  - CriticalUpdates
+
+# Windows Firewall defaults — enable all profiles
+firewall_profiles:
+  domain: true
+  private: true
+  public: true
+
+# WinRM configuration
+winrm_https_port: 5986
+winrm_max_memory_per_shell: 1024
+
+# Chocolatey settings
+chocolatey_source: "https://community.chocolatey.org/api/v2/"
+
+# RDP settings
+rdp_enabled: true
+rdp_nla_required: true
+
+# Power plan
+power_plan: "High Performance"
+
+# Services to disable for hardening
+disabled_services:
+  - Spooler          # Print Spooler
+  - XblAuthManager   # Xbox Live Auth Manager
+  - XblGameSave      # Xbox Live Game Save
+  - MapsBroker       # Downloaded Maps Manager

@@ -1,0 +1,16 @@
+---
+# ansible/roles/common/handlers/main.yml
+
+- name: restart chronyd
+  ansible.builtin.service:
+    name: chronyd
+    state: restarted
+  when: ansible_os_family in ['RedHat', 'Debian']
+  listen: restart chronyd
+
+- name: restart sshd
+  ansible.builtin.service:
+    name: sshd
+    state: restarted
+  when: ansible_os_family in ['RedHat', 'Debian']
+  listen: restart sshd

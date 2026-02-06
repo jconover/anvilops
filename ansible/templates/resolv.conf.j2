@@ -1,0 +1,9 @@
+# Managed by AnvilOps — do not edit manually
+# DNS resolver configuration
+
+{% for server in dns_servers %}
+nameserver {{ server }}
+{% endfor %}
+
+options timeout:2 attempts:3 rotate
+search ec2.internal

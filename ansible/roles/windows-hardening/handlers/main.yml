@@ -1,0 +1,8 @@
+---
+# ansible/roles/windows-hardening/handlers/main.yml
+
+- name: restart WinRM
+  ansible.windows.win_service:
+    name: WinRM
+    state: restarted
+  listen: restart WinRM

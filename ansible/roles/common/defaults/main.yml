@@ -1,0 +1,35 @@
+---
+# ansible/roles/common/defaults/main.yml
+# Default variables for common role - shared across all servers
+
+# AnvilOps service account
+anvilops_service_user: "anvilops"
+anvilops_service_user_password: "{{ vault_anvilops_service_user_password | default(omit) }}"
+anvilops_managed: true
+
+# Time settings
+timezone: "UTC"
+ntp_servers:
+  - 169.254.169.123
+
+# Banner / MOTD
+motd_banner: "This server is managed by AnvilOps. Unauthorized changes will be reverted."
+
+# Base packages for Linux
+common_linux_packages:
+  - curl
+  - wget
+  - vim
+  - htop
+  - jq
+  - unzip
+  - git
+
+# Windows services to disable
+windows_disabled_services:
+  - Spooler
+  - XblAuthManager
+  - XblGameSave
+  - XboxGipSvc
+  - XboxNetApiSvc
+  - Fax

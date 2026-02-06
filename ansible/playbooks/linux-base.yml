@@ -1,0 +1,388 @@
+---
+# =============================================================================
+# AnvilOps — Linux Base Configuration Playbook
+# =============================================================================
+# Purpose:  Day 1 post-provision baseline for all Linux servers managed by
+#           AnvilOps. Configures hostname, timezone, packages, NTP, DNS, SSH
+#           hardening, service accounts, firewall, SSM agent, and kernel tuning.
+#
+# Execution: Runs via AWX job template after Terraform provisions the EC2
+#            instance. Designed to be idempotent — safe to re-run at any time.
+#
+# Extra vars (optional):
+#   - server_hostname: override hostname (default: inventory_hostname)
+#   - timezone: override timezone (default: UTC)
+#
+# Tags: hostname, timezone, packages, ntp, dns, syslog, ssh, users, motd,
+#       ssm, firewall, sysctl
+# =============================================================================
+
+- name: AnvilOps Linux Base Configuration
+  hosts: all
+  become: true
+  gather_facts: true
+
+  vars:
+    server_hostname: "{{ inventory_hostname }}"
+    timezone: "UTC"
+
+  tasks:
+    # =========================================================================
+    # Hostname
+    # =========================================================================
+    - name: Set hostname
+      ansible.builtin.hostname:
+        name: "{{ server_hostname }}"
+      tags:
+        - hostname
+
+    - name: Update /etc/hostname
+      ansible.builtin.copy:
+        content: "{{ server_hostname }}\n"
+        dest: /etc/hostname
+        owner: root
+        group: root
+        mode: "0644"
+      tags:
+        - hostname
+
+    - name: Add hostname to /etc/hosts
+      ansible.builtin.lineinfile:
+        path: /etc/hosts
+        regexp: '^127\.0\.1\.1'
+        line: "127.0.1.1 {{ server_hostname }}"
+        state: present
+      tags:
+        - hostname
+
+    # =========================================================================
+    # Timezone
+    # =========================================================================
+    - name: Set timezone to {{ timezone }}
+      community.general.timezone:
+        name: "{{ timezone }}"
+      tags:
+        - timezone
+
+    # =========================================================================
+    # Package Management
+    # =========================================================================
+    - name: Enable EPEL repository (RHEL family)
+      ansible.builtin.yum:
+        name: epel-release
+        state: present
+      when:
+        - ansible_os_family == "RedHat"
+        - epel_enabled | default(true)
+      tags:
+        - packages
+
+    - name: Update all packages (RHEL family)
+      ansible.builtin.yum:
+        name: "*"
+        state: latest
+        security: true
+      when: ansible_os_family == "RedHat"
+      tags:
+        - packages
+
+    - name: Update all packages (Debian family)
+      ansible.builtin.apt:
+        upgrade: safe
+        update_cache: true
+        cache_valid_time: 3600
+      when: ansible_os_family == "Debian"
+      tags:
+        - packages
+
+    - name: Install essential packages (RHEL family)
+      ansible.builtin.yum:
+        name: "{{ linux_base_packages }}"
+        state: present
+      when: ansible_os_family == "RedHat"
+      tags:
+        - packages
+
+    - name: Install essential packages (Debian family)
+      ansible.builtin.apt:
+        name: "{{ linux_base_packages }}"
+        state: present
+        update_cache: true
+      when: ansible_os_family == "Debian"
+      tags:
+        - packages
+
+    # =========================================================================
+    # NTP — chrony
+    # =========================================================================
+    - name: Configure chrony NTP servers
+      ansible.builtin.template:
+        src: ../templates/chrony.conf.j2
+        dest: /etc/chrony.conf
+        owner: root
+        group: root
+        mode: "0644"
+        backup: true
+      notify: Restart chrony
+      when: ansible_os_family == "RedHat"
+      tags:
+        - ntp
+
+    - name: Configure chrony NTP servers (Debian)
+      ansible.builtin.template:
+        src: ../templates/chrony.conf.j2
+        dest: /etc/chrony/chrony.conf
+        owner: root
+        group: root
+        mode: "0644"
+        backup: true
+      notify: Restart chrony
+      when: ansible_os_family == "Debian"
+      tags:
+        - ntp
+
+    - name: Ensure chrony is enabled and running
+      ansible.builtin.systemd:
+        name: chronyd
+        state: started
+        enabled: true
+      tags:
+        - ntp
+
+    # =========================================================================
+    # DNS resolvers
+    # =========================================================================
+    - name: Configure DNS resolvers in /etc/resolv.conf
+      ansible.builtin.template:
+        src: ../templates/resolv.conf.j2
+        dest: /etc/resolv.conf
+        owner: root
+        group: root
+        mode: "0644"
+      tags:
+        - dns
+
+    # =========================================================================
+    # Syslog — forward to CloudWatch via rsyslog
+    # =========================================================================
+    - name: Configure rsyslog forwarding
+      ansible.builtin.copy:
+        content: |
+          # AnvilOps — forward all logs for CloudWatch agent pickup
+          *.* /var/log/anvilops/all.log
+        dest: /etc/rsyslog.d/50-anvilops.conf
+        owner: root
+        group: root
+        mode: "0644"
+      notify: Restart rsyslog
+      tags:
+        - syslog
+
+    - name: Ensure AnvilOps log directory exists
+      ansible.builtin.file:
+        path: /var/log/anvilops
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+      tags:
+        - syslog
+
+    - name: Ensure rsyslog is enabled and running
+      ansible.builtin.systemd:
+        name: rsyslog
+        state: started
+        enabled: true
+      tags:
+        - syslog
+
+    # =========================================================================
+    # SSH Hardening
+    # =========================================================================
+    - name: Harden SSH configuration
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: "{{ item.regexp }}"
+        line: "{{ item.line }}"
+        state: present
+        validate: "sshd -t -f %s"
+      loop:
+        - regexp: '^#?PermitRootLogin'
+          line: "PermitRootLogin {{ ssh_permit_root_login }}"
+        - regexp: '^#?PasswordAuthentication'
+          line: "PasswordAuthentication {{ ssh_password_authentication }}"
+        - regexp: '^#?MaxAuthTries'
+          line: "MaxAuthTries {{ ssh_max_auth_tries }}"
+        - regexp: '^#?ClientAliveInterval'
+          line: "ClientAliveInterval {{ ssh_client_alive_interval | default(300) }}"
+        - regexp: '^#?ClientAliveCountMax'
+          line: "ClientAliveCountMax {{ ssh_client_alive_count_max | default(2) }}"
+      notify: Restart sshd
+      tags:
+        - ssh
+
+    # =========================================================================
+    # Service accounts
+    # =========================================================================
+    - name: Create anvilops service account
+      ansible.builtin.user:
+        name: "{{ anvilops_service_account }}"
+        comment: "AnvilOps Service Account"
+        shell: /bin/bash
+        create_home: true
+        system: true
+        state: present
+      tags:
+        - users
+
+    - name: Configure sudoers for anvilops user
+      ansible.builtin.copy:
+        content: |
+          # AnvilOps service account — full sudo without password
+          {{ anvilops_service_account }} ALL=(ALL) NOPASSWD: ALL
+        dest: "/etc/sudoers.d/{{ anvilops_service_account }}"
+        owner: root
+        group: root
+        mode: "0440"
+        validate: "visudo -cf %s"
+      tags:
+        - users
+
+    # =========================================================================
+    # MOTD banner
+    # =========================================================================
+    - name: Set AnvilOps MOTD banner
+      ansible.builtin.copy:
+        content: |
+          ============================================================
+                          AnvilOps Managed Server
+          ------------------------------------------------------------
+           Hostname:     {{ server_hostname }}
+           Environment:  {{ server_environment | default('unknown') }}
+           Role:         {{ server_role | default('generic') }}
+           Managed By:   AnvilOps Automation Platform
+          ------------------------------------------------------------
+           WARNING: This server is managed by AnvilOps.
+           Manual changes may be overwritten by automation.
+          ============================================================
+        dest: /etc/motd
+        owner: root
+        group: root
+        mode: "0644"
+      tags:
+        - motd
+
+    # =========================================================================
+    # SSM Agent
+    # =========================================================================
+    - name: Ensure SSM Agent is installed (RHEL family)
+      ansible.builtin.yum:
+        name: amazon-ssm-agent
+        state: present
+      when: ansible_os_family == "RedHat"
+      tags:
+        - ssm
+
+    - name: Ensure SSM Agent is installed (Debian family)
+      block:
+        - name: Check if SSM agent is installed
+          ansible.builtin.command: dpkg -l amazon-ssm-agent
+          register: ssm_check
+          changed_when: false
+          failed_when: false
+
+        - name: Download SSM agent (Debian)
+          ansible.builtin.get_url:
+            url: "https://s3.{{ aws_region }}.amazonaws.com/amazon-ssm-{{ aws_region }}/latest/debian_amd64/amazon-ssm-agent.deb"
+            dest: /tmp/amazon-ssm-agent.deb
+            mode: "0644"
+          when: ssm_check.rc != 0
+
+        - name: Install SSM agent (Debian)
+          ansible.builtin.apt:
+            deb: /tmp/amazon-ssm-agent.deb
+            state: present
+          when: ssm_check.rc != 0
+      when: ansible_os_family == "Debian"
+      tags:
+        - ssm
+
+    - name: Enable and start SSM Agent
+      ansible.builtin.systemd:
+        name: amazon-ssm-agent
+        state: started
+        enabled: true
+      tags:
+        - ssm
+
+    # =========================================================================
+    # Firewall — firewalld
+    # =========================================================================
+    - name: Install firewalld
+      ansible.builtin.package:
+        name: firewalld
+        state: present
+      tags:
+        - firewall
+
+    - name: Enable and start firewalld
+      ansible.builtin.systemd:
+        name: firewalld
+        state: started
+        enabled: true
+      tags:
+        - firewall
+
+    - name: Set default zone to drop (deny all inbound by default)
+      ansible.builtin.command: firewall-cmd --set-default-zone=drop
+      register: fw_default_zone
+      changed_when: "'ZONE_ALREADY_SET' not in fw_default_zone.stderr"
+      failed_when: fw_default_zone.rc != 0 and 'ZONE_ALREADY_SET' not in fw_default_zone.stderr
+      tags:
+        - firewall
+
+    - name: Allow SSH through firewall
+      ansible.posix.firewalld:
+        service: ssh
+        permanent: true
+        state: enabled
+        zone: drop
+      notify: Reload firewalld
+      tags:
+        - firewall
+
+    # =========================================================================
+    # Sysctl kernel tuning
+    # =========================================================================
+    - name: Apply sysctl tuning parameters
+      ansible.posix.sysctl:
+        name: "{{ item.key }}"
+        value: "{{ item.value }}"
+        sysctl_set: true
+        state: present
+        reload: true
+      loop: "{{ sysctl_settings | dict2items }}"
+      tags:
+        - sysctl
+
+  # ===========================================================================
+  # Handlers
+  # ===========================================================================
+  handlers:
+    - name: Restart chrony
+      ansible.builtin.systemd:
+        name: chronyd
+        state: restarted
+
+    - name: Restart rsyslog
+      ansible.builtin.systemd:
+        name: rsyslog
+        state: restarted
+
+    - name: Restart sshd
+      ansible.builtin.systemd:
+        name: sshd
+        state: restarted
+
+    - name: Reload firewalld
+      ansible.builtin.command: firewall-cmd --reload

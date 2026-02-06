@@ -1,0 +1,42 @@
+---
+# ansible/roles/windows-hardening/defaults/main.yml
+# CIS benchmark-inspired Windows hardening defaults
+
+# Windows Firewall
+enable_firewall_domain: true
+enable_firewall_private: true
+enable_firewall_public: true
+
+# Password policy
+password_min_length: 14
+password_max_age: 90
+password_complexity: true
+
+# Account lockout
+account_lockout_threshold: 5
+account_lockout_duration: 30
+account_lockout_reset_timer: 30
+
+# Audit policy
+audit_logon_events: true
+audit_account_management: true
+audit_policy_changes: true
+
+# Protocol hardening
+disable_smb1: true
+disable_llmnr: true
+disable_netbios: true
+
+# RDP settings
+enable_nla: true
+
+# Administrator account
+admin_rename_to: "anvilops-admin"
+
+# Windows features to remove
+windows_features_to_remove:
+  - Telnet-Client
+  - TFTP-Client
+
+# Windows Update settings
+windows_update_auto_download: true

@@ -1,0 +1,9 @@
+---
+# ansible/roles/iis/handlers/main.yml
+
+- name: restart IIS
+  ansible.windows.win_powershell:
+    script: |
+      iisreset /restart
+      $Ansible.Changed = $true
+  listen: restart IIS

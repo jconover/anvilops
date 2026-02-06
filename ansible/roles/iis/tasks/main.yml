@@ -1,0 +1,180 @@
+---
+# ansible/roles/iis/tasks/main.yml
+# IIS web server installation and configuration
+
+# ---------------------------------------------------------------------------
+# Install IIS Features
+# ---------------------------------------------------------------------------
+- name: Install IIS features
+  ansible.windows.win_feature:
+    name: "{{ iis_features }}"
+    state: present
+    include_management_tools: true
+  register: iis_install_result
+  tags:
+    - iis
+    - install
+
+- name: Reboot after IIS installation if required
+  ansible.windows.win_reboot:
+    reboot_timeout: 600
+    msg: "Rebooting after IIS feature installation"
+  when: iis_install_result.reboot_required | default(false)
+  tags:
+    - iis
+    - install
+
+# ---------------------------------------------------------------------------
+# Remove Default Web Site
+# ---------------------------------------------------------------------------
+- name: Remove Default Web Site
+  community.windows.win_iis_website:
+    name: "Default Web Site"
+    state: absent
+  when: iis_remove_default_site
+  tags:
+    - iis
+    - sites
+
+# ---------------------------------------------------------------------------
+# Application Pool
+# ---------------------------------------------------------------------------
+- name: Create application pool
+  community.windows.win_iis_webapppool:
+    name: "{{ iis_app_pool_name }}"
+    state: started
+    attributes:
+      managedRuntimeVersion: "{{ iis_app_pool_runtime }}"
+      managedPipelineMode: "{{ iis_app_pool_pipeline }}"
+      startMode: AlwaysRunning
+      processModel.idleTimeout: "00:00:00"
+  tags:
+    - iis
+    - app-pool
+
+# ---------------------------------------------------------------------------
+# IIS Logging
+# ---------------------------------------------------------------------------
+- name: Ensure IIS log directory exists
+  ansible.windows.win_file:
+    path: "{{ iis_log_directory }}"
+    state: directory
+  tags:
+    - iis
+    - logging
+
+- name: Configure IIS logging directory
+  ansible.windows.win_powershell:
+    script: |
+      Import-Module WebAdministration
+      $current = (Get-WebConfigurationProperty -Filter "system.applicationHost/sites/siteDefaults/logFile" -Name "directory").Value
+      if ($current -ne "{{ iis_log_directory }}") {
+          Set-WebConfigurationProperty -Filter "system.applicationHost/sites/siteDefaults/logFile" -Name "directory" -Value "{{ iis_log_directory }}"
+          $Ansible.Changed = $true
+      } else {
+          $Ansible.Changed = $false
+      }
+  tags:
+    - iis
+    - logging
+
+# ---------------------------------------------------------------------------
+# Firewall Rules
+# ---------------------------------------------------------------------------
+- name: Open HTTP port (80) in Windows Firewall
+  community.windows.win_firewall_rule:
+    name: "AnvilOps - IIS HTTP (TCP-In)"
+    localport: 80
+    protocol: tcp
+    direction: in
+    action: allow
+    enabled: true
+    state: present
+    profiles:
+      - domain
+      - private
+      - public
+  tags:
+    - iis
+    - firewall
+
+- name: Open HTTPS port (443) in Windows Firewall
+  community.windows.win_firewall_rule:
+    name: "AnvilOps - IIS HTTPS (TCP-In)"
+    localport: 443
+    protocol: tcp
+    direction: in
+    action: allow
+    enabled: true
+    state: present
+    profiles:
+      - domain
+      - private
+      - public
+  tags:
+    - iis
+    - firewall
+
+# ---------------------------------------------------------------------------
+# IIS Remote Management
+# ---------------------------------------------------------------------------
+- name: Install IIS remote management feature
+  ansible.windows.win_feature:
+    name: Web-Mgmt-Service
+    state: present
+  when: iis_enable_remote_management
+  tags:
+    - iis
+    - remote-management
+
+- name: Enable IIS remote management via registry
+  ansible.windows.win_regedit:
+    path: HKLM:\SOFTWARE\Microsoft\WebManagement\Server
+    name: EnableRemoteManagement
+    data: 1
+    type: dword
+  when: iis_enable_remote_management
+  tags:
+    - iis
+    - remote-management
+
+- name: Ensure Web Management Service is started
+  ansible.windows.win_service:
+    name: WMSVC
+    state: started
+    start_mode: auto
+  when: iis_enable_remote_management
+  tags:
+    - iis
+    - remote-management
+
+# ---------------------------------------------------------------------------
+# Default Health Check Page
+# ---------------------------------------------------------------------------
+- name: Ensure webroot directory exists
+  ansible.windows.win_file:
+    path: "{{ iis_webroot }}"
+    state: directory
+  tags:
+    - iis
+    - health-check
+
+- name: Create default health check page
+  ansible.windows.win_template:
+    src: index.html.j2
+    dest: "{{ iis_webroot }}\\index.html"
+  tags:
+    - iis
+    - health-check
+
+# ---------------------------------------------------------------------------
+# Ensure IIS service is running
+# ---------------------------------------------------------------------------
+- name: Ensure W3SVC (IIS) is started and enabled
+  ansible.windows.win_service:
+    name: W3SVC
+    state: started
+    start_mode: auto
+  tags:
+    - iis
+    - service

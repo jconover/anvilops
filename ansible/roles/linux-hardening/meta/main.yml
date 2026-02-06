@@ -1,0 +1,27 @@
+---
+# ansible/roles/linux-hardening/meta/main.yml
+
+galaxy_info:
+  author: AnvilOps
+  company: AnvilOps
+  description: CIS benchmark-inspired Linux hardening for AnvilOps-managed servers
+  license: MIT
+  min_ansible_version: "2.15"
+  platforms:
+    - name: EL
+      versions:
+        - "8"
+        - "9"
+    - name: Ubuntu
+      versions:
+        - jammy
+        - noble
+  galaxy_tags:
+    - hardening
+    - security
+    - cis
+    - linux
+    - anvilops
+
+dependencies:
+  - role: common

@@ -1,0 +1,307 @@
+---
+# ansible/roles/windows-hardening/tasks/main.yml
+# CIS benchmark-inspired Windows hardening
+
+# ---------------------------------------------------------------------------
+# Windows Firewall
+# ---------------------------------------------------------------------------
+- name: Enable Windows Firewall - Domain profile
+  ansible.windows.win_powershell:
+    script: |
+      Set-NetFirewallProfile -Profile Domain -Enabled True
+      $Ansible.Changed = $true
+  when: enable_firewall_domain
+  tags:
+    - hardening
+    - firewall
+
+- name: Enable Windows Firewall - Private profile
+  ansible.windows.win_powershell:
+    script: |
+      Set-NetFirewallProfile -Profile Private -Enabled True
+      $Ansible.Changed = $true
+  when: enable_firewall_private
+  tags:
+    - hardening
+    - firewall
+
+- name: Enable Windows Firewall - Public profile
+  ansible.windows.win_powershell:
+    script: |
+      Set-NetFirewallProfile -Profile Public -Enabled True
+      $Ansible.Changed = $true
+  when: enable_firewall_public
+  tags:
+    - hardening
+    - firewall
+
+# ---------------------------------------------------------------------------
+# Password Policy
+# ---------------------------------------------------------------------------
+- name: Set minimum password length
+  ansible.windows.win_security_policy:
+    section: System Access
+    key: MinimumPasswordLength
+    value: "{{ password_min_length }}"
+  tags:
+    - hardening
+    - password-policy
+
+- name: Set maximum password age
+  ansible.windows.win_security_policy:
+    section: System Access
+    key: MaximumPasswordAge
+    value: "{{ password_max_age }}"
+  tags:
+    - hardening
+    - password-policy
+
+- name: Enable password complexity requirements
+  ansible.windows.win_security_policy:
+    section: System Access
+    key: PasswordComplexity
+    value: "1"
+  when: password_complexity
+  tags:
+    - hardening
+    - password-policy
+
+# ---------------------------------------------------------------------------
+# Account Lockout Policy
+# ---------------------------------------------------------------------------
+- name: Set account lockout threshold
+  ansible.windows.win_security_policy:
+    section: System Access
+    key: LockoutBadCount
+    value: "{{ account_lockout_threshold }}"
+  tags:
+    - hardening
+    - lockout-policy
+
+- name: Set account lockout duration (minutes)
+  ansible.windows.win_security_policy:
+    section: System Access
+    key: LockoutDuration
+    value: "{{ account_lockout_duration }}"
+  tags:
+    - hardening
+    - lockout-policy
+
+- name: Set account lockout reset counter (minutes)
+  ansible.windows.win_security_policy:
+    section: System Access
+    key: ResetLockoutCount
+    value: "{{ account_lockout_reset_timer }}"
+  tags:
+    - hardening
+    - lockout-policy
+
+# ---------------------------------------------------------------------------
+# Disable SMBv1
+# ---------------------------------------------------------------------------
+- name: Disable SMBv1 protocol
+  ansible.windows.win_optional_feature:
+    name: SMB1Protocol
+    state: absent
+  when: disable_smb1
+  tags:
+    - hardening
+    - smb
+
+# ---------------------------------------------------------------------------
+# Disable LLMNR
+# ---------------------------------------------------------------------------
+- name: Disable LLMNR via registry
+  ansible.windows.win_regedit:
+    path: HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\DNSClient
+    name: EnableMulticast
+    data: 0
+    type: dword
+  when: disable_llmnr
+  tags:
+    - hardening
+    - llmnr
+
+# ---------------------------------------------------------------------------
+# Disable NetBIOS over TCP/IP
+# ---------------------------------------------------------------------------
+- name: Disable NetBIOS over TCP/IP
+  ansible.windows.win_powershell:
+    script: |
+      $changed = $false
+      $adapters = Get-WmiObject Win32_NetworkAdapterConfiguration -Filter "IPEnabled=True"
+      foreach ($adapter in $adapters) {
+          $current = $adapter.TcpipNetbiosOptions
+          if ($current -ne 2) {
+              $adapter.SetTcpipNetbios(2) | Out-Null
+              $changed = $true
+          }
+      }
+      $Ansible.Changed = $changed
+  when: disable_netbios
+  tags:
+    - hardening
+    - netbios
+
+# ---------------------------------------------------------------------------
+# Windows Defender
+# ---------------------------------------------------------------------------
+- name: Enable Windows Defender real-time protection
+  ansible.windows.win_powershell:
+    script: |
+      $prefs = Get-MpPreference
+      if ($prefs.DisableRealtimeMonitoring -eq $true) {
+          Set-MpPreference -DisableRealtimeMonitoring $false
+          $Ansible.Changed = $true
+      } else {
+          $Ansible.Changed = $false
+      }
+  tags:
+    - hardening
+    - defender
+
+# ---------------------------------------------------------------------------
+# Disable Autorun/Autoplay
+# ---------------------------------------------------------------------------
+- name: Disable autorun for all drives
+  ansible.windows.win_regedit:
+    path: HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer
+    name: NoDriveTypeAutoRun
+    data: 255
+    type: dword
+  tags:
+    - hardening
+    - autorun
+
+- name: Disable autoplay
+  ansible.windows.win_regedit:
+    path: HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer
+    name: NoAutoplayfornonVolume
+    data: 1
+    type: dword
+  tags:
+    - hardening
+    - autorun
+
+# ---------------------------------------------------------------------------
+# Enable NLA for RDP
+# ---------------------------------------------------------------------------
+- name: Enable Network Level Authentication for RDP
+  ansible.windows.win_regedit:
+    path: HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp
+    name: UserAuthentication
+    data: 1
+    type: dword
+  when: enable_nla
+  tags:
+    - hardening
+    - rdp
+
+# ---------------------------------------------------------------------------
+# Audit Policy
+# ---------------------------------------------------------------------------
+- name: Enable audit logon events (Success and Failure)
+  ansible.windows.win_powershell:
+    script: |
+      auditpol /set /subcategory:"Logon" /success:enable /failure:enable
+      $Ansible.Changed = $true
+  when: audit_logon_events
+  tags:
+    - hardening
+    - audit
+
+- name: Enable audit account management (Success and Failure)
+  ansible.windows.win_powershell:
+    script: |
+      auditpol /set /subcategory:"User Account Management" /success:enable /failure:enable
+      auditpol /set /subcategory:"Computer Account Management" /success:enable /failure:enable
+      auditpol /set /subcategory:"Security Group Management" /success:enable /failure:enable
+      $Ansible.Changed = $true
+  when: audit_account_management
+  tags:
+    - hardening
+    - audit
+
+- name: Enable audit policy changes (Success and Failure)
+  ansible.windows.win_powershell:
+    script: |
+      auditpol /set /subcategory:"Audit Policy Change" /success:enable /failure:enable
+      auditpol /set /subcategory:"Authentication Policy Change" /success:enable /failure:enable
+      $Ansible.Changed = $true
+  when: audit_policy_changes
+  tags:
+    - hardening
+    - audit
+
+# ---------------------------------------------------------------------------
+# Disable Guest Account
+# ---------------------------------------------------------------------------
+- name: Disable guest account
+  ansible.windows.win_user:
+    name: Guest
+    account_disabled: true
+  tags:
+    - hardening
+    - accounts
+
+# ---------------------------------------------------------------------------
+# Rename Administrator Account
+# ---------------------------------------------------------------------------
+- name: Rename default administrator account
+  ansible.windows.win_powershell:
+    script: |
+      $admin = Get-LocalUser -Name "Administrator" -ErrorAction SilentlyContinue
+      if ($admin) {
+          Rename-LocalUser -Name "Administrator" -NewName "{{ admin_rename_to }}"
+          $Ansible.Changed = $true
+      } else {
+          # Already renamed or does not exist
+          $existing = Get-LocalUser -Name "{{ admin_rename_to }}" -ErrorAction SilentlyContinue
+          if ($existing) {
+              $Ansible.Changed = $false
+          } else {
+              $Ansible.Changed = $false
+              $Ansible.Result = "Administrator account not found with either name"
+          }
+      }
+  tags:
+    - hardening
+    - accounts
+
+# ---------------------------------------------------------------------------
+# Windows Update Configuration
+# ---------------------------------------------------------------------------
+- name: Configure Windows Update to auto-download but not auto-install
+  ansible.windows.win_regedit:
+    path: HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU
+    name: AUOptions
+    data: 3
+    type: dword
+  when: windows_update_auto_download
+  tags:
+    - hardening
+    - windows-update
+
+- name: Enable automatic download of updates
+  ansible.windows.win_regedit:
+    path: HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU
+    name: NoAutoUpdate
+    data: 0
+    type: dword
+  when: windows_update_auto_download
+  tags:
+    - hardening
+    - windows-update
+
+# ---------------------------------------------------------------------------
+# Remove Unnecessary Windows Features
+# ---------------------------------------------------------------------------
+- name: Remove unnecessary Windows features
+  ansible.windows.win_feature:
+    name: "{{ item }}"
+    state: absent
+  loop: "{{ windows_features_to_remove }}"
+  failed_when: false
+  tags:
+    - hardening
+    - features

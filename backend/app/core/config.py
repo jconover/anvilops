@@ -13,6 +13,15 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "AnvilOps"
     DEBUG: bool = False
 
+    # AWX Configuration
+    AWX_BASE_URL: str = "http://localhost:8052"
+    AWX_USERNAME: str = "admin"
+    AWX_PASSWORD: str = "password"
+    AWX_VERIFY_SSL: bool = False
+    AWX_JOB_TIMEOUT: int = 600
+    AWX_POLL_INTERVAL: int = 10
+    AWX_ORGANIZATION_ID: int = 1
+
     model_config = {"env_file": ".env", "extra": "ignore"}
 
 

@@ -80,6 +80,11 @@ def get_server_request(session: Session, server_request_id: str) -> dict:
         "software_packages": sr.software_packages,
         "additional_storage": sr.additional_storage,
         "tags": sr.tags,
+        "aws_instance_id": sr.aws_instance_id,
+        "private_ip": sr.private_ip,
+        "public_ip": sr.public_ip,
+        "dns_name": sr.dns_name,
+        "awx_host_id": getattr(sr, "awx_host_id", None),
     }
 
 

@@ -1,0 +1,20 @@
+---
+# ansible/roles/linux-hardening/handlers/main.yml
+
+- name: restart sshd
+  ansible.builtin.service:
+    name: sshd
+    state: restarted
+  listen: restart sshd
+
+- name: restart firewalld
+  ansible.builtin.service:
+    name: firewalld
+    state: restarted
+  listen: restart firewalld
+
+- name: restart auditd
+  ansible.builtin.service:
+    name: auditd
+    state: restarted
+  listen: restart auditd

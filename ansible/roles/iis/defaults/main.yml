@@ -1,0 +1,39 @@
+---
+# ansible/roles/iis/defaults/main.yml
+# IIS web server installation and configuration defaults
+
+# IIS features to install
+iis_features:
+  - Web-Server
+  - Web-Common-Http
+  - Web-Default-Doc
+  - Web-Http-Errors
+  - Web-Static-Content
+  - Web-Health
+  - Web-Performance
+  - Web-Security
+  - Web-Mgmt-Tools
+  - Web-Mgmt-Console
+
+# Site configuration
+iis_remove_default_site: true
+
+# Logging
+iis_log_directory: "C:\\inetpub\\logs\\LogFiles"
+
+# Application pool
+iis_app_pool_name: "AnvilOps"
+iis_app_pool_runtime: "v4.0"
+iis_app_pool_pipeline: "Integrated"
+iis_app_pool_state: started
+
+# Webroot
+iis_webroot: "C:\\inetpub\\wwwroot"
+
+# Remote management
+iis_enable_remote_management: true
+
+# Firewall
+iis_firewall_ports:
+  - 80
+  - 443

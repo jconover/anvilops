@@ -1,0 +1,89 @@
+{
+  "agent": {
+    "metrics_collection_interval": {{ cloudwatch_metrics_collection_interval }},
+    "logfile": "C:\\ProgramData\\Amazon\\AmazonCloudWatchAgent\\Logs\\amazon-cloudwatch-agent.log"
+  },
+  "metrics": {
+    "namespace": "{{ cloudwatch_namespace }}",
+    "metrics_collected": {
+      "Processor": {
+        "measurement": [
+          "% Idle Time",
+          "% Interrupt Time",
+          "% User Time",
+          "% Processor Time"
+        ],
+        "resources": ["_Total"],
+        "metrics_collection_interval": {{ cloudwatch_metrics_collection_interval }}
+      },
+      "Memory": {
+        "measurement": [
+          "% Committed Bytes In Use",
+          "Available MBytes",
+          "Committed Bytes"
+        ],
+        "metrics_collection_interval": {{ cloudwatch_metrics_collection_interval }}
+      },
+      "LogicalDisk": {
+        "measurement": [
+          "% Free Space",
+          "Free Megabytes",
+          "% Disk Time",
+          "Disk Read Bytes/sec",
+          "Disk Write Bytes/sec"
+        ],
+        "resources": ["*"],
+        "metrics_collection_interval": {{ cloudwatch_metrics_collection_interval }}
+      },
+      "Paging File": {
+        "measurement": [
+          "% Usage"
+        ],
+        "resources": ["_Total"],
+        "metrics_collection_interval": {{ cloudwatch_metrics_collection_interval }}
+      },
+      "Network Interface": {
+        "measurement": [
+          "Bytes Received/sec",
+          "Bytes Sent/sec",
+          "Packets Received/sec",
+          "Packets Sent/sec",
+          "Packets Received Errors",
+          "Packets Outbound Errors"
+        ],
+        "resources": ["*"],
+        "metrics_collection_interval": {{ cloudwatch_metrics_collection_interval }}
+      },
+      "System": {
+        "measurement": [
+          "Processor Queue Length",
+          "System Up Time"
+        ],
+        "metrics_collection_interval": {{ cloudwatch_metrics_collection_interval }}
+      }
+    },
+    "append_dimensions": {
+      "InstanceId": "${aws:InstanceId}",
+      "InstanceType": "${aws:InstanceType}",
+      "AutoScalingGroupName": "${aws:AutoScalingGroupName}"
+    }
+  },
+  "logs": {
+    "logs_collected": {
+      "windows_events": {
+        "collect_list": [
+{% for event_log in monitored_windows_logs %}
+          {
+            "event_name": "{{ event_log }}",
+            "event_levels": ["INFORMATION", "WARNING", "ERROR", "CRITICAL"],
+            "log_group_name": "{{ cloudwatch_log_group_prefix }}/{{ inventory_hostname }}/{{ event_log }}",
+            "log_stream_name": "{instance_id}",
+            "retention_in_days": {{ cloudwatch_log_retention_days }}
+          }{{ "," if not loop.last else "" }}
+{% endfor %}
+        ]
+      }
+    },
+    "force_flush_interval": 15
+  }
+}
