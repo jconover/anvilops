@@ -124,12 +124,20 @@ async def get_server(
     return server
 
 
-@router.delete("/{server_id}", response_model=ServerResponse)
+@router.post("/{server_id}/decommission", response_model=ServerResponse)
 async def decommission_server(
     server_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
 ):
-    """Request server decommission."""
+    """Trigger server decommission workflow.
+
+    Validates the server is in a decommissionable state (``ready`` or
+    ``failed``), marks it as ``decommissioning``, and dispatches the
+    Celery decommission task that runs the full reverse pipeline:
+    Puppet purge -> AWX decommission -> Terraform destroy -> DNS cleanup.
+
+    Returns the updated server with status ``decommissioning``.
+    """
     result = await db.execute(
         select(ServerRequest).where(ServerRequest.id == server_id)
     )
@@ -144,9 +152,62 @@ async def decommission_server(
             detail=f"Server is already {server.status}",
         )
 
+    if server.status not in ("ready", "failed"):
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Server cannot be decommissioned from status '{server.status}'. "
+                "Only servers in 'ready' or 'failed' status can be decommissioned."
+            ),
+        )
+
     server.status = "decommissioning"
+    server.status_message = "Decommission requested"
     await db.flush()
     await db.refresh(server)
 
-    logger.info("Server %s marked for decommission", server.server_name)
+    # Dispatch Celery decommission task
+    try:
+        from app.tasks.decommission import run_server_decommission
+        run_server_decommission.delay(str(server.id))
+    except ImportError:
+        logger.warning("Celery decommission task not yet available, skipping dispatch")
+
+    logger.info("Server %s (%s) marked for decommission", server.server_name, server.id)
+    return server
+
+
+@router.delete("/{server_id}", response_model=ServerResponse)
+async def delete_server(
+    server_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+):
+    """Delete a decommissioned server request record.
+
+    Only servers in ``decommissioned`` status can be deleted.  For active
+    servers, use the ``POST /{server_id}/decommission`` endpoint to
+    trigger the full teardown workflow first.
+    """
+    result = await db.execute(
+        select(ServerRequest).where(ServerRequest.id == server_id)
+    )
+    server = result.scalar_one_or_none()
+
+    if server is None:
+        raise HTTPException(status_code=404, detail="Server request not found")
+
+    if server.status != "decommissioned":
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Only decommissioned servers can be deleted. "
+                f"Current status: '{server.status}'. "
+                "Use POST /{server_id}/decommission to tear down first."
+            ),
+        )
+
+    await db.delete(server)
+    await db.flush()
+
+    logger.info("Deleted decommissioned server record %s (%s)", server.server_name, server.id)
     return server

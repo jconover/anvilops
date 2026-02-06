@@ -3,7 +3,6 @@
 import {
   AlertTriangle,
   Pencil,
-  DollarSign,
   Server,
   Shield,
   Package,
@@ -15,6 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { useServerForm } from '@/hooks/use-server-form';
+import { CostEstimate } from './cost-estimate';
 
 // ---------------------------------------------------------------------------
 // Display helpers
@@ -303,20 +303,8 @@ export function StepReview({ onGoToStep }: StepReviewProps) {
         </CardContent>
       </Card>
 
-      {/* Cost estimation placeholder */}
-      <Card className="border-dashed">
-        <CardContent className="flex items-center gap-3 p-5">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted text-muted-foreground">
-            <DollarSign className="h-5 w-5" />
-          </div>
-          <div>
-            <p className="text-sm font-semibold">Estimated Monthly Cost</p>
-            <p className="text-sm text-muted-foreground">
-              Coming soon -- real-time cost estimation from the AWS Pricing API.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Cost estimation */}
+      <CostEstimate />
     </div>
   );
 }

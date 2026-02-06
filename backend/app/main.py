@@ -15,6 +15,19 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("AnvilOps API starting")
+
+    # Seed default server templates
+    try:
+        from app.db.session import async_session_maker
+        from app.services.template_seed import seed_default_templates
+
+        async with async_session_maker() as session:
+            await seed_default_templates(session)
+            await session.commit()
+        logger.info("Template seeding complete")
+    except Exception as exc:
+        logger.warning("Template seeding skipped: %s", exc)
+
     yield
     logger.info("AnvilOps API shutting down")
 

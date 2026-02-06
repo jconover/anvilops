@@ -4,6 +4,8 @@ import {
   ClipboardList,
   CheckSquare,
   Shield,
+  FileText,
+  Bell,
   Settings,
   LayoutDashboard,
   type LucideIcon,
@@ -24,5 +26,7 @@ export const mainNavItems: NavItem[] = [
   { title: 'Requests', href: '/dashboard/requests', icon: ClipboardList },
   { title: 'Approvals', href: '/dashboard/approvals', icon: CheckSquare, permission: 'servers:approve' },
   { title: 'Compliance', href: '/dashboard/compliance', icon: Shield },
+  { title: 'Audit Log', href: '/dashboard/audit', icon: FileText, permission: 'admin:access' },
+  { title: 'Notifications', href: '/dashboard/notifications', icon: Bell },
   { title: 'Admin', href: '/dashboard/admin', icon: Settings, permission: 'admin:access' },
 ];

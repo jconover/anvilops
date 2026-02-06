@@ -72,3 +72,29 @@ export {
   useServerBuildSteps,
   useServers,
 } from './hooks';
+
+// Notification types
+export type {
+  NotificationItem,
+  NotificationListResponse,
+  NotificationListParams,
+} from './notifications';
+
+// Notification endpoint functions
+export {
+  listNotifications,
+  getUnreadCount,
+  markAsRead,
+  markAllAsRead,
+  deleteNotification as deleteNotificationApi,
+} from './notifications';
+
+// Notification React Query hooks
+export {
+  notificationKeys,
+  useNotifications,
+  useUnreadCount,
+  useMarkAsRead,
+  useMarkAllAsRead,
+  useDeleteNotification,
+} from './notifications';

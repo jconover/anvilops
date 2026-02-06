@@ -1,26 +1,17 @@
 'use client';
 
 import { useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import {
   useServer,
   useServerBuildSteps,
   usePuppetStatus,
-  useDeleteServer,
 } from '@/lib/api/hooks';
 import { useAuth } from '@/lib/auth/context';
 import {
@@ -29,6 +20,8 @@ import {
   getOsFriendlyName,
   getInstanceSizeLabel,
 } from '@/components/server-inventory/columns';
+import { DecommissionDialog } from '@/components/server-inventory/decommission-dialog';
+import { DecommissionTracker } from '@/components/server-inventory/decommission-tracker';
 import type { BuildStep, BuildStepStatus } from '@/lib/api/types';
 import {
   ArrowLeft,
@@ -42,8 +35,9 @@ import {
   Circle,
   XCircle,
   Loader2,
+  AlertTriangle,
+  Ban,
 } from 'lucide-react';
-import { toast } from 'sonner';
 
 // ---------------------------------------------------------------------------
 // Build steps timeline
@@ -187,33 +181,20 @@ function DetailSkeleton() {
 
 export default function ServerDetailPage() {
   const params = useParams<{ id: string }>();
-  const router = useRouter();
   const { hasPermission } = useAuth();
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showDecommissionDialog, setShowDecommissionDialog] = useState(false);
 
   const serverId = params.id;
   const { data: server, isLoading: serverLoading } = useServer(serverId);
   const { data: buildSteps } = useServerBuildSteps(serverId);
   const { data: puppetStatus } = usePuppetStatus(serverId);
-  const deleteServer = useDeleteServer();
 
-  const canDelete = hasPermission('servers:delete');
-
-  const handleDelete = () => {
-    if (!serverId) return;
-    deleteServer.mutate(serverId, {
-      onSuccess: () => {
-        toast.success(
-          `Server ${server?.server_name ?? serverId} decommission initiated`,
-        );
-        setShowDeleteDialog(false);
-        router.push('/dashboard/servers');
-      },
-      onError: () => {
-        toast.error('Failed to delete server');
-      },
-    });
-  };
+  const canDecommission = hasPermission('servers:delete');
+  const isDecommissioning = server?.status === 'decommissioning';
+  const isDecommissioned = server?.status === 'decommissioned';
+  const canShowDecommission =
+    canDecommission &&
+    (server?.status === 'ready' || server?.status === 'failed');
 
   // Loading
   if (serverLoading || !server) {
@@ -240,6 +221,33 @@ export default function ServerDetailPage() {
         </Link>
       </Button>
 
+      {/* Decommissioned banner */}
+      {isDecommissioned && (
+        <Alert variant="destructive">
+          <Ban className="h-4 w-4" />
+          <AlertTitle>Server Decommissioned</AlertTitle>
+          <AlertDescription>
+            This server has been permanently decommissioned. All associated
+            resources (EC2 instance, EBS volumes, DNS records, security groups)
+            have been destroyed. The Puppet node has been purged and the AWX host
+            has been removed.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Decommissioning banner */}
+      {isDecommissioning && (
+        <Alert variant="warning">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Decommission In Progress</AlertTitle>
+          <AlertDescription>
+            This server is currently being decommissioned. The reverse pipeline
+            is running to clean up all associated resources. Track the progress
+            below.
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3 flex-wrap">
@@ -256,14 +264,14 @@ export default function ServerDetailPage() {
               View Build
             </Link>
           </Button>
-          {canDelete && (
+          {canShowDecommission && (
             <Button
               variant="destructive"
               size="sm"
-              onClick={() => setShowDeleteDialog(true)}
+              onClick={() => setShowDecommissionDialog(true)}
             >
               <Trash2 className="mr-2 h-4 w-4" />
-              Delete
+              Decommission
             </Button>
           )}
         </div>
@@ -273,6 +281,21 @@ export default function ServerDetailPage() {
         <div className="rounded-md bg-muted px-4 py-3 text-sm">
           {server.status_message}
         </div>
+      )}
+
+      {/* Decommission progress tracker */}
+      {isDecommissioning && (
+        <Card className="border-amber-200 dark:border-amber-800">
+          <CardHeader className="pb-4">
+            <CardTitle className="flex items-center gap-2 text-base text-amber-700 dark:text-amber-400">
+              <Trash2 className="h-4 w-4" />
+              Decommission Pipeline
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <DecommissionTracker buildSteps={buildSteps} />
+          </CardContent>
+        </Card>
       )}
 
       {/* Info grid */}
@@ -457,39 +480,12 @@ export default function ServerDetailPage() {
         </Card>
       )}
 
-      {/* Delete confirmation dialog */}
-      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete Server</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to decommission{' '}
-              <span className="font-semibold text-foreground">
-                {server.server_name}
-              </span>
-              ? This will initiate the full decommission workflow: Ansible
-              decommission playbook, Terraform destroy, DNS cleanup, and Puppet
-              node purge. This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setShowDeleteDialog(false)}
-              disabled={deleteServer.isPending}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleDelete}
-              disabled={deleteServer.isPending}
-            >
-              {deleteServer.isPending ? 'Deleting...' : 'Delete Server'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Decommission confirmation dialog */}
+      <DecommissionDialog
+        server={server}
+        open={showDecommissionDialog}
+        onOpenChange={setShowDecommissionDialog}
+      />
     </div>
   );
 }

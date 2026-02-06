@@ -20,6 +20,7 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/auth/context';
 import type { Permission } from '@/lib/auth/roles';
 import { mainNavItems } from './nav-config';
+import { NotificationBell } from '@/components/notifications/notification-bell';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -54,6 +55,7 @@ const ROUTE_TITLES: Record<string, string> = {
   '/dashboard/requests': 'Requests',
   '/dashboard/approvals': 'Approvals',
   '/dashboard/compliance': 'Compliance',
+  '/dashboard/notifications': 'Notifications',
   '/dashboard/admin': 'Admin',
   '/dashboard': 'Dashboard',
 };
@@ -221,15 +223,8 @@ export function Header() {
         />
       </div>
 
-      {/* Notification bell (cosmetic) */}
-      <Button variant="ghost" size="icon" className="relative">
-        <Bell className="h-5 w-5" />
-        <span className="absolute right-1.5 top-1.5 flex h-2 w-2">
-          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
-          <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
-        </span>
-        <span className="sr-only">Notifications</span>
-      </Button>
+      {/* Notification bell with dropdown */}
+      <NotificationBell />
 
       {/* User dropdown */}
       <DropdownMenu>

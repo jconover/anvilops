@@ -35,6 +35,13 @@ class Settings(BaseSettings):
     PUPPET_DEFAULT_ENVIRONMENT: str = "production"
     PUPPET_CERTNAME_DOMAIN: str = "anvilops.internal"
 
+    # Slack Configuration
+    SLACK_WEBHOOK_URL: str = ""
+    SLACK_SIGNING_SECRET: str = ""
+    SLACK_ENABLED: bool = False
+    SLACK_CHANNEL: str = "#anvilops-builds"
+    SLACK_APP_URL: str = "http://localhost:3000"  # Frontend URL for links
+
     model_config = {"env_file": ".env", "extra": "ignore"}
 
 
