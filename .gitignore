@@ -1,0 +1,57 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Terraform
+*.tfstate
+*.tfstate.backup
+*.tfstate.*.backup
+.terraform/
+.terraform.lock.hcl
+*.tfvars
+!terraform/templates/*.tfvars
+crash.log
+
+# Docker
+docker-compose.override.yml
+
+# Node
+node_modules/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test / Coverage
+.coverage
+htmlcov/
+.pytest_cache/
+
+# Logs
+*.log
+
+# Database
+*.dump
