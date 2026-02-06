@@ -1,0 +1,63 @@
+---
+# Red Hat OS family defaults
+# Applied to RHEL, CentOS, Amazon Linux, Rocky, AlmaLinux
+
+# ============================================================
+# Linux base packages
+# ============================================================
+profile::linux_base::base_packages:
+  - 'curl'
+  - 'wget'
+  - 'vim-enhanced'
+  - 'htop'
+  - 'jq'
+  - 'unzip'
+  - 'git'
+  - 'tree'
+  - 'lsof'
+  - 'strace'
+  - 'tcpdump'
+  - 'net-tools'
+  - 'bind-utils'
+  - 'telnet'
+  - 'nc'
+
+# ============================================================
+# Patching configuration
+# ============================================================
+profile::patching::auto_update_security_linux: true
+profile::patching::package_manager: 'yum'
+profile::patching::excluded_packages_linux:
+  - 'kernel*'  # Kernel updates require planning
+  # Add exclusions as needed
+
+# ============================================================
+# Firewall (firewalld on RHEL/CentOS 7+)
+# ============================================================
+profile::firewall::allowed_services_linux:
+  - 'ssh'
+
+profile::firewall::firewall_backend: 'firewalld'  # or 'iptables' for older systems
+
+# ============================================================
+# SELinux configuration
+# ============================================================
+profile::security::selinux_mode: 'enforcing'  # enforcing, permissive, disabled
+profile::security::selinux_type: 'targeted'
+
+# ============================================================
+# SSH hardening
+# ============================================================
+profile::security::ssh_ciphers:
+  - 'chacha20-poly1305@openssh.com'
+  - 'aes256-gcm@openssh.com'
+  - 'aes128-gcm@openssh.com'
+
+profile::security::ssh_macs:
+  - 'hmac-sha2-512-etm@openssh.com'
+  - 'hmac-sha2-256-etm@openssh.com'
+
+profile::security::ssh_kex_algorithms:
+  - 'curve25519-sha256'
+  - 'curve25519-sha256@libssh.org'
+  - 'diffie-hellman-group-exchange-sha256'

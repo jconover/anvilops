@@ -1,0 +1,49 @@
+---
+# Windows OS family defaults
+# Applied to all Windows Server versions (2016, 2019, 2022)
+
+# ============================================================
+# Windows base configuration
+# ============================================================
+profile::windows_base::enable_rdp: true
+profile::windows_base::enable_winrm: true
+profile::windows_base::power_plan: 'High Performance'
+profile::windows_base::disable_ipv6: false
+profile::windows_base::enable_remote_desktop_firewall: true
+
+# Services to disable (security hardening)
+profile::windows_base::disabled_services:
+  - 'Spooler'           # Print spooler — disable unless needed
+  - 'XblGameSave'       # Xbox services
+  - 'XblAuthManager'
+  - 'Fax'
+  - 'MapsBroker'
+  - 'RemoteRegistry'    # Security risk if exposed
+
+# ============================================================
+# Windows patching
+# ============================================================
+profile::patching::patch_categories_windows:
+  - 'SecurityUpdates'
+  - 'CriticalUpdates'
+  # Optionally add: UpdateRollups, FeaturePacks
+
+profile::patching::excluded_kb_articles_windows: []  # Add problematic KBs here
+
+# ============================================================
+# Windows firewall
+# ============================================================
+profile::firewall::windows_firewall_profiles:
+  Domain: true
+  Private: true
+  Public: true
+
+# ============================================================
+# Windows security hardening
+# ============================================================
+profile::security::enable_credential_guard: true
+profile::security::enable_device_guard: false  # Requires hardware support
+profile::security::disable_llmnr: true
+profile::security::disable_netbios: true
+profile::security::smb_signing_required: true
+profile::security::min_tls_version: '1.2'

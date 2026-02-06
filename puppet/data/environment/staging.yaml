@@ -1,0 +1,39 @@
+---
+# Staging environment — production-like security settings
+# Purpose: Final validation before production deployment
+
+# ============================================================
+# Security — matches production baseline
+# ============================================================
+profile::security::password_max_age_days: 90
+profile::security::account_lockout_threshold: 5
+profile::security::ssh_password_auth: false
+profile::security::enable_selinux: true
+
+# ============================================================
+# Patching — manual reboot, same window as prod
+# ============================================================
+profile::patching::auto_reboot: false
+profile::patching::patch_window: 'Sunday 02:00'
+profile::patching::maintenance_window_duration: 4
+
+# ============================================================
+# Monitoring — production-level frequency
+# ============================================================
+profile::monitoring::metrics_collection_interval: 60
+profile::monitoring::log_retention_days: 30
+
+# ============================================================
+# Base configuration
+# ============================================================
+profile::base::motd_message: |
+  ============================================================
+  STAGING ENVIRONMENT - AnvilOps + Puppet Managed
+  Changes here mirror production settings.
+  Use this environment to validate changes before prod rollout.
+  ============================================================
+
+# ============================================================
+# Firewall — production defaults
+# ============================================================
+profile::firewall::default_deny: true

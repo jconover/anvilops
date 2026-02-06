@@ -1,0 +1,63 @@
+---
+# AnvilOps Common Hiera Data
+# Applied to all nodes regardless of OS, role, or environment
+# These are the universal baseline settings for the entire fleet
+
+# ============================================================
+# Base profile settings
+# ============================================================
+profile::base::timezone: 'UTC'
+profile::base::ntp_servers:
+  - '169.254.169.123'  # AWS Time Sync Service
+profile::base::motd_message: |
+  ============================================================
+  This server is managed by AnvilOps + Puppet Enterprise.
+  Unauthorized changes WILL be automatically reverted.
+  ============================================================
+
+# ============================================================
+# Monitoring & logging
+# ============================================================
+profile::monitoring::log_group_prefix: '/anvilops'
+profile::monitoring::metrics_collection_interval: 60
+profile::monitoring::log_retention_days: 30
+profile::monitoring::enable_cloudwatch_agent: true
+profile::monitoring::enable_ssm_agent: true
+
+# ============================================================
+# Patching defaults
+# ============================================================
+profile::patching::auto_reboot: false
+profile::patching::patch_window: 'Sunday 02:00'
+profile::patching::maintenance_window_duration: 4  # hours
+profile::patching::pre_patch_snapshot: true
+
+# ============================================================
+# Firewall defaults
+# ============================================================
+profile::firewall::default_deny: true
+profile::firewall::purge_unmanaged_rules: false  # Safety first
+
+# ============================================================
+# Security baseline
+# ============================================================
+profile::security::enable_audit_logging: true
+profile::security::ssh_permit_root_login: false
+profile::security::ssh_password_auth: false
+profile::security::ssh_max_auth_tries: 3
+profile::security::password_min_length: 14
+profile::security::password_max_age_days: 90
+profile::security::account_lockout_threshold: 5
+profile::security::account_lockout_duration: 30  # minutes
+profile::security::disable_ipv6: false
+profile::security::enable_selinux: true  # Linux only
+
+# ============================================================
+# Compliance enforcement (CIS/STIG)
+# ============================================================
+profile::compliance::cis_level: 1
+profile::compliance::stig_enabled: false
+profile::compliance::report_only: false
+profile::compliance::enforce_file_permissions: true
+profile::compliance::enforce_network_hardening: true
+profile::compliance::enforce_audit_rules: true

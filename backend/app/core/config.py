@@ -22,6 +22,19 @@ class Settings(BaseSettings):
     AWX_POLL_INTERVAL: int = 10
     AWX_ORGANIZATION_ID: int = 1
 
+    # Puppet Enterprise Configuration
+    PUPPET_BASE_URL: str = "https://puppet.anvilops.internal"
+    PUPPET_API_TOKEN: str = ""
+    PUPPET_VERIFY_SSL: bool = False
+    PUPPET_CA_PORT: int = 8140
+    PUPPET_CLASSIFIER_PORT: int = 4433
+    PUPPET_PUPPETDB_PORT: int = 8081
+    PUPPET_ORCHESTRATOR_PORT: int = 8143
+    PUPPET_NODE_CHECKIN_TIMEOUT: int = 600
+    PUPPET_NODE_CHECKIN_POLL: int = 30
+    PUPPET_DEFAULT_ENVIRONMENT: str = "production"
+    PUPPET_CERTNAME_DOMAIN: str = "anvilops.internal"
+
     model_config = {"env_file": ".env", "extra": "ignore"}
 
 

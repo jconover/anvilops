@@ -51,6 +51,10 @@ class ServerResponse(BaseModel):
     dns_name: str | None = None
     awx_host_id: int | None = None
     awx_job_ids: list | None = None
+    puppet_certname: str | None = None
+    puppet_node_group_id: str | None = None
+    puppet_last_report_status: str | None = None
+    puppet_enrolled_at: datetime | None = None
     created_at: datetime
     updated_at: datetime
 

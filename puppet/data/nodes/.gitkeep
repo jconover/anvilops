@@ -1,0 +1,8 @@
+# Per-node Hiera data directory
+# Use sparingly — prefer role/environment data for maintainability
+#
+# Example: data/nodes/prod-web-a3f8.anvilops.local.yaml
+# Use cases:
+#   - Emergency hotfixes for specific nodes
+#   - Snowflake configurations that can't be generalized yet
+#   - Temporary overrides during incident response

@@ -1,0 +1,12 @@
+# Per-role Hiera data directory
+# Role-specific data for nodes classified via trusted extensions
+#
+# Example files:
+#   - data/role/web.yaml
+#   - data/role/app.yaml
+#   - data/role/db.yaml
+#
+# Roles are set during CSR generation via pp_role extension:
+#   puppet agent -t --custom_attributes "pp_role=web"
+#
+# This directory will be populated as roles are defined in site-modules/role/

@@ -1,0 +1,38 @@
+---
+# Dev environment — relaxed security, verbose logging, aggressive patching
+# Trade-offs: Prioritize agility over strict controls
+
+# ============================================================
+# Security — relaxed for development workflow
+# ============================================================
+profile::security::password_max_age_days: 365
+profile::security::account_lockout_threshold: 10
+profile::security::ssh_password_auth: true  # Allow password auth in dev
+profile::security::enable_selinux: false    # Permissive for troubleshooting
+
+# ============================================================
+# Patching — aggressive, auto-reboot acceptable
+# ============================================================
+profile::patching::auto_reboot: true
+profile::patching::patch_window: 'Daily 03:00'  # Nightly patching
+profile::patching::maintenance_window_duration: 2
+
+# ============================================================
+# Monitoring — reduced frequency to save costs
+# ============================================================
+profile::monitoring::metrics_collection_interval: 300  # 5 minutes
+profile::monitoring::log_retention_days: 7
+
+# ============================================================
+# Base configuration
+# ============================================================
+profile::base::motd_message: |
+  ============================================================
+  DEV ENVIRONMENT - AnvilOps + Puppet Managed
+  Relaxed security settings for development agility.
+  ============================================================
+
+# ============================================================
+# Firewall — more permissive
+# ============================================================
+profile::firewall::default_deny: false

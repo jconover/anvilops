@@ -85,6 +85,8 @@ def get_server_request(session: Session, server_request_id: str) -> dict:
         "public_ip": sr.public_ip,
         "dns_name": sr.dns_name,
         "awx_host_id": getattr(sr, "awx_host_id", None),
+        "puppet_certname": getattr(sr, "puppet_certname", None),
+        "puppet_role": sr.puppet_role,
     }
 
 

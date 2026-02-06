@@ -84,6 +84,20 @@ class ServerRequest(Base):
     awx_inventory_id: Mapped[Optional[int]] = mapped_column(nullable=True)
     awx_job_ids: Mapped[Optional[list]] = mapped_column(JSON, nullable=True)
 
+    # Puppet metadata (populated after enrollment)
+    puppet_certname: Mapped[Optional[str]] = mapped_column(
+        String(256), nullable=True
+    )
+    puppet_node_group_id: Mapped[Optional[str]] = mapped_column(
+        String(64), nullable=True
+    )
+    puppet_last_report_status: Mapped[Optional[str]] = mapped_column(
+        String(32), nullable=True
+    )
+    puppet_enrolled_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
     build_steps: Mapped[list["BuildStep"]] = relationship(
         "BuildStep",
         back_populates="server_request",

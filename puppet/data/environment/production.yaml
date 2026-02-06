@@ -1,0 +1,64 @@
+---
+# Production environment — strict security, conservative patching, full auditing
+# This is the most restrictive baseline — override in Hiera only when justified
+
+# ============================================================
+# Security — strictest settings
+# ============================================================
+profile::security::password_min_length: 16
+profile::security::password_max_age_days: 90
+profile::security::account_lockout_threshold: 5
+profile::security::ssh_password_auth: false
+profile::security::ssh_permit_root_login: false
+profile::security::disable_usb_storage: true
+profile::security::enable_selinux: true
+profile::security::selinux_mode: 'enforcing'
+
+# ============================================================
+# Patching — manual reboot, scheduled maintenance window
+# ============================================================
+profile::patching::auto_reboot: false
+profile::patching::patch_window: 'Sunday 02:00'
+profile::patching::maintenance_window_duration: 4
+profile::patching::pre_patch_snapshot: true  # Always snapshot before patching
+
+# ============================================================
+# Monitoring — full retention, fine-grained metrics
+# ============================================================
+profile::monitoring::metrics_collection_interval: 60
+profile::monitoring::log_retention_days: 90
+profile::monitoring::enable_cloudwatch_agent: true
+profile::monitoring::enable_ssm_agent: true
+
+# ============================================================
+# Base configuration
+# ============================================================
+profile::base::motd_message: |
+  ============================================================
+  PRODUCTION ENVIRONMENT - AnvilOps + Puppet Managed
+  ALL changes are logged and audited.
+  Unauthorized modifications WILL be automatically reverted.
+  Contact Platform Engineering for change requests.
+  ============================================================
+
+# ============================================================
+# Firewall — strict default-deny
+# ============================================================
+profile::firewall::default_deny: true
+profile::firewall::purge_unmanaged_rules: true  # Production enforces purity
+
+# ============================================================
+# Audit logging — comprehensive
+# ============================================================
+profile::security::enable_audit_logging: true
+profile::security::audit_rules_preset: 'cis-benchmark'  # Use CIS baseline rules
+
+# ============================================================
+# Compliance — CIS Level 1 enforced, STIG audited
+# ============================================================
+profile::compliance::cis_level: 1
+profile::compliance::stig_enabled: false
+profile::compliance::report_only: false
+profile::compliance::enforce_file_permissions: true
+profile::compliance::enforce_network_hardening: true
+profile::compliance::enforce_audit_rules: true

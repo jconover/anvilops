@@ -1,0 +1,31 @@
+# SSH configuration for AnvilOps managed servers
+# Managed by Puppet - DO NOT EDIT
+
+# Security settings
+PermitRootLogin no
+PasswordAuthentication no
+PubkeyAuthentication yes
+PermitEmptyPasswords no
+ChallengeResponseAuthentication no
+UsePAM yes
+
+# Logging
+SyslogFacility AUTHPRIV
+LogLevel INFO
+
+# Session settings
+ClientAliveInterval 300
+ClientAliveCountMax 2
+MaxAuthTries 3
+MaxSessions 10
+
+# X11 and agent forwarding
+X11Forwarding no
+AllowAgentForwarding yes
+AllowTcpForwarding yes
+
+# Environment
+AcceptEnv LANG LC_*
+
+# Subsystems
+Subsystem sftp /usr/libexec/openssh/sftp-server

@@ -1,0 +1,6 @@
+<%- | String $java_home | -%>
+# Java environment configuration - managed by Puppet
+# DO NOT EDIT - Changes will be overwritten
+
+export JAVA_HOME="<%= $java_home %>"
+export PATH="${JAVA_HOME}/bin:${PATH}"

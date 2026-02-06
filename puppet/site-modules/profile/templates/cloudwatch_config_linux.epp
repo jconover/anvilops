@@ -1,0 +1,137 @@
+<%- | String  $log_group_prefix,
+      Integer $metrics_collection_interval,
+      String  $hostname,
+| -%>
+{
+  "agent": {
+    "metrics_collection_interval": <%= $metrics_collection_interval %>,
+    "run_as_user": "cwagent"
+  },
+  "metrics": {
+    "namespace": "AnvilOps/EC2",
+    "metrics_collected": {
+      "cpu": {
+        "measurement": [
+          {
+            "name": "cpu_usage_idle",
+            "rename": "CPU_IDLE",
+            "unit": "Percent"
+          },
+          {
+            "name": "cpu_usage_iowait",
+            "rename": "CPU_IOWAIT",
+            "unit": "Percent"
+          },
+          "cpu_time_guest"
+        ],
+        "metrics_collection_interval": <%= $metrics_collection_interval %>,
+        "resources": [
+          "*"
+        ],
+        "totalcpu": false
+      },
+      "disk": {
+        "measurement": [
+          {
+            "name": "used_percent",
+            "rename": "DISK_USED",
+            "unit": "Percent"
+          },
+          "disk_free",
+          "disk_used"
+        ],
+        "metrics_collection_interval": <%= $metrics_collection_interval %>,
+        "resources": [
+          "*"
+        ]
+      },
+      "diskio": {
+        "measurement": [
+          "io_time",
+          "read_bytes",
+          "write_bytes",
+          "reads",
+          "writes"
+        ],
+        "metrics_collection_interval": <%= $metrics_collection_interval %>,
+        "resources": [
+          "*"
+        ]
+      },
+      "mem": {
+        "measurement": [
+          {
+            "name": "mem_used_percent",
+            "rename": "MEM_USED",
+            "unit": "Percent"
+          },
+          "mem_available",
+          "mem_used"
+        ],
+        "metrics_collection_interval": <%= $metrics_collection_interval %>
+      },
+      "netstat": {
+        "measurement": [
+          "tcp_established",
+          "tcp_time_wait"
+        ],
+        "metrics_collection_interval": <%= $metrics_collection_interval %>
+      },
+      "swap": {
+        "measurement": [
+          {
+            "name": "swap_used_percent",
+            "rename": "SWAP_USED",
+            "unit": "Percent"
+          }
+        ],
+        "metrics_collection_interval": <%= $metrics_collection_interval %>
+      }
+    },
+    "append_dimensions": {
+      "InstanceId": "${aws:InstanceId}",
+      "InstanceType": "${aws:InstanceType}",
+      "AutoScalingGroupName": "${aws:AutoScalingGroupName}",
+      "ImageId": "${aws:ImageId}",
+      "Hostname": "<%= $hostname %>"
+    }
+  },
+  "logs": {
+    "logs_collected": {
+      "files": {
+        "collect_list": [
+          {
+            "file_path": "/var/log/messages",
+            "log_group_name": "<%= $log_group_prefix %>/system",
+            "log_stream_name": "{instance_id}/messages",
+            "retention_in_days": 30
+          },
+          {
+            "file_path": "/var/log/secure",
+            "log_group_name": "<%= $log_group_prefix %>/security",
+            "log_stream_name": "{instance_id}/secure",
+            "retention_in_days": 90
+          },
+          {
+            "file_path": "/var/log/syslog",
+            "log_group_name": "<%= $log_group_prefix %>/system",
+            "log_stream_name": "{instance_id}/syslog",
+            "retention_in_days": 30
+          },
+          {
+            "file_path": "/var/log/auth.log",
+            "log_group_name": "<%= $log_group_prefix %>/security",
+            "log_stream_name": "{instance_id}/auth",
+            "retention_in_days": 90
+          },
+          {
+            "file_path": "/var/log/audit/audit.log",
+            "log_group_name": "<%= $log_group_prefix %>/audit",
+            "log_stream_name": "{instance_id}/audit",
+            "retention_in_days": 365
+          }
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,37 @@
+---
+# Hiera 5 configuration for AnvilOps
+# Hierarchy precedence: node → role → environment → OS → common
+
+version: 5
+
+defaults:
+  datadir: data
+  data_hash: yaml_data
+
+hierarchy:
+  # Level 1: Per-node overrides (highest precedence)
+  # Use sparingly — prefer role/environment data for maintainability
+  - name: "Per-node data"
+    path: "nodes/%{trusted.certname}.yaml"
+
+  # Level 2: Per-role data
+  # Uses trusted extensions set during CSR — requires pp_role extension
+  # Example: nodes with pp_role=web get data/role/web.yaml
+  - name: "Per-role data"
+    path: "role/%{trusted.extensions.pp_role}.yaml"
+
+  # Level 3: Per-environment data
+  # dev.yaml, staging.yaml, production.yaml
+  - name: "Per-environment data"
+    path: "environment/%{environment}.yaml"
+
+  # Level 4: Per-OS data with major version fallback
+  # Example: RedHat-8.yaml → RedHat.yaml → common.yaml
+  - name: "Per-OS data"
+    paths:
+      - "os/%{facts.os.name}-%{facts.os.release.major}.yaml"
+      - "os/%{facts.os.family}.yaml"
+
+  # Level 5: Common data (lowest precedence, universal defaults)
+  - name: "Common data"
+    path: "common.yaml"

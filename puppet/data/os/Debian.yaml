@@ -1,0 +1,70 @@
+---
+# Debian OS family defaults
+# Applied to Debian, Ubuntu
+
+# ============================================================
+# Linux base packages
+# ============================================================
+profile::linux_base::base_packages:
+  - 'curl'
+  - 'wget'
+  - 'vim'
+  - 'htop'
+  - 'jq'
+  - 'unzip'
+  - 'git'
+  - 'tree'
+  - 'lsof'
+  - 'strace'
+  - 'tcpdump'
+  - 'net-tools'
+  - 'dnsutils'
+  - 'telnet'
+  - 'netcat'
+  - 'apt-transport-https'
+  - 'ca-certificates'
+  - 'gnupg'
+
+# ============================================================
+# Patching configuration
+# ============================================================
+profile::patching::auto_update_security_linux: true
+profile::patching::package_manager: 'apt'
+profile::patching::excluded_packages_linux:
+  - 'linux-image-*'  # Kernel updates require planning
+  - 'linux-headers-*'
+
+# Unattended-upgrades configuration
+profile::patching::unattended_upgrades_enable: true
+profile::patching::unattended_upgrades_auto_reboot: false
+profile::patching::unattended_upgrades_auto_reboot_time: '02:00'
+
+# ============================================================
+# Firewall (ufw on Ubuntu/Debian)
+# ============================================================
+profile::firewall::allowed_services_linux:
+  - 'ssh'
+
+profile::firewall::firewall_backend: 'ufw'  # or 'iptables'
+
+# ============================================================
+# AppArmor configuration (Debian/Ubuntu equivalent to SELinux)
+# ============================================================
+profile::security::apparmor_enabled: true
+
+# ============================================================
+# SSH hardening
+# ============================================================
+profile::security::ssh_ciphers:
+  - 'chacha20-poly1305@openssh.com'
+  - 'aes256-gcm@openssh.com'
+  - 'aes128-gcm@openssh.com'
+
+profile::security::ssh_macs:
+  - 'hmac-sha2-512-etm@openssh.com'
+  - 'hmac-sha2-256-etm@openssh.com'
+
+profile::security::ssh_kex_algorithms:
+  - 'curve25519-sha256'
+  - 'curve25519-sha256@libssh.org'
+  - 'diffie-hellman-group-exchange-sha256'

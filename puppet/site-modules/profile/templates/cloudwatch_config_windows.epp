@@ -1,0 +1,169 @@
+<%- | String  $log_group_prefix,
+      Integer $metrics_collection_interval,
+      String  $hostname,
+| -%>
+{
+  "agent": {
+    "metrics_collection_interval": <%= $metrics_collection_interval %>
+  },
+  "metrics": {
+    "namespace": "AnvilOps/EC2",
+    "metrics_collected": {
+      "LogicalDisk": {
+        "measurement": [
+          {
+            "name": "% Free Space",
+            "rename": "DISK_FREE",
+            "unit": "Percent"
+          }
+        ],
+        "metrics_collection_interval": <%= $metrics_collection_interval %>,
+        "resources": [
+          "*"
+        ]
+      },
+      "Memory": {
+        "measurement": [
+          {
+            "name": "% Committed Bytes In Use",
+            "rename": "MEM_USED",
+            "unit": "Percent"
+          },
+          {
+            "name": "Available Mbytes",
+            "rename": "MEM_AVAILABLE",
+            "unit": "Megabytes"
+          }
+        ],
+        "metrics_collection_interval": <%= $metrics_collection_interval %>
+      },
+      "Network Interface": {
+        "measurement": [
+          "Bytes Received/sec",
+          "Bytes Sent/sec",
+          "Packets Received/sec",
+          "Packets Sent/sec"
+        ],
+        "metrics_collection_interval": <%= $metrics_collection_interval %>,
+        "resources": [
+          "*"
+        ]
+      },
+      "Paging File": {
+        "measurement": [
+          {
+            "name": "% Usage",
+            "rename": "PAGEFILE_USED",
+            "unit": "Percent"
+          }
+        ],
+        "metrics_collection_interval": <%= $metrics_collection_interval %>,
+        "resources": [
+          "*"
+        ]
+      },
+      "PhysicalDisk": {
+        "measurement": [
+          {
+            "name": "% Disk Time",
+            "rename": "DISK_TIME",
+            "unit": "Percent"
+          },
+          "Disk Read Bytes/sec",
+          "Disk Write Bytes/sec",
+          "Disk Reads/sec",
+          "Disk Writes/sec"
+        ],
+        "metrics_collection_interval": <%= $metrics_collection_interval %>,
+        "resources": [
+          "*"
+        ]
+      },
+      "Processor": {
+        "measurement": [
+          {
+            "name": "% Processor Time",
+            "rename": "CPU_USAGE",
+            "unit": "Percent"
+          },
+          {
+            "name": "% Idle Time",
+            "rename": "CPU_IDLE",
+            "unit": "Percent"
+          }
+        ],
+        "metrics_collection_interval": <%= $metrics_collection_interval %>,
+        "resources": [
+          "_Total"
+        ]
+      },
+      "TCPv4": {
+        "measurement": [
+          "Connections Established"
+        ],
+        "metrics_collection_interval": <%= $metrics_collection_interval %>
+      }
+    },
+    "append_dimensions": {
+      "InstanceId": "${aws:InstanceId}",
+      "InstanceType": "${aws:InstanceType}",
+      "AutoScalingGroupName": "${aws:AutoScalingGroupName}",
+      "ImageId": "${aws:ImageId}",
+      "Hostname": "<%= $hostname %>"
+    }
+  },
+  "logs": {
+    "logs_collected": {
+      "windows_events": {
+        "collect_list": [
+          {
+            "event_name": "System",
+            "event_levels": [
+              "CRITICAL",
+              "ERROR",
+              "WARNING",
+              "INFORMATION"
+            ],
+            "log_group_name": "<%= $log_group_prefix %>/windows/system",
+            "log_stream_name": "{instance_id}",
+            "retention_in_days": 30
+          },
+          {
+            "event_name": "Application",
+            "event_levels": [
+              "CRITICAL",
+              "ERROR",
+              "WARNING",
+              "INFORMATION"
+            ],
+            "log_group_name": "<%= $log_group_prefix %>/windows/application",
+            "log_stream_name": "{instance_id}",
+            "retention_in_days": 30
+          },
+          {
+            "event_name": "Security",
+            "event_levels": [
+              "CRITICAL",
+              "ERROR",
+              "WARNING",
+              "INFORMATION"
+            ],
+            "log_group_name": "<%= $log_group_prefix %>/windows/security",
+            "log_stream_name": "{instance_id}",
+            "retention_in_days": 90
+          }
+        ]
+      },
+      "files": {
+        "collect_list": [
+          {
+            "file_path": "C:\\ProgramData\\Amazon\\EC2-Windows\\Launch\\Log\\UserdataExecution.log",
+            "log_group_name": "<%= $log_group_prefix %>/windows/userdata",
+            "log_stream_name": "{instance_id}",
+            "retention_in_days": 30
+          }
+        ]
+      }
+    }
+  }
+}
