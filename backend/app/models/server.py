@@ -98,6 +98,11 @@ class ServerRequest(Base):
         DateTime(timezone=True), nullable=True
     )
 
+    # ServiceNow CMDB metadata (populated after CMDB sync)
+    cmdb_sys_id: Mapped[Optional[str]] = mapped_column(
+        String(64), nullable=True
+    )
+
     build_steps: Mapped[list["BuildStep"]] = relationship(
         "BuildStep",
         back_populates="server_request",

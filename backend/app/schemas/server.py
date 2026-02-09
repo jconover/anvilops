@@ -55,6 +55,7 @@ class ServerResponse(BaseModel):
     puppet_node_group_id: str | None = None
     puppet_last_report_status: str | None = None
     puppet_enrolled_at: datetime | None = None
+    cmdb_sys_id: str | None = None
     created_at: datetime
     updated_at: datetime
 

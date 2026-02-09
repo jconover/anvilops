@@ -42,6 +42,13 @@ class Settings(BaseSettings):
     SLACK_CHANNEL: str = "#anvilops-builds"
     SLACK_APP_URL: str = "http://localhost:3000"  # Frontend URL for links
 
+    # ServiceNow CMDB Integration
+    SERVICENOW_INSTANCE_URL: str = ""
+    SERVICENOW_USERNAME: str = ""
+    SERVICENOW_PASSWORD: str = ""
+    SERVICENOW_ENABLED: bool = False
+    SERVICENOW_TABLE: str = "cmdb_ci_server"
+
     model_config = {"env_file": ".env", "extra": "ignore"}
 
 

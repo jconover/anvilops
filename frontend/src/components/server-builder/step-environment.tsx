@@ -8,16 +8,10 @@ import {
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { useServerForm } from '@/hooks/use-server-form';
 import type { OsType } from '@/lib/api/types';
+import { RegionSelector } from './region-selector';
 
 // ---------------------------------------------------------------------------
 // Data
@@ -61,11 +55,6 @@ const OS_OPTIONS: { value: OsType; label: string; family: 'windows' | 'linux' }[
   { value: 'rhel_9', label: 'Red Hat Enterprise Linux 9', family: 'linux' },
 ];
 
-const REGIONS = [
-  { value: 'us-east-1', label: 'US East (N. Virginia) - us-east-1' },
-  { value: 'us-west-2', label: 'US West (Oregon) - us-west-2' },
-];
-
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
@@ -75,6 +64,13 @@ export function StepEnvironment() {
   const os_type = useServerForm((s) => s.os_type);
   const region = useServerForm((s) => s.region);
   const setField = useServerForm((s) => s.setField);
+
+  const handleRegionChange = (regionId: string) => {
+    setField('region', regionId);
+    // Clear downstream selections when region changes
+    setField('vpc_id', '');
+    setField('subnet_id', '');
+  };
 
   return (
     <div className="space-y-8">
@@ -165,28 +161,13 @@ export function StepEnvironment() {
       </fieldset>
 
       {/* Region selector */}
-      <div className="space-y-2">
-        <Label htmlFor="region" className="text-base font-semibold">
-          AWS Region
-        </Label>
+      <div className="space-y-3">
+        <Label className="text-base font-semibold">AWS Region</Label>
         <p className="text-sm text-muted-foreground">
-          Select the AWS region for this server.
+          Select the AWS region where this server will be deployed. VPC and
+          subnet options will update based on your selection.
         </p>
-        <Select
-          value={region}
-          onValueChange={(val) => setField('region', val)}
-        >
-          <SelectTrigger id="region" className="max-w-md">
-            <SelectValue placeholder="Select a region" />
-          </SelectTrigger>
-          <SelectContent>
-            {REGIONS.map((r) => (
-              <SelectItem key={r.value} value={r.value}>
-                {r.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <RegionSelector value={region} onChange={handleRegionChange} />
       </div>
     </div>
   );

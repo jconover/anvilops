@@ -7,6 +7,8 @@ import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { useServerForm } from '@/hooks/use-server-form';
 import type { InstanceSize } from '@/lib/api/types';
+import { VPCSelector } from './vpc-selector';
+import { SubnetSelector } from './subnet-selector';
 
 // ---------------------------------------------------------------------------
 // Instance size data
@@ -31,10 +33,21 @@ const INSTANCE_SIZES: {
 
 export function StepInstance() {
   const instance_size = useServerForm((s) => s.instance_size);
+  const region = useServerForm((s) => s.region);
   const vpc_id = useServerForm((s) => s.vpc_id);
   const subnet_id = useServerForm((s) => s.subnet_id);
   const server_name = useServerForm((s) => s.server_name);
   const setField = useServerForm((s) => s.setField);
+
+  const handleVPCChange = (vpcId: string) => {
+    setField('vpc_id', vpcId);
+    // Clear subnet when VPC changes — subnets belong to a specific VPC
+    setField('subnet_id', '');
+  };
+
+  const handleSubnetChange = (subnetId: string) => {
+    setField('subnet_id', subnetId);
+  };
 
   return (
     <div className="space-y-8">
@@ -83,34 +96,39 @@ export function StepInstance() {
         </div>
       </fieldset>
 
-      {/* VPC & Subnet */}
+      {/* VPC & Subnet — cascading selectors */}
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
         <div className="space-y-2">
-          <Label htmlFor="vpc_id" className="text-base font-semibold">
-            VPC ID
-          </Label>
+          <Label className="text-base font-semibold">VPC</Label>
           <p className="text-sm text-muted-foreground">
             The VPC where this server will be launched.
+            {!region && (
+              <span className="ml-1 italic">
+                Select a region in the previous step to see available VPCs.
+              </span>
+            )}
           </p>
-          <Input
-            id="vpc_id"
-            placeholder="vpc-0abc123def456789"
+          <VPCSelector
+            region={region || undefined}
             value={vpc_id}
-            onChange={(e) => setField('vpc_id', e.target.value)}
+            onChange={handleVPCChange}
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="subnet_id" className="text-base font-semibold">
-            Subnet ID
-          </Label>
+          <Label className="text-base font-semibold">Subnet</Label>
           <p className="text-sm text-muted-foreground">
             The subnet within the VPC.
+            {region && !vpc_id && (
+              <span className="ml-1 italic">
+                Select a VPC to see available subnets.
+              </span>
+            )}
           </p>
-          <Input
-            id="subnet_id"
-            placeholder="subnet-0abc123def456789"
+          <SubnetSelector
+            region={region || undefined}
+            vpcId={vpc_id || undefined}
             value={subnet_id}
-            onChange={(e) => setField('subnet_id', e.target.value)}
+            onChange={handleSubnetChange}
           />
         </div>
       </div>

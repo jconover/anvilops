@@ -23,6 +23,7 @@ import {
 import { DecommissionDialog } from '@/components/server-inventory/decommission-dialog';
 import { DecommissionTracker } from '@/components/server-inventory/decommission-tracker';
 import type { BuildStep, BuildStepStatus } from '@/lib/api/types';
+import { CMDBStatusCard } from '@/components/cmdb/cmdb-status-card';
 import {
   ArrowLeft,
   Trash2,
@@ -452,6 +453,11 @@ export default function ServerDetailPage() {
             </div>
           </CardContent>
         </Card>
+      </div>
+
+      {/* ServiceNow CMDB */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <CMDBStatusCard serverId={server.id} />
       </div>
 
       {/* AWX info (if available) */}

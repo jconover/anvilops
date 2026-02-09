@@ -98,3 +98,53 @@ export {
   useMarkAllAsRead,
   useDeleteNotification,
 } from './notifications';
+
+// Region / VPC / Subnet types
+export type { Region, VPC, Subnet } from './regions';
+
+// Region endpoint functions
+export { listRegions, listVPCs, listSubnets } from './regions';
+
+// Region React Query hooks
+export {
+  regionKeys,
+  useRegions,
+  useVPCs,
+  useSubnets,
+} from './regions';
+
+// Drift Detection types
+export type {
+  DriftSummary,
+  EnhancedDriftEvent,
+  DriftEventsResponse,
+  DriftEventsParams,
+  DriftAlert,
+  TrendDataPoint,
+  TopResource,
+  TopServer,
+  DriftTrends,
+  DriftTimelineEvent,
+  DriftTimelineResponse,
+} from './drift';
+
+// Drift Detection endpoint functions
+export {
+  getDriftSummary,
+  getDriftEvents,
+  getDriftTimeline,
+  getDriftAlerts,
+  acknowledgeDriftAlert,
+  getDriftTrends,
+} from './drift';
+
+// Drift Detection React Query hooks
+export {
+  driftKeys,
+  useDriftSummary,
+  useDriftEvents,
+  useDriftTimeline,
+  useDriftAlerts,
+  useAcknowledgeAlert,
+  useDriftTrends,
+} from './drift';
