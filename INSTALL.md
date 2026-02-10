@@ -164,12 +164,107 @@ npm install
 
 ### PostgreSQL setup
 
-Install PostgreSQL 16 and create the database:
+If you installed PostgreSQL via Chocolatey (`choco install postgresql`), here's the full setup:
+
+#### Step 1: Verify the service is running
+
+```powershell
+# Check if the PostgreSQL service is running
+Get-Service -Name 'postgresql*'
+
+# If it's stopped, start it
+Start-Service -Name 'postgresql-x64-16'  # version number may vary
+```
+
+If you don't see a service, find the install path (usually `C:\Program Files\PostgreSQL\16\`) and start it manually:
+
+```powershell
+& "C:\Program Files\PostgreSQL\16\bin\pg_ctl.exe" start -D "C:\Program Files\PostgreSQL\16\data"
+```
+
+#### Step 2: Connect to PostgreSQL
+
+The Chocolatey install creates a default `postgres` superuser. Connect using `psql`:
+
+```powershell
+# Option A: If psql is in your PATH
+psql -U postgres
+
+# Option B: Use the full path (common Chocolatey install location)
+& "C:\Program Files\PostgreSQL\16\bin\psql.exe" -U postgres
+
+# Option C: If you get a password prompt and don't know the password,
+# try connecting via localhost with the password you set during install
+psql -U postgres -h localhost
+```
+
+**Stuck on the password?** During Chocolatey install, the superuser password may have been set automatically or prompted. If you can't remember it:
+
+```powershell
+# Edit pg_hba.conf to temporarily allow passwordless local access
+# Find it at: C:\Program Files\PostgreSQL\16\data\pg_hba.conf
+# Change the line:
+#   host  all  all  127.0.0.1/32  scram-sha-256
+# To:
+#   host  all  all  127.0.0.1/32  trust
+# Then restart PostgreSQL and connect without a password.
+# IMPORTANT: Change it back after you're done.
+```
+
+#### Step 3: Create the AnvilOps user and database
+
+Once you're in the `psql` prompt (you'll see `postgres=#`), run:
 
 ```sql
+-- Create the anvilops user with a password
 CREATE USER anvilops WITH PASSWORD 'anvilops';
+
+-- Create the database owned by that user
 CREATE DATABASE anvilops OWNER anvilops;
+
+-- Grant all privileges (belt and suspenders)
+GRANT ALL PRIVILEGES ON DATABASE anvilops TO anvilops;
+
+-- Verify it worked
+\du anvilops
+\l anvilops
+
+-- Exit psql
+\q
 ```
+
+#### Step 4: Test the connection
+
+```powershell
+# Connect as the new anvilops user to the anvilops database
+psql -U anvilops -d anvilops -h localhost
+
+# You should see: anvilops=>
+# Type \q to exit
+```
+
+#### Step 5: Add psql to your PATH (optional but recommended)
+
+If `psql` isn't recognized as a command:
+
+```powershell
+# Add PostgreSQL bin to your PATH for the current session
+$env:PATH += ";C:\Program Files\PostgreSQL\16\bin"
+
+# Or add it permanently (run PowerShell as Administrator)
+[Environment]::SetEnvironmentVariable("PATH", $env:PATH + ";C:\Program Files\PostgreSQL\16\bin", "Machine")
+```
+
+#### Quick reference: useful psql commands
+
+| Command | Description |
+|---------|-------------|
+| `\l` | List all databases |
+| `\du` | List all users/roles |
+| `\dt` | List tables in current database |
+| `\d table_name` | Describe a table's columns |
+| `\conninfo` | Show current connection info |
+| `\q` | Quit psql |
 
 ### Redis setup
 
