@@ -46,14 +46,19 @@ export interface Subnet {
 
 /** Fetch all supported AWS regions. */
 export async function listRegions(): Promise<Region[]> {
-  const response = await apiClient.get<Region[]>('/regions');
-  return response.data;
+  const response = await apiClient.get<{ regions: Array<{ region: string; name: string; short_name: string; enabled: boolean }> }>('/regions');
+  return response.data.regions.map((r) => ({
+    id: r.region,
+    name: r.name,
+    short_name: r.short_name,
+    enabled: r.enabled,
+  }));
 }
 
 /** Fetch VPCs available in a given region. */
 export async function listVPCs(region: string): Promise<VPC[]> {
-  const response = await apiClient.get<VPC[]>(`/regions/${region}/vpcs`);
-  return response.data;
+  const response = await apiClient.get<{ vpcs: VPC[] }>(`/regions/${region}/vpcs`);
+  return response.data.vpcs;
 }
 
 /** Fetch subnets for a specific VPC in a region. */
@@ -61,10 +66,10 @@ export async function listSubnets(
   region: string,
   vpcId: string,
 ): Promise<Subnet[]> {
-  const response = await apiClient.get<Subnet[]>(
+  const response = await apiClient.get<{ subnets: Subnet[] }>(
     `/regions/${region}/vpcs/${vpcId}/subnets`,
   );
-  return response.data;
+  return response.data.subnets;
 }
 
 // ---------------------------------------------------------------------------

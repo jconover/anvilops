@@ -8,19 +8,18 @@ Complete guide for setting up, running, and testing the AnvilOps server provisio
 
 1. [Prerequisites](#1-prerequisites)
 2. [Quick Start (Docker Compose)](#2-quick-start-docker-compose)
-3. [Manual Setup (Without Docker)](#3-manual-setup-without-docker)
-4. [Database Setup & Migrations](#4-database-setup--migrations)
-5. [Running the Backend API](#5-running-the-backend-api)
-6. [Running the Celery Worker](#6-running-the-celery-worker)
-7. [Running the Frontend](#7-running-the-frontend)
-8. [Testing the API](#8-testing-the-api)
-9. [Running Automated Tests](#9-running-automated-tests)
-10. [Terraform Local Testing](#10-terraform-local-testing)
-11. [Ansible Local Testing](#11-ansible-local-testing)
-12. [Puppet Local Testing](#12-puppet-local-testing)
-13. [Slack Webhook Setup](#13-slack-webhook-setup)
-14. [Environment Variables Reference](#14-environment-variables-reference)
-15. [Troubleshooting](#15-troubleshooting)
+3. [Database Setup & Migrations](#3-database-setup--migrations)
+4. [Running the Backend API](#4-running-the-backend-api)
+5. [Running the Celery Worker](#5-running-the-celery-worker)
+6. [Running the Frontend](#6-running-the-frontend)
+7. [Testing the API](#7-testing-the-api)
+8. [Running Automated Tests](#8-running-automated-tests)
+9. [Terraform Local Testing](#9-terraform-local-testing)
+10. [Ansible Local Testing](#10-ansible-local-testing)
+11. [Puppet Local Testing](#11-puppet-local-testing)
+12. [Slack Webhook Setup](#12-slack-webhook-setup)
+13. [Environment Variables Reference](#13-environment-variables-reference)
+14. [Troubleshooting](#14-troubleshooting)
 
 ---
 
@@ -128,6 +127,60 @@ Frontend available at: **http://localhost:3000**
                                       └──────────────┘
 ```
 
+### Connecting to the containerized database
+
+The Docker Compose stack includes PostgreSQL — no separate install needed. To connect:
+
+```powershell
+# Open a psql shell inside the running container
+docker compose exec db psql -U anvilops -d anvilops
+```
+
+You'll see the `anvilops=#` prompt. From here you can inspect data:
+
+```sql
+-- List all tables
+\dt
+
+-- Check server requests
+SELECT id, server_name, status, environment FROM server_requests;
+
+-- Check migration state
+SELECT * FROM alembic_version;
+
+-- Exit
+\q
+```
+
+Connection details (if you want to connect from a GUI tool like pgAdmin or DBeaver):
+
+| Setting | Value |
+|---------|-------|
+| Host | `localhost` |
+| Port | `5432` |
+| Database | `anvilops` |
+| Username | `anvilops` |
+| Password | `anvilops` |
+
+### Connecting to the containerized Redis
+
+```powershell
+# Open a redis-cli shell inside the running container
+docker compose exec redis redis-cli
+```
+
+```
+# Check it's alive
+PING
+# Returns: PONG
+
+# See Celery queues
+KEYS *
+
+# Exit
+QUIT
+```
+
 ### Stopping services
 
 ```bash
@@ -137,223 +190,7 @@ docker compose down -v       # Stop and remove volumes (resets database)
 
 ---
 
-## 3. Manual Setup (Without Docker)
-
-For development without Docker, you need PostgreSQL and Redis running locally.
-
-### Backend setup
-
-```bash
-cd backend
-
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate      # Linux/Mac
-# venv\Scripts\activate       # Windows
-
-# Install dependencies
-pip install -r requirements-dev.txt
-```
-
-### Frontend setup
-
-```bash
-cd frontend
-npm install
-```
-
-### PostgreSQL setup
-
-If you installed PostgreSQL via Chocolatey (`choco install postgresql`), here's the full setup:
-
-#### Step 1: Verify the service is running
-
-```powershell
-# Check if the PostgreSQL service is running
-Get-Service -Name 'postgresql*'
-
-# If it's stopped, start it
-Start-Service -Name 'postgresql-x64-16'  # version number may vary
-```
-
-If you don't see a service, find the install path (usually `C:\Program Files\PostgreSQL\16\`) and start it manually:
-
-```powershell
-& "C:\Program Files\PostgreSQL\16\bin\pg_ctl.exe" start -D "C:\Program Files\PostgreSQL\16\data"
-```
-
-#### Step 2: Connect to PostgreSQL
-
-The Chocolatey install creates a default `postgres` superuser. Connect using `psql`:
-
-```powershell
-# Option A: If psql is in your PATH
-psql -U postgres
-
-# Option B: Use the full path (common Chocolatey install location)
-& "C:\Program Files\PostgreSQL\16\bin\psql.exe" -U postgres
-
-# Option C: If you get a password prompt and don't know the password,
-# try connecting via localhost with the password you set during install
-psql -U postgres -h localhost
-```
-
-**Stuck on the password?** During Chocolatey install, the superuser password may have been set automatically or prompted. If you can't remember it:
-
-```powershell
-# Edit pg_hba.conf to temporarily allow passwordless local access
-# Find it at: C:\Program Files\PostgreSQL\16\data\pg_hba.conf
-# Change the line:
-#   host  all  all  127.0.0.1/32  scram-sha-256
-# To:
-#   host  all  all  127.0.0.1/32  trust
-# Then restart PostgreSQL and connect without a password.
-# IMPORTANT: Change it back after you're done.
-```
-
-#### Step 3: Create the AnvilOps user and database
-
-Once you're in the `psql` prompt (you'll see `postgres=#`), run:
-
-```sql
--- Create the anvilops user with a password
-CREATE USER anvilops WITH PASSWORD 'anvilops';
-
--- Create the database owned by that user
-CREATE DATABASE anvilops OWNER anvilops;
-
--- Grant all privileges (belt and suspenders)
-GRANT ALL PRIVILEGES ON DATABASE anvilops TO anvilops;
-
--- Verify it worked
-\du anvilops
-\l anvilops
-
--- Exit psql
-\q
-```
-
-#### Step 4: Test the connection
-
-```powershell
-# Connect as the new anvilops user to the anvilops database
-psql -U anvilops -d anvilops -h localhost
-
-# You should see: anvilops=>
-# Type \q to exit
-```
-
-#### Step 5: Add psql to your PATH (optional but recommended)
-
-If `psql` isn't recognized as a command:
-
-```powershell
-# Add PostgreSQL bin to your PATH for the current session
-$env:PATH += ";C:\Program Files\PostgreSQL\16\bin"
-
-# Or add it permanently (run PowerShell as Administrator)
-[Environment]::SetEnvironmentVariable("PATH", $env:PATH + ";C:\Program Files\PostgreSQL\16\bin", "Machine")
-```
-
-#### Quick reference: useful psql commands
-
-| Command | Description |
-|---------|-------------|
-| `\l` | List all databases |
-| `\du` | List all users/roles |
-| `\dt` | List tables in current database |
-| `\d table_name` | Describe a table's columns |
-| `\conninfo` | Show current connection info |
-| `\q` | Quit psql |
-
-### Redis setup
-
-Redis is used as the Celery message broker and result backend. On Windows, the official Redis build isn't natively supported, so you have a few options:
-
-#### Option A: Install via Chocolatey (easiest)
-
-```powershell
-choco install redis-64
-```
-
-After install, start the server:
-
-```powershell
-# Start Redis in the foreground
-redis-server
-
-# Or start it in the background as a Windows service
-# (Chocolatey may have registered it as a service already)
-Get-Service -Name 'Redis'
-Start-Service -Name 'Redis'
-```
-
-#### Option B: Install via WSL (recommended for parity with production)
-
-If you have WSL (Windows Subsystem for Linux) installed:
-
-```bash
-# Inside your WSL terminal
-sudo apt update && sudo apt install redis-server -y
-
-# Start Redis
-sudo service redis-server start
-
-# Verify
-redis-cli ping
-# Should return: PONG
-```
-
-Redis in WSL is accessible from Windows at `localhost:6379` by default.
-
-#### Option C: Use Docker (standalone, without full Docker Compose)
-
-If you only want Redis in Docker but run everything else natively:
-
-```powershell
-docker run -d --name anvilops-redis -p 6379:6379 redis:7-alpine
-```
-
-#### Verify Redis is running
-
-```powershell
-# If redis-cli is in your PATH
-redis-cli ping
-# Should return: PONG
-
-# Check what's in Redis (should be empty initially)
-redis-cli INFO keyspace
-
-# If redis-cli isn't found, try the full path
-& "C:\ProgramData\chocolatey\lib\redis-64\redis-cli.exe" ping
-```
-
-#### Troubleshooting Redis on Windows
-
-| Problem | Solution |
-|---------|----------|
-| `redis-cli` not found | Add Redis install dir to PATH, or use the full path |
-| Connection refused on 6379 | Redis isn't running — start the service or run `redis-server` |
-| Port 6379 already in use | Another Redis instance (or Docker container) is using it — stop it first |
-| Need to flush all data | `redis-cli FLUSHALL` — clears all keys (safe in local dev) |
-
-### Configure environment
-
-```bash
-# From project root
-cp .env.example .env
-```
-
-Edit `.env` to point to your local services:
-
-```env
-DATABASE_URL=postgresql+asyncpg://anvilops:anvilops@localhost:5432/anvilops
-REDIS_URL=redis://localhost:6379/0
-```
-
----
-
-## 4. Database Setup & Migrations
+## 3. Database Setup & Migrations
 
 ### Initial migration
 
@@ -405,7 +242,7 @@ alembic downgrade base     # Rollback everything
 
 ---
 
-## 5. Running the Backend API
+## 4. Running the Backend API
 
 ### With Docker (recommended)
 
@@ -443,7 +280,7 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
 ---
 
-## 6. Running the Celery Worker
+## 5. Running the Celery Worker
 
 The Celery worker processes async tasks (Terraform, AWX, Puppet, notifications).
 
@@ -513,7 +350,7 @@ celery -A app.worker.celery_app flower --port=5555
 
 ---
 
-## 7. Running the Frontend
+## 6. Running the Frontend
 
 ### Development server
 
@@ -573,7 +410,7 @@ npm start     # Starts production server on :3000
 
 ---
 
-## 8. Testing the API
+## 7. Testing the API
 
 ### Interactive testing
 
@@ -755,7 +592,7 @@ echo -e "\n=== Done ==="
 
 ---
 
-## 9. Running Automated Tests
+## 8. Running Automated Tests
 
 ### Backend tests
 
@@ -873,7 +710,7 @@ npm run lint
 
 ---
 
-## 10. Terraform Local Testing
+## 9. Terraform Local Testing
 
 ### Prerequisites
 
@@ -983,7 +820,7 @@ The `TerraformService` class (`backend/app/services/terraform.py`):
 
 ---
 
-## 11. Ansible Local Testing
+## 10. Ansible Local Testing
 
 ### Prerequisites
 
@@ -1056,7 +893,7 @@ AWX is not included in Docker Compose. For full integration testing, deploy AWX 
 
 ---
 
-## 12. Puppet Local Testing
+## 11. Puppet Local Testing
 
 ### Prerequisites
 
@@ -1134,7 +971,7 @@ PE is not included in Docker Compose. For full integration testing, deploy Puppe
 
 ---
 
-## 13. Slack Webhook Setup
+## 12. Slack Webhook Setup
 
 AnvilOps sends Slack notifications for build events, approval requests, and compliance alerts. This requires a Slack incoming webhook and optionally a Slack app for interactive approval buttons.
 
@@ -1256,7 +1093,7 @@ If Slack is disabled (`SLACK_ENABLED=false`, the default), the system still work
 
 ---
 
-## 14. Environment Variables Reference
+## 13. Environment Variables Reference
 
 Create a `.env` file in the project root. All variables with defaults:
 
@@ -1335,7 +1172,7 @@ Create a `.env` file in the project root. All variables with defaults:
 
 ---
 
-## 15. Troubleshooting
+## 14. Troubleshooting
 
 ### Docker Compose issues
 
