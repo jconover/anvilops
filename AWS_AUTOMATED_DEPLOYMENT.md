@@ -121,18 +121,38 @@ terraform/platform/
 
 ## 4. Quick Start (TL;DR)
 
-Pre-built tfvars files are provided for each environment. Pick the one that matches your target:
+### Bootstrap the State Backend (one-time)
+
+This creates the S3 bucket and DynamoDB table that store Terraform state. Run once per AWS account:
+
+```bash
+cd terraform/platform/modules/state-backend
+terraform init
+terraform apply -var="project_name=anvilops" -var="environment=dev"
+# Note the outputs: state_bucket_name, dynamodb_table_name
+```
+
+### Initialize and Deploy
 
 ```bash
 cd terraform/platform
+terraform init \
+  -backend-config="bucket=<state_bucket_name>" \
+  -backend-config="key=platform/terraform.tfstate" \
+  -backend-config="region=us-east-1" \
+  -backend-config="dynamodb_table=<dynamodb_table_name>"
 
 # ── Option A: Dev / Demo (~$350/month) ──────────────────────────────
+cp terraform.dev.tfvars.example terraform.dev.tfvars
+# Edit terraform.dev.tfvars with your domain and zone ID
 terraform plan -var-file=terraform.dev.tfvars -out=tfplan
 terraform apply tfplan
 ./scripts/deploy-app.sh dev
 ./scripts/smoke-test.sh
 
 # ── Option B: Production (~$1,740/month) ────────────────────────────
+cp terraform.production.tfvars.example terraform.production.tfvars
+# Edit terraform.production.tfvars with your domain and zone ID
 terraform plan -var-file=terraform.production.tfvars -out=tfplan
 terraform apply tfplan
 ./scripts/deploy-app.sh production
