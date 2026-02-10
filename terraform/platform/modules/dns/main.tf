@@ -15,13 +15,19 @@ locals {
     for name, opts in local.acm_validation_map :
     name => opts[0]
   }
+
+  # Use existing zone if provided, otherwise create a new one
+  use_existing_zone = var.existing_zone_id != ""
+  zone_id           = local.use_existing_zone ? var.existing_zone_id : aws_route53_zone.this[0].zone_id
 }
 
 # -----------------------------------------------------------------------------
-# Route 53 Hosted Zone
+# Route 53 Hosted Zone (skipped when using an existing zone)
 # -----------------------------------------------------------------------------
 
 resource "aws_route53_zone" "this" {
+  count = local.use_existing_zone ? 0 : 1
+
   name    = var.domain_name
   comment = "AnvilOps ${var.environment} platform DNS"
 
@@ -33,7 +39,7 @@ resource "aws_route53_zone" "this" {
 # -----------------------------------------------------------------------------
 
 resource "aws_route53_record" "root" {
-  zone_id = aws_route53_zone.this.zone_id
+  zone_id = local.zone_id
   name    = var.domain_name
   type    = "A"
 
@@ -49,7 +55,7 @@ resource "aws_route53_record" "root" {
 # -----------------------------------------------------------------------------
 
 resource "aws_route53_record" "api" {
-  zone_id = aws_route53_zone.this.zone_id
+  zone_id = local.zone_id
   name    = "api.${var.domain_name}"
   type    = "A"
 
@@ -65,7 +71,7 @@ resource "aws_route53_record" "api" {
 # -----------------------------------------------------------------------------
 
 resource "aws_route53_record" "app" {
-  zone_id = aws_route53_zone.this.zone_id
+  zone_id = local.zone_id
   name    = "app.${var.domain_name}"
   type    = "A"
 
@@ -83,7 +89,7 @@ resource "aws_route53_record" "app" {
 resource "aws_route53_record" "auth" {
   count = var.cognito_domain_url != "" ? 1 : 0
 
-  zone_id = aws_route53_zone.this.zone_id
+  zone_id = local.zone_id
   name    = "auth.${var.domain_name}"
   type    = "CNAME"
   ttl     = 300
@@ -97,7 +103,7 @@ resource "aws_route53_record" "auth" {
 resource "aws_route53_record" "acm_validation" {
   for_each = local.acm_validation_records
 
-  zone_id         = aws_route53_zone.this.zone_id
+  zone_id         = local.zone_id
   name            = each.value.resource_record_name
   type            = each.value.resource_record_type
   ttl             = 60

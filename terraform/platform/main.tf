@@ -182,6 +182,7 @@ module "dns" {
   project_name                    = var.project_name
   environment                     = var.environment
   domain_name                     = var.domain_name
+  existing_zone_id                = var.existing_route53_zone_id
   alb_dns_name                    = module.alb.alb_dns_name
   alb_zone_id                     = module.alb.alb_zone_id
   cognito_domain_url              = module.cognito.user_pool_domain_url

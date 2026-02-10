@@ -1,11 +1,11 @@
 output "hosted_zone_id" {
   description = "ID of the Route 53 hosted zone."
-  value       = aws_route53_zone.this.zone_id
+  value       = local.zone_id
 }
 
 output "hosted_zone_name_servers" {
-  description = "Name servers for the hosted zone. Delegate from your registrar."
-  value       = aws_route53_zone.this.name_servers
+  description = "Name servers for the hosted zone (empty when using an existing zone)."
+  value       = local.use_existing_zone ? [] : aws_route53_zone.this[0].name_servers
 }
 
 output "root_domain_fqdn" {

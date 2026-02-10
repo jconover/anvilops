@@ -45,8 +45,14 @@ variable "tags" {
 # -----------------------------------------------------------------------------
 
 variable "domain_name" {
-  description = "Root domain name for the AnvilOps platform (e.g., anvilops.example.com)."
+  description = "Root domain name for the AnvilOps platform (e.g., anvilops.devopsnexus.io)."
   type        = string
+}
+
+variable "existing_route53_zone_id" {
+  description = "ID of an existing Route 53 hosted zone. When set, DNS records are added to this zone instead of creating a new one."
+  type        = string
+  default     = ""
 }
 
 # -----------------------------------------------------------------------------

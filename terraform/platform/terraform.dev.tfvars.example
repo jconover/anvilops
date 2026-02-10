@@ -1,18 +1,14 @@
 # =============================================================================
-# AnvilOps Platform Infrastructure - Example Variable Values
+# AnvilOps Platform — Dev / Demo Environment (~$350/month)
 # =============================================================================
-# Copy this file to terraform.tfvars and fill in values for your environment.
-# Do NOT commit terraform.tfvars to version control.
+# Smallest reasonable instance sizes for development, demos, and testing.
+# NOT suitable for production workloads.
 #
 # Usage:
-#   cp terraform.tfvars.example terraform.tfvars
-#   terraform init -backend-config="bucket=anvilops-terraform-state-dev-ACCOUNT_ID" \
-#                  -backend-config="key=platform/terraform.tfstate" \
-#                  -backend-config="region=us-east-1" \
-#                  -backend-config="dynamodb_table=anvilops-terraform-locks-dev" \
-#                  -backend-config="encrypt=true"
-#   terraform plan
-#   terraform apply
+#   cp terraform.dev.tfvars.example terraform.dev.tfvars
+#   # Edit terraform.dev.tfvars with your values
+#   terraform plan -var-file=terraform.dev.tfvars -out=tfplan
+#   terraform apply tfplan
 # =============================================================================
 
 # -----------------------------------------------------------------------------
@@ -25,49 +21,52 @@ aws_region       = "us-east-1"
 secondary_region = "us-west-2"
 
 tags = {
-  Team       = "Platform Engineering"
-  CostCenter = "INFRA-001"
+  Team        = "Platform Engineering"
+  CostCenter  = "INFRA-001"
+  Environment = "dev"
 }
 
 # -----------------------------------------------------------------------------
-# DNS
-# If you have an existing Route 53 hosted zone, set existing_route53_zone_id
-# to add records to it instead of creating a new zone.
+# DNS — Set your domain and optionally reuse an existing Route 53 hosted zone
 # -----------------------------------------------------------------------------
 
 domain_name              = "anvilops.example.com"
 existing_route53_zone_id = ""  # e.g., "Z0123456789ABCDEFGHIJ"
 
 # -----------------------------------------------------------------------------
-# Networking
+# Networking — Single NAT Gateway saves ~$67/month
 # -----------------------------------------------------------------------------
 
 vpc_cidr           = "10.0.0.0/16"
 availability_zones = ["us-east-1a", "us-east-1b", "us-east-1c"]
+single_nat_gateway = true
 
 # -----------------------------------------------------------------------------
-# EKS Cluster
+# EKS Cluster — t3.medium nodes, minimal count
+# Production: 3x t3.xlarge (~$450/mo) → Dev: 2x t3.medium (~$100/mo)
 # -----------------------------------------------------------------------------
 
-eks_node_instance_types = ["t3.xlarge"]
-eks_node_min_size       = 2
-eks_node_max_size       = 6
-eks_node_desired_size   = 3
+eks_node_instance_types = ["t3.medium"]
+eks_node_min_size       = 1
+eks_node_max_size       = 3
+eks_node_desired_size   = 2
 
 # -----------------------------------------------------------------------------
-# RDS PostgreSQL
+# RDS PostgreSQL — Smallest instance, no Multi-AZ, minimal storage
+# Production: db.t3.large Multi-AZ (~$280/mo) → Dev: db.t3.small (~$30/mo)
 # -----------------------------------------------------------------------------
 
-db_instance_class    = "db.t3.large"
-db_allocated_storage = 50
+db_instance_class    = "db.t3.small"
+db_allocated_storage = 20
 db_name              = "anvilops"
 
 # -----------------------------------------------------------------------------
-# ElastiCache Redis
+# ElastiCache Redis — Single micro node, no replication
+# Production: cache.t3.medium x2 (~$130/mo) → Dev: cache.t3.micro x1 (~$15/mo)
 # -----------------------------------------------------------------------------
 
-redis_node_type          = "cache.t3.medium"
-redis_num_cache_clusters = 2
+redis_node_type          = "cache.t3.micro"
+redis_num_cache_clusters = 1
 
 # -----------------------------------------------------------------------------
 # Cognito
@@ -84,11 +83,11 @@ cognito_logout_urls = [
 ]
 
 # -----------------------------------------------------------------------------
-# Security
+# Security — WAF disabled, no deletion protection
 # -----------------------------------------------------------------------------
 
-enable_waf                 = true
-enable_deletion_protection = false  # Set true for production
+enable_waf                 = false
+enable_deletion_protection = false
 
 # -----------------------------------------------------------------------------
 # Monitoring
@@ -97,8 +96,9 @@ enable_deletion_protection = false  # Set true for production
 alert_email = "platform-team@example.com"
 
 # -----------------------------------------------------------------------------
-# Puppet Enterprise
+# Puppet Enterprise — Smaller instance for demo (10-node trial)
+# Production: r5.xlarge (~$200/mo) → Dev: t3.large (~$60/mo)
 # -----------------------------------------------------------------------------
 
-puppet_instance_type = "r5.xlarge"
+puppet_instance_type = "t3.large"
 puppet_ami_id        = "ami-0123456789abcdef0"  # Replace with actual PE AMI
