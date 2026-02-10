@@ -121,24 +121,28 @@ terraform/platform/
 
 ## 4. Quick Start (TL;DR)
 
+Pre-built tfvars files are provided for each environment. Pick the one that matches your target:
+
 ```bash
 cd terraform/platform
 
-# 1. Configure
-cp terraform.tfvars.example terraform.tfvars
-# Edit terraform.tfvars with your values
-
-# 2. Deploy infrastructure (~30 minutes)
-./scripts/bootstrap.sh production
-
-# 3. Build and deploy the application (~10 minutes)
-./scripts/deploy-app.sh production
-
-# 4. Validate
+# ── Option A: Dev / Demo (~$350/month) ──────────────────────────────
+terraform plan -var-file=terraform.dev.tfvars -out=tfplan
+terraform apply tfplan
+./scripts/deploy-app.sh dev
 ./scripts/smoke-test.sh
 
-# 5. Open the platform
-echo "Visit: https://$(terraform output -raw app_domain)"
+# ── Option B: Production (~$1,740/month) ────────────────────────────
+terraform plan -var-file=terraform.production.tfvars -out=tfplan
+terraform apply tfplan
+./scripts/deploy-app.sh production
+./scripts/smoke-test.sh
+
+# ── Option C: Custom ────────────────────────────────────────────────
+cp terraform.tfvars.example terraform.tfvars
+# Edit terraform.tfvars with your values
+terraform plan -out=tfplan
+terraform apply tfplan
 ```
 
 ---
@@ -147,22 +151,37 @@ echo "Visit: https://$(terraform output -raw app_domain)"
 
 ### Step 1: Configure Variables
 
+Pre-built tfvars files are included for dev and production. Use one directly, or copy the example to customize:
+
 ```bash
 cd terraform/platform
+
+# Option 1 — Use the dev/demo environment as-is
+terraform plan -var-file=terraform.dev.tfvars -out=tfplan
+
+# Option 2 — Use the production environment as-is
+terraform plan -var-file=terraform.production.tfvars -out=tfplan
+
+# Option 3 — Customize from the example
 cp terraform.tfvars.example terraform.tfvars
+# Edit terraform.tfvars, then:
+terraform plan -out=tfplan
 ```
 
-Edit `terraform.tfvars`. Key variables:
+**Environment sizing comparison:**
 
-| Variable | Dev | Staging | Production |
-|----------|-----|---------|------------|
+| Variable | Dev (~$350/mo) | Staging | Production (~$1,740/mo) |
+|----------|---------------|---------|------------------------|
 | `single_nat_gateway` | true | true | false |
+| `eks_node_instance_types` | t3.medium | t3.xlarge | t3.xlarge |
 | `eks_node_desired_size` | 2 | 3 | 4 |
-| `rds_instance_class` | db.t3.medium | db.t3.large | db.r6g.large |
-| `rds_multi_az` | false | false | true |
-| `redis_node_type` | cache.t3.medium | cache.t3.medium | cache.r6g.large |
+| `db_instance_class` | db.t3.small | db.t3.large | db.r6g.large |
+| `db_allocated_storage` | 20 GB | 50 GB | 100 GB |
+| `redis_node_type` | cache.t3.micro | cache.t3.medium | cache.r6g.large |
 | `redis_num_cache_clusters` | 1 | 1 | 2 |
+| `puppet_instance_type` | t3.large | r5.xlarge | r5.xlarge |
 | `enable_waf` | false | true | true |
+| `enable_deletion_protection` | false | false | true |
 
 ### Step 2: Bootstrap State Backend
 
@@ -356,15 +375,32 @@ Update `terraform.tfvars` (instance types, classes) and `terraform apply`.
 
 ## 12. Cost Optimization Tips
 
+### Use the Dev/Demo Environment
+
+The fastest way to cut costs is to use the included dev tfvars, which scales every component to its smallest reasonable size:
+
+```bash
+terraform plan -var-file=terraform.dev.tfvars -out=tfplan
+terraform apply tfplan
+```
+
+| Component | Production | Dev/Demo | Savings |
+|-----------|-----------|----------|---------|
+| EKS nodes | 3x t3.xlarge | 2x t3.medium | ~$350/mo |
+| RDS PostgreSQL | db.r6g.large Multi-AZ | db.t3.small Single-AZ | ~$250/mo |
+| ElastiCache Redis | cache.r6g.large x2 | cache.t3.micro x1 | ~$115/mo |
+| NAT Gateways | 3 (one per AZ) | 1 (shared) | ~$67/mo |
+| Puppet Enterprise | r5.xlarge | t3.large | ~$140/mo |
+| WAF | enabled | disabled | ~$25/mo |
+| **Monthly total** | **~$1,740** | **~$350** | **~$1,390** |
+
+### Additional Production Optimizations
+
 | Optimization | Savings |
 |-------------|---------|
-| Single NAT Gateway (dev) | ~$32/mo |
-| Smaller EKS nodes (t3.large) | ~$200/mo |
-| Smaller RDS (db.t3.medium, no Multi-AZ) | ~$300/mo |
-| Smaller Redis (cache.t3.medium, 1 node) | ~$300/mo |
 | FARGATE_SPOT for TF runner | 70% on runner tasks |
 | Reserved Instances (1-year) | 30-40% on steady-state |
-| **Dev total** | **~$450/mo** vs $1,740 production |
+| Savings Plans (compute) | 20-30% across EC2/Fargate |
 
 Monitor costs:
 ```bash

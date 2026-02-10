@@ -32,6 +32,7 @@ module "networking" {
   environment        = var.environment
   vpc_cidr           = var.vpc_cidr
   availability_zones = var.availability_zones
+  single_nat_gateway = var.single_nat_gateway
   tags               = local.common_tags
 }
 

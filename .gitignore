@@ -34,6 +34,8 @@ myenv
 .terraform.lock.hcl
 *.tfvars
 !terraform/templates/*.tfvars
+!terraform/platform/terraform.*.tfvars
+!terraform/platform/terraform.tfvars.example
 crash.log
 
 # Docker

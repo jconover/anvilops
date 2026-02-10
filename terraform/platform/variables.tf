@@ -65,6 +65,12 @@ variable "availability_zones" {
   default     = ["us-east-1a", "us-east-1b", "us-east-1c"]
 }
 
+variable "single_nat_gateway" {
+  description = "Use a single NAT Gateway instead of one per AZ. Saves ~$67/mo but reduces AZ redundancy."
+  type        = bool
+  default     = true
+}
+
 # -----------------------------------------------------------------------------
 # EKS Cluster
 # -----------------------------------------------------------------------------
