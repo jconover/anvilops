@@ -6,16 +6,6 @@
 # =============================================================================
 
 locals {
-  # De-duplicate ACM validation options (wildcard + apex can share records)
-  acm_validation_map = {
-    for opt in var.acm_domain_validation_options :
-    opt.resource_record_name => opt...
-  }
-  acm_validation_records = {
-    for name, opts in local.acm_validation_map :
-    name => opts[0]
-  }
-
   # Use existing zone if provided, otherwise create a new one
   use_existing_zone = var.existing_zone_id != ""
   zone_id           = local.use_existing_zone ? var.existing_zone_id : aws_route53_zone.this[0].zone_id
@@ -97,21 +87,6 @@ resource "aws_route53_record" "auth" {
 }
 
 # -----------------------------------------------------------------------------
-# ACM Certificate Validation Records
-# -----------------------------------------------------------------------------
-
-resource "aws_route53_record" "acm_validation" {
-  for_each = local.acm_validation_records
-
-  zone_id         = local.zone_id
-  name            = each.value.resource_record_name
-  type            = each.value.resource_record_type
-  ttl             = 60
-  records         = [each.value.resource_record_value]
-  allow_overwrite = true
-}
-
-# -----------------------------------------------------------------------------
 # Route 53 Health Check — API Endpoint
 # -----------------------------------------------------------------------------
 
@@ -131,7 +106,7 @@ resource "aws_route53_health_check" "api" {
 # -----------------------------------------------------------------------------
 
 resource "aws_cloudwatch_metric_alarm" "health_check" {
-  count = var.sns_topic_arn != "" ? 1 : 0
+  count = var.enable_health_check_alarm ? 1 : 0
 
   alarm_name          = "${var.project_name}-${var.environment}-api-health-check"
   alarm_description   = "Alarm when API health check fails in ${var.environment}"

@@ -12,6 +12,11 @@ output "alb_dns_name" {
   value       = aws_lb.this.dns_name
 }
 
+output "alb_arn_suffix" {
+  description = "ARN suffix of the ALB (for CloudWatch metric dimensions)."
+  value       = aws_lb.this.arn_suffix
+}
+
 output "alb_zone_id" {
   description = "Canonical hosted zone ID of the ALB (for Route 53 alias records)."
   value       = aws_lb.this.zone_id

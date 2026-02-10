@@ -42,6 +42,11 @@ variable "alb_security_group_id" {
   type        = string
 }
 
+variable "route53_zone_id" {
+  description = "Route 53 hosted zone ID for ACM DNS validation records."
+  type        = string
+}
+
 variable "enable_waf" {
   description = "Whether to create and associate a WAF v2 Web ACL with the ALB."
   type        = bool

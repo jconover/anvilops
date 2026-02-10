@@ -40,19 +40,14 @@ variable "cognito_domain_url" {
   default     = ""
 }
 
-variable "acm_domain_validation_options" {
-  description = "ACM certificate domain validation options for DNS validation records."
-  type = list(object({
-    domain_name           = string
-    resource_record_name  = string
-    resource_record_type  = string
-    resource_record_value = string
-  }))
-  default = []
+variable "enable_health_check_alarm" {
+  description = "Whether to create a CloudWatch alarm for the API health check."
+  type        = bool
+  default     = true
 }
 
 variable "sns_topic_arn" {
-  description = "SNS topic ARN for health check alarms. Leave empty to skip."
+  description = "SNS topic ARN for health check alarms."
   type        = string
   default     = ""
 }

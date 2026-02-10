@@ -117,11 +117,8 @@ resource "aws_cloudwatch_log_group" "frontend" {
   tags              = local.common_tags
 }
 
-resource "aws_cloudwatch_log_group" "terraform_runner" {
-  name              = "/ecs/${var.project_name}-terraform-runner-${var.environment}"
-  retention_in_days = local.retention_days
-  tags              = local.common_tags
-}
+# Note: The terraform_runner log group is created by the ecs-runner module.
+# This module references it by name in the dashboard query below.
 
 # =============================================================================
 # Metric Filters - Application Error Tracking

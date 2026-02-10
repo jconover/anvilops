@@ -167,6 +167,7 @@ module "alb" {
   vpc_id                    = module.networking.vpc_id
   public_subnet_ids         = module.networking.public_subnet_ids
   alb_security_group_id     = module.networking.alb_security_group_id
+  route53_zone_id           = module.dns.hosted_zone_id
   enable_waf                = var.enable_waf
   enable_deletion_protection = var.enable_deletion_protection
   tags                      = local.common_tags
@@ -179,16 +180,16 @@ module "alb" {
 module "dns" {
   source = "./modules/dns"
 
-  project_name                    = var.project_name
-  environment                     = var.environment
-  domain_name                     = var.domain_name
-  existing_zone_id                = var.existing_route53_zone_id
-  alb_dns_name                    = module.alb.alb_dns_name
-  alb_zone_id                     = module.alb.alb_zone_id
-  cognito_domain_url              = module.cognito.user_pool_domain_url
-  acm_domain_validation_options   = module.alb.acm_certificate_domain_validation_options
-  sns_topic_arn                   = module.monitoring.sns_topic_arn
-  tags                            = local.common_tags
+  project_name              = var.project_name
+  environment               = var.environment
+  domain_name               = var.domain_name
+  existing_zone_id          = var.existing_route53_zone_id
+  alb_dns_name              = module.alb.alb_dns_name
+  alb_zone_id               = module.alb.alb_zone_id
+  cognito_domain_url        = module.cognito.user_pool_domain_url
+  enable_health_check_alarm = true
+  sns_topic_arn             = module.monitoring.sns_topic_arn
+  tags                      = local.common_tags
 }
 
 # -----------------------------------------------------------------------------

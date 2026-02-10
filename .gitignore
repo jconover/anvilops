@@ -35,6 +35,8 @@ myenv
 *.tfvars
 !terraform/templates/*.tfvars
 !terraform/platform/terraform.tfvars.example
+tfplan
+*.tfplan
 crash.log
 
 # Docker
