@@ -136,11 +136,7 @@ terraform apply -var="project_name=anvilops" -var="environment=dev"
 
 ```bash
 cd terraform/platform
-terraform init \
-  -backend-config="bucket=<state_bucket_name>" \
-  -backend-config="key=platform/terraform.tfstate" \
-  -backend-config="region=us-east-1" \
-  -backend-config="dynamodb_table=<dynamodb_table_name>"
+terraform init -backend-config="bucket=<state_bucket_name>" -backend-config="key=platform/terraform.tfstate" -backend-config="region=us-east-1" -backend-config="dynamodb_table=<dynamodb_table_name>"
 
 # ── Option A: Dev / Demo (~$350/month) ──────────────────────────────
 cp terraform.dev.tfvars.example terraform.dev.tfvars
@@ -219,11 +215,7 @@ Note the output values (`state_bucket_name`, `dynamodb_table_name`).
 
 ```bash
 cd terraform/platform
-terraform init \
-  -backend-config="bucket=<state_bucket_name>" \
-  -backend-config="key=platform/terraform.tfstate" \
-  -backend-config="region=us-east-1" \
-  -backend-config="dynamodb_table=<dynamodb_table_name>"
+terraform init -backend-config="bucket=<state_bucket_name>" -backend-config="key=platform/terraform.tfstate" -backend-config="region=us-east-1" -backend-config="dynamodb_table=<dynamodb_table_name>"
 ```
 
 ### Step 4: Plan and Apply
@@ -238,9 +230,7 @@ terraform apply tfplan
 ### Step 5: Configure kubectl
 
 ```bash
-aws eks update-kubeconfig \
-  --name $(terraform output -raw eks_cluster_name) \
-  --region us-east-1
+aws eks update-kubeconfig --name $(terraform output -raw eks_cluster_name) --region us-east-1
 kubectl get nodes
 ```
 
@@ -255,8 +245,7 @@ kubectl get nodes
 
 ```bash
 ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-aws ecr get-login-password --region us-east-1 | \
-  docker login --username AWS --password-stdin ${ACCOUNT_ID}.dkr.ecr.us-east-1.amazonaws.com
+aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${ACCOUNT_ID}.dkr.ecr.us-east-1.amazonaws.com
 
 docker build -t anvilops-api:latest ./backend
 docker tag anvilops-api:latest ${ACCOUNT_ID}.dkr.ecr.us-east-1.amazonaws.com/anvilops-api:v1.0.0
@@ -281,15 +270,8 @@ kubectl -n anvilops exec deploy/anvilops-api -- alembic upgrade head
 
 ```bash
 USER_POOL_ID=$(terraform output -raw cognito_user_pool_id)
-aws cognito-idp admin-create-user \
-  --user-pool-id $USER_POOL_ID \
-  --username admin@example.com \
-  --user-attributes Name=email,Value=admin@example.com Name=email_verified,Value=true \
-  --temporary-password "TempPassword123!"
-aws cognito-idp admin-add-user-to-group \
-  --user-pool-id $USER_POOL_ID \
-  --username admin@example.com \
-  --group-name admin
+aws cognito-idp admin-create-user --user-pool-id $USER_POOL_ID --username admin@example.com --user-attributes Name=email,Value=admin@example.com Name=email_verified,Value=true --temporary-password "TempPassword123!"
+aws cognito-idp admin-add-user-to-group --user-pool-id $USER_POOL_ID --username admin@example.com --group-name admin
 ```
 
 ### Step 11: Validate
@@ -304,9 +286,7 @@ aws cognito-idp admin-add-user-to-group \
 
 ### Slack Webhook
 ```bash
-aws secretsmanager put-secret-value \
-  --secret-id anvilops/slack-webhook \
-  --secret-string "https://hooks.slack.com/services/T.../B.../..."
+aws secretsmanager put-secret-value --secret-id anvilops/slack-webhook --secret-string "https://hooks.slack.com/services/T.../B.../..."
 kubectl -n anvilops rollout restart deployment/anvilops-worker
 ```
 
@@ -424,7 +404,5 @@ terraform apply tfplan
 
 Monitor costs:
 ```bash
-aws ce get-cost-and-usage \
-  --time-period Start=$(date -d "$(date +%Y-%m-01)" +%Y-%m-%d),End=$(date +%Y-%m-%d) \
-  --granularity MONTHLY --metrics BlendedCost --group-by Type=DIMENSION,Key=SERVICE
+aws ce get-cost-and-usage --time-period Start=$(date -d "$(date +%Y-%m-01)" +%Y-%m-%d),End=$(date +%Y-%m-%d) --granularity MONTHLY --metrics BlendedCost --group-by Type=DIMENSION,Key=SERVICE
 ```

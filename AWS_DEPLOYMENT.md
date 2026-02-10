@@ -2,6 +2,8 @@
 
 Complete guide for deploying the AnvilOps server provisioning platform to AWS. This document covers every component from networking to observability, written for a production-grade deployment across two regions.
 
+> **Shell compatibility note:** Command examples use `\` for line continuation (Linux/macOS). On **PowerShell**, replace `\` with a backtick (`` ` ``) or join the command onto a single line. For a cross-platform quickstart, see [AWS_AUTOMATED_DEPLOYMENT.md](./AWS_AUTOMATED_DEPLOYMENT.md).
+
 ---
 
 ## Table of Contents
