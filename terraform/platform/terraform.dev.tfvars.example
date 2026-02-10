@@ -7,7 +7,7 @@
 # Usage:
 #   cp terraform.dev.tfvars.example terraform.dev.tfvars
 #   # Edit terraform.dev.tfvars with your values
-#   terraform plan -var-file=terraform.dev.tfvars -out=tfplan
+#   terraform plan -var-file terraform.dev.tfvars -out tfplan
 #   terraform apply tfplan
 # =============================================================================
 

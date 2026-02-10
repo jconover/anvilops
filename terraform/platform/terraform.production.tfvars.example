@@ -7,7 +7,7 @@
 # Usage:
 #   cp terraform.production.tfvars.example terraform.production.tfvars
 #   # Edit terraform.production.tfvars with your values
-#   terraform plan -var-file=terraform.production.tfvars -out=tfplan
+#   terraform plan -var-file terraform.production.tfvars -out tfplan
 #   terraform apply tfplan
 # =============================================================================
 

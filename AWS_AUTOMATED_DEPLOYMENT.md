@@ -141,7 +141,7 @@ terraform init -backend-config="bucket=<state_bucket_name>" -backend-config="key
 # ── Option A: Dev / Demo (~$350/month) ──────────────────────────────
 cp terraform.dev.tfvars.example terraform.dev.tfvars
 # Edit terraform.dev.tfvars with your domain and zone ID
-terraform plan -var-file=terraform.dev.tfvars -out=tfplan
+terraform plan -var-file terraform.dev.tfvars -out tfplan
 terraform apply tfplan
 ./scripts/deploy-app.sh dev
 ./scripts/smoke-test.sh
@@ -149,7 +149,7 @@ terraform apply tfplan
 # ── Option B: Production (~$1,740/month) ────────────────────────────
 cp terraform.production.tfvars.example terraform.production.tfvars
 # Edit terraform.production.tfvars with your domain and zone ID
-terraform plan -var-file=terraform.production.tfvars -out=tfplan
+terraform plan -var-file terraform.production.tfvars -out tfplan
 terraform apply tfplan
 ./scripts/deploy-app.sh production
 ./scripts/smoke-test.sh
@@ -157,7 +157,7 @@ terraform apply tfplan
 # ── Option C: Custom ────────────────────────────────────────────────
 cp terraform.tfvars.example terraform.tfvars
 # Edit terraform.tfvars with your values
-terraform plan -out=tfplan
+terraform plan -out tfplan
 terraform apply tfplan
 ```
 
@@ -173,15 +173,15 @@ Pre-built tfvars files are included for dev and production. Use one directly, or
 cd terraform/platform
 
 # Option 1 — Use the dev/demo environment as-is
-terraform plan -var-file=terraform.dev.tfvars -out=tfplan
+terraform plan -var-file terraform.dev.tfvars -out tfplan
 
 # Option 2 — Use the production environment as-is
-terraform plan -var-file=terraform.production.tfvars -out=tfplan
+terraform plan -var-file terraform.production.tfvars -out tfplan
 
 # Option 3 — Customize from the example
 cp terraform.tfvars.example terraform.tfvars
 # Edit terraform.tfvars, then:
-terraform plan -out=tfplan
+terraform plan -out tfplan
 ```
 
 **Environment sizing comparison:**
@@ -221,7 +221,7 @@ terraform init -backend-config="bucket=<state_bucket_name>" -backend-config="key
 ### Step 4: Plan and Apply
 
 ```bash
-terraform plan -out=tfplan
+terraform plan -out tfplan
 terraform apply tfplan
 ```
 
@@ -306,7 +306,7 @@ Check inbox for AWS SNS confirmation email and click the link.
 ```bash
 # Create dev environment with separate workspace
 terraform workspace new dev
-terraform plan -var-file=terraform.dev.tfvars -out=tfplan-dev
+terraform plan -var-file terraform.dev.tfvars -out tfplan-dev
 terraform apply tfplan-dev
 ```
 
@@ -380,7 +380,7 @@ Update `terraform.tfvars` (instance types, classes) and `terraform apply`.
 The fastest way to cut costs is to use the included dev tfvars, which scales every component to its smallest reasonable size:
 
 ```bash
-terraform plan -var-file=terraform.dev.tfvars -out=tfplan
+terraform plan -var-file terraform.dev.tfvars -out tfplan
 terraform apply tfplan
 ```
 
