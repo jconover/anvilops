@@ -13,6 +13,7 @@ build/
 venv/
 .venv/
 env/
+myenv
 
 # IDE
 .vscode/
@@ -40,6 +41,7 @@ docker-compose.override.yml
 
 # Node
 node_modules/
+.next/
 
 # OS
 .DS_Store
