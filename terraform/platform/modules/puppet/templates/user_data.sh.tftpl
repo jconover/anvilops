@@ -1,0 +1,143 @@
+#!/bin/bash
+# ============================================================================
+# Puppet Enterprise Installation and Configuration
+# ============================================================================
+set -euo pipefail
+exec > >(tee /var/log/puppet-bootstrap.log) 2>&1
+echo "=== Puppet Enterprise Bootstrap Started at $(date) ==="
+
+# [1/8] Configure hostname
+echo "[1/8] Configuring hostname..."
+hostnamectl set-hostname ${hostname}
+cat >> /etc/hosts <<EOF
+
+$(hostname -I | awk '{print $1}') ${hostname} puppet
+EOF
+
+if command -v setenforce &>/dev/null; then
+  setenforce 0 || true
+fi
+
+# [2/8] Mount EBS data volume
+echo "[2/8] Configuring /opt/puppetlabs EBS volume..."
+DEVICE="${device_name}"
+for i in {1..30}; do
+  [ -e "$DEVICE" ] && break
+  echo "Waiting for $DEVICE... ($i/30)"
+  sleep 2
+done
+
+if [ ! -e "$DEVICE" ]; then
+  echo "ERROR: EBS volume $DEVICE did not attach within 60 seconds"
+  exit 1
+fi
+
+if ! blkid "$DEVICE" &>/dev/null; then
+  mkfs.ext4 -m 0 -F "$DEVICE"
+fi
+
+mkdir -p ${mount_point}
+mount "$DEVICE" ${mount_point}
+
+UUID=$(blkid -s UUID -o value "$DEVICE")
+if ! grep -q "$UUID" /etc/fstab; then
+  echo "UUID=$UUID ${mount_point} ext4 defaults,nofail 0 2" >> /etc/fstab
+fi
+
+# [3/8] Install prerequisites
+echo "[3/8] Installing prerequisites..."
+if command -v yum &>/dev/null; then
+  OS_FAMILY="rhel"
+  yum install -y curl wget tar gzip net-tools unzip jq
+  yum update -y
+elif command -v apt-get &>/dev/null; then
+  OS_FAMILY="debian"
+  apt-get update -y
+  apt-get install -y curl wget tar gzip net-tools unzip jq
+fi
+
+# [4/8] Retrieve console admin password
+echo "[4/8] Retrieving console admin password from Secrets Manager..."
+CONSOLE_PASSWORD=$(aws secretsmanager get-secret-value \
+  --region ${aws_region} \
+  --secret-id ${console_password_arn} \
+  --query SecretString \
+  --output text | jq -r '.password')
+
+if [ -z "$CONSOLE_PASSWORD" ]; then
+  echo "ERROR: Failed to retrieve console password"
+  exit 1
+fi
+
+# [5/8] Install Puppet Enterprise
+echo "[5/8] Downloading and installing PE ${pe_version}..."
+PE_TARBALL="puppet-enterprise-${pe_version}-el-8-x86_64.tar.gz"
+cd /tmp
+if [ ! -f "$PE_TARBALL" ]; then
+  curl -o "$PE_TARBALL" "https://pm.puppet.com/puppet-enterprise/$PE_TARBALL"
+fi
+
+tar -xzf "$PE_TARBALL"
+cd "puppet-enterprise-${pe_version}-el-8-x86_64"
+
+cat > pe.conf <<PECONF
+{
+  "console_admin_password": "$CONSOLE_PASSWORD"
+  "puppet_enterprise::puppet_master_host": "${hostname}"
+  "puppet_enterprise::puppetdb_database_name": "pe-puppetdb"
+  "puppet_enterprise::puppetdb_database_user": "pe-puppetdb"
+  "puppet_enterprise::profile::master::code_manager_auto_configure": true
+  "puppet_enterprise::profile::master::r10k_remote": "${puppet_code_repo_url}"
+  "puppet_enterprise::use_application_services": true
+}
+PECONF
+
+./puppet-enterprise-installer -c pe.conf
+
+# [6/8] Post-installation configuration
+echo "[6/8] Configuring Puppet Enterprise..."
+sleep 30
+
+cat > /etc/puppetlabs/puppet/autosign.conf <<EOF
+*.${autosign_domain}
+EOF
+chmod 644 /etc/puppetlabs/puppet/autosign.conf
+
+/opt/puppetlabs/bin/puppet agent -t || true
+
+if [ -n "${puppet_code_repo_url}" ]; then
+  /opt/puppetlabs/bin/puppet-code deploy --all --wait || true
+fi
+
+# [7/8] Install CloudWatch agent
+echo "[7/8] Installing CloudWatch agent..."
+if [ "$OS_FAMILY" = "rhel" ]; then
+  yum install -y amazon-cloudwatch-agent
+elif [ "$OS_FAMILY" = "debian" ]; then
+  wget https://s3.amazonaws.com/amazoncloudwatch-agent/ubuntu/amd64/latest/amazon-cloudwatch-agent.deb
+  dpkg -i -E ./amazon-cloudwatch-agent.deb
+fi
+
+aws ssm get-parameter \
+  --region ${aws_region} \
+  --name "/anvilops/${environment}/puppet/cloudwatch-agent-config" \
+  --query 'Parameter.Value' \
+  --output text > /opt/aws/amazon-cloudwatch-agent/etc/config.json
+
+/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl \
+  -a fetch-config -m ec2 -s \
+  -c file:/opt/aws/amazon-cloudwatch-agent/etc/config.json
+
+# [8/8] Finalize
+echo "[8/8] Finalizing..."
+/opt/puppetlabs/bin/puppet resource service puppet ensure=running enable=true
+systemctl enable pe-puppetserver pe-puppetdb pe-console-services || true
+
+cat > /etc/puppetlabs/anvilops-bootstrap-complete <<EOF
+Bootstrap completed: $(date)
+PE Version: ${pe_version}
+Hostname: ${hostname}
+EOF
+
+echo "=== Puppet Enterprise Bootstrap Completed at $(date) ==="
+echo "Console: https://${hostname}"

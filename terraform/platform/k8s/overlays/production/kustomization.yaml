@@ -1,0 +1,126 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../../base
+
+commonLabels:
+  environment: production
+
+patches:
+  - target:
+      kind: Deployment
+      name: anvilops-api
+    patch: |
+      - op: replace
+        path: /spec/replicas
+        value: 3
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/cpu
+        value: 500m
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/memory
+        value: 1Gi
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/limits/cpu
+        value: 2000m
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/limits/memory
+        value: 2Gi
+
+  - target:
+      kind: Deployment
+      name: anvilops-worker
+    patch: |
+      - op: replace
+        path: /spec/replicas
+        value: 4
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/cpu
+        value: 1000m
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/memory
+        value: 2Gi
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/limits/cpu
+        value: 4000m
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/limits/memory
+        value: 4Gi
+
+  - target:
+      kind: Deployment
+      name: anvilops-frontend
+    patch: |
+      - op: replace
+        path: /spec/replicas
+        value: 3
+
+  - target:
+      kind: HorizontalPodAutoscaler
+      name: anvilops-api-hpa
+    patch: |
+      - op: replace
+        path: /spec/minReplicas
+        value: 3
+      - op: replace
+        path: /spec/maxReplicas
+        value: 20
+
+  - target:
+      kind: HorizontalPodAutoscaler
+      name: anvilops-worker-hpa
+    patch: |
+      - op: replace
+        path: /spec/minReplicas
+        value: 4
+      - op: replace
+        path: /spec/maxReplicas
+        value: 16
+
+  - target:
+      kind: PodDisruptionBudget
+      name: anvilops-api-pdb
+    patch: |
+      - op: replace
+        path: /spec/minAvailable
+        value: 2
+
+  - target:
+      kind: PodDisruptionBudget
+      name: anvilops-worker-pdb
+    patch: |
+      - op: replace
+        path: /spec/minAvailable
+        value: 2
+
+  - target:
+      kind: ConfigMap
+      name: anvilops-config
+    patch: |
+      - op: replace
+        path: /data/ENVIRONMENT
+        value: production
+      - op: replace
+        path: /data/DEBUG
+        value: "false"
+      - op: replace
+        path: /data/NEXT_PUBLIC_API_URL
+        value: "https://api.anvilops.example.com/api/v1"
+      - op: replace
+        path: /data/SLACK_ENABLED
+        value: "true"
+      - op: replace
+        path: /data/SERVICENOW_ENABLED
+        value: "true"
+
+  - target:
+      kind: Ingress
+      name: anvilops-ingress
+    patch: |
+      - op: replace
+        path: /spec/rules/0/host
+        value: anvilops.example.com
+      - op: replace
+        path: /metadata/annotations/alb.ingress.kubernetes.io~1tags
+        value: "Environment=production,Application=anvilops"

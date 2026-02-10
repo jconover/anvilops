@@ -1,0 +1,61 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../../base
+
+commonLabels:
+  environment: staging
+
+patches:
+  - target:
+      kind: Deployment
+      name: anvilops-api
+    patch: |
+      - op: replace
+        path: /spec/replicas
+        value: 2
+
+  - target:
+      kind: Deployment
+      name: anvilops-worker
+    patch: |
+      - op: replace
+        path: /spec/replicas
+        value: 2
+
+  - target:
+      kind: Deployment
+      name: anvilops-frontend
+    patch: |
+      - op: replace
+        path: /spec/replicas
+        value: 2
+
+  - target:
+      kind: ConfigMap
+      name: anvilops-config
+    patch: |
+      - op: replace
+        path: /data/ENVIRONMENT
+        value: staging
+      - op: replace
+        path: /data/DEBUG
+        value: "false"
+      - op: replace
+        path: /data/NEXT_PUBLIC_API_URL
+        value: "https://staging-api.anvilops.internal/api/v1"
+      - op: replace
+        path: /data/SLACK_ENABLED
+        value: "true"
+
+  - target:
+      kind: Ingress
+      name: anvilops-ingress
+    patch: |
+      - op: replace
+        path: /spec/rules/0/host
+        value: staging.anvilops.example.com
+      - op: replace
+        path: /metadata/annotations/alb.ingress.kubernetes.io~1tags
+        value: "Environment=staging,Application=anvilops"

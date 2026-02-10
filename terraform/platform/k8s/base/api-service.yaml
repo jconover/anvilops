@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: anvilops-api
+  namespace: anvilops
+  labels:
+    app.kubernetes.io/name: anvilops-api
+    app.kubernetes.io/part-of: anvilops
+    app.kubernetes.io/component: api
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: anvilops-api
+  ports:
+    - port: 80
+      targetPort: 8000
+      protocol: TCP
+      name: http

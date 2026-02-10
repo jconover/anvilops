@@ -1,0 +1,26 @@
+serviceAccount:
+  create: true
+  name: external-dns
+  annotations:
+    eks.amazonaws.com/role-arn: ${external_dns_role_arn}
+
+provider: aws
+
+aws:
+  region: ${region}
+  zoneType: public
+
+domainFilters:
+  - ${domain}
+
+policy: upsert-only
+
+txtOwnerId: anvilops-${environment}
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 100m
+    memory: 128Mi

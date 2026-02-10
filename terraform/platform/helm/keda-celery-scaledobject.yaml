@@ -1,0 +1,21 @@
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: anvilops-worker
+  namespace: anvilops
+spec:
+  scaleTargetRef:
+    name: anvilops-worker
+  pollingInterval: 15
+  cooldownPeriod: 60
+  minReplicaCount: 2
+  maxReplicaCount: 10
+  triggers:
+    - type: redis
+      metadata:
+        address: ${redis_endpoint}:6379
+        listName: celery
+        listLength: "5"
+        enableTLS: "true"
+        authenticationRef:
+          name: redis-auth

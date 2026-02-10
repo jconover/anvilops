@@ -1,0 +1,28 @@
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: anvilops-api-pdb
+  namespace: anvilops
+  labels:
+    app.kubernetes.io/part-of: anvilops
+    app.kubernetes.io/component: api
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: anvilops-api
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: anvilops-worker-pdb
+  namespace: anvilops
+  labels:
+    app.kubernetes.io/part-of: anvilops
+    app.kubernetes.io/component: worker
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: anvilops-worker

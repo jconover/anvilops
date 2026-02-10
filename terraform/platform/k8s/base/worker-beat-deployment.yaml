@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: anvilops-beat
+  namespace: anvilops
+  labels:
+    app.kubernetes.io/name: anvilops-beat
+    app.kubernetes.io/part-of: anvilops
+    app.kubernetes.io/component: beat
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: anvilops-beat
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: anvilops-beat
+        app.kubernetes.io/part-of: anvilops
+        app.kubernetes.io/component: beat
+    spec:
+      serviceAccountName: anvilops-worker
+      containers:
+        - name: beat
+          image: anvilops-api:latest
+          command:
+            - celery
+            - -A
+            - app.worker.celery_app
+            - beat
+            - --loglevel=info
+          envFrom:
+            - configMapRef:
+                name: anvilops-config
+            - secretRef:
+                name: anvilops-secrets
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+      restartPolicy: Always

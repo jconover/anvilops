@@ -1,0 +1,28 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: anvilops-config
+  namespace: anvilops
+  labels:
+    app.kubernetes.io/part-of: anvilops
+data:
+  ENVIRONMENT: "dev"
+  AWS_REGION: "us-east-1"
+  AWS_DEFAULT_REGION: "us-east-1"
+  ALLOWED_REGIONS: "us-east-1,us-west-2"
+  CELERY_BROKER_URL: "redis://redis.anvilops.svc.cluster.local:6379/0"
+  DATABASE_URL: "postgresql+asyncpg://anvilops:changeme@anvilops-db.anvilops.svc.cluster.local:5432/anvilops"
+  REDIS_URL: "redis://redis.anvilops.svc.cluster.local:6379/0"
+  NEXT_PUBLIC_API_URL: "https://api.anvilops.internal/api/v1"
+  PUPPET_MASTER_HOST: "puppet.anvilops.internal"
+  API_V1_PREFIX: "/api/v1"
+  PROJECT_NAME: "AnvilOps"
+  DEBUG: "false"
+  TERRAFORM_WORK_DIR: "/tmp/terraform"
+  AWX_BASE_URL: "http://awx-service.awx.svc.cluster.local"
+  PUPPET_BASE_URL: "https://puppet.anvilops.internal"
+  PUPPET_DEFAULT_ENVIRONMENT: "production"
+  PUPPET_CERTNAME_DOMAIN: "anvilops.internal"
+  SLACK_ENABLED: "false"
+  SLACK_CHANNEL: "#anvilops-builds"
+  SERVICENOW_ENABLED: "false"
