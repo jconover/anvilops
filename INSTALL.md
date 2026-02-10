@@ -268,7 +268,74 @@ $env:PATH += ";C:\Program Files\PostgreSQL\16\bin"
 
 ### Redis setup
 
-Install Redis 7 and ensure it's running on port 6379 (default).
+Redis is used as the Celery message broker and result backend. On Windows, the official Redis build isn't natively supported, so you have a few options:
+
+#### Option A: Install via Chocolatey (easiest)
+
+```powershell
+choco install redis-64
+```
+
+After install, start the server:
+
+```powershell
+# Start Redis in the foreground
+redis-server
+
+# Or start it in the background as a Windows service
+# (Chocolatey may have registered it as a service already)
+Get-Service -Name 'Redis'
+Start-Service -Name 'Redis'
+```
+
+#### Option B: Install via WSL (recommended for parity with production)
+
+If you have WSL (Windows Subsystem for Linux) installed:
+
+```bash
+# Inside your WSL terminal
+sudo apt update && sudo apt install redis-server -y
+
+# Start Redis
+sudo service redis-server start
+
+# Verify
+redis-cli ping
+# Should return: PONG
+```
+
+Redis in WSL is accessible from Windows at `localhost:6379` by default.
+
+#### Option C: Use Docker (standalone, without full Docker Compose)
+
+If you only want Redis in Docker but run everything else natively:
+
+```powershell
+docker run -d --name anvilops-redis -p 6379:6379 redis:7-alpine
+```
+
+#### Verify Redis is running
+
+```powershell
+# If redis-cli is in your PATH
+redis-cli ping
+# Should return: PONG
+
+# Check what's in Redis (should be empty initially)
+redis-cli INFO keyspace
+
+# If redis-cli isn't found, try the full path
+& "C:\ProgramData\chocolatey\lib\redis-64\redis-cli.exe" ping
+```
+
+#### Troubleshooting Redis on Windows
+
+| Problem | Solution |
+|---------|----------|
+| `redis-cli` not found | Add Redis install dir to PATH, or use the full path |
+| Connection refused on 6379 | Redis isn't running — start the service or run `redis-server` |
+| Port 6379 already in use | Another Redis instance (or Docker container) is using it — stop it first |
+| Need to flush all data | `redis-cli FLUSHALL` — clears all keys (safe in local dev) |
 
 ### Configure environment
 
