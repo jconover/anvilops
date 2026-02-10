@@ -53,12 +53,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
     localStorage.setItem('anvilops_user', JSON.stringify(mockUser));
     localStorage.setItem('anvilops_token', 'dev-token');
+    // Set cookie so Next.js middleware can read the token server-side
+    document.cookie = 'anvilops_token=dev-token; path=/; max-age=86400; SameSite=Lax';
     setUser(mockUser);
   }, []);
 
   const logout = useCallback(() => {
     localStorage.removeItem('anvilops_user');
     localStorage.removeItem('anvilops_token');
+    document.cookie = 'anvilops_token=; path=/; max-age=0';
     setUser(null);
   }, []);
 
