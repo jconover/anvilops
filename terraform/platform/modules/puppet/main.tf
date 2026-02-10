@@ -28,6 +28,35 @@ data "aws_subnet" "puppet_subnet" {
 }
 
 # -----------------------------------------------------------------------------
+# AMI Lookup — Latest Amazon Linux 2023 (used when puppet_ami_id is empty)
+# -----------------------------------------------------------------------------
+
+data "aws_ami" "amazon_linux_2023" {
+  count       = var.puppet_ami_id == "" ? 1 : 0
+  most_recent = true
+  owners      = ["amazon"]
+
+  filter {
+    name   = "name"
+    values = ["al2023-ami-2023.*-x86_64"]
+  }
+
+  filter {
+    name   = "state"
+    values = ["available"]
+  }
+
+  filter {
+    name   = "architecture"
+    values = ["x86_64"]
+  }
+}
+
+locals {
+  puppet_ami_id = var.puppet_ami_id != "" ? var.puppet_ami_id : data.aws_ami.amazon_linux_2023[0].id
+}
+
+# -----------------------------------------------------------------------------
 # Secrets Manager — PE Console Admin Password
 # -----------------------------------------------------------------------------
 
@@ -84,7 +113,7 @@ resource "aws_volume_attachment" "puppet_data" {
 # -----------------------------------------------------------------------------
 
 resource "aws_instance" "puppet_enterprise" {
-  ami                    = var.puppet_ami_id
+  ami                    = local.puppet_ami_id
   instance_type          = var.puppet_instance_type
   subnet_id              = var.private_subnet_ids[0]
   vpc_security_group_ids = [var.puppet_security_group_id]

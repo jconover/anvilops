@@ -193,6 +193,7 @@ variable "puppet_instance_type" {
 }
 
 variable "puppet_ami_id" {
-  description = "AMI ID for the Puppet Enterprise server."
+  description = "AMI ID for the Puppet Enterprise server. Leave empty to auto-discover the latest Amazon Linux 2023 AMI."
   type        = string
+  default     = ""
 }

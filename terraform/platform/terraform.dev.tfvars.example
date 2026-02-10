@@ -101,4 +101,4 @@ alert_email = "platform-team@example.com"
 # -----------------------------------------------------------------------------
 
 puppet_instance_type = "t3.large"
-puppet_ami_id        = "ami-0123456789abcdef0"  # Replace with actual PE AMI
+# puppet_ami_id      = ""  # Leave unset to auto-discover latest Amazon Linux 2023

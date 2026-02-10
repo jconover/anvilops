@@ -71,14 +71,45 @@ fi
 
 # [5/8] Install Puppet Enterprise
 echo "[5/8] Downloading and installing PE ${pe_version}..."
-PE_TARBALL="puppet-enterprise-${pe_version}-el-8-x86_64.tar.gz"
+
+# Detect OS major version for the correct PE tarball
+if [ -f /etc/os-release ]; then
+  . /etc/os-release
+  OS_VERSION_MAJOR=$(echo "$VERSION_ID" | cut -d. -f1)
+  case "$ID" in
+    amzn)
+      # Amazon Linux 2023 is Fedora-based, uses el-9 PE packages
+      if [ "$OS_VERSION_MAJOR" = "2023" ] || [ "$OS_VERSION_MAJOR" -ge 2023 ]; then
+        PE_PLATFORM="el-9"
+      else
+        PE_PLATFORM="el-7"
+      fi
+      ;;
+    rhel|centos|rocky|almalinux|ol)
+      PE_PLATFORM="el-$OS_VERSION_MAJOR"
+      ;;
+    ubuntu)
+      PE_PLATFORM="ubuntu-$VERSION_ID"
+      ;;
+    *)
+      PE_PLATFORM="el-8"
+      ;;
+  esac
+else
+  PE_PLATFORM="el-8"
+fi
+
+PE_TARBALL="puppet-enterprise-${pe_version}-$PE_PLATFORM-x86_64.tar.gz"
+PE_DIR="puppet-enterprise-${pe_version}-$PE_PLATFORM-x86_64"
+echo "Detected platform: $PE_PLATFORM"
+
 cd /tmp
 if [ ! -f "$PE_TARBALL" ]; then
   curl -o "$PE_TARBALL" "https://pm.puppet.com/puppet-enterprise/$PE_TARBALL"
 fi
 
 tar -xzf "$PE_TARBALL"
-cd "puppet-enterprise-${pe_version}-el-8-x86_64"
+cd "$PE_DIR"
 
 cat > pe.conf <<PECONF
 {

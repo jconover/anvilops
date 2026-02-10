@@ -14,8 +14,9 @@ variable "environment" {
 }
 
 variable "puppet_ami_id" {
-  description = "AMI ID for the Puppet Enterprise instance."
+  description = "AMI ID for the Puppet Enterprise instance. Leave empty to auto-discover the latest Amazon Linux 2023 AMI."
   type        = string
+  default     = ""
 }
 
 variable "private_subnet_ids" {
