@@ -106,19 +106,32 @@ build_and_push() {
     fi
 }
 
+set_kustomize_image() {
+    local dir="$1" old_image="$2" new_image="$3"
+    if command -v kustomize &>/dev/null; then
+        (cd "$dir" && kustomize edit set image "${old_image}=${new_image}")
+    else
+        # Fallback: append image override to kustomization.yaml
+        local kfile="${dir}/kustomization.yaml"
+        if ! grep -q "^images:" "$kfile" 2>/dev/null; then
+            printf '\nimages:\n' >> "$kfile"
+        fi
+        printf '  - name: %s\n    newName: %s\n    newTag: "%s"\n' \
+            "${old_image%%:*}" "${new_image%%:*}" "${new_image##*:}" >> "$kfile"
+    fi
+}
+
 update_kustomize_images() {
     log_step "Updating Kustomize image tags..."
     local overlay_dir="${K8S_DIR}/overlays/${ENV}"
-    pushd "$overlay_dir" >/dev/null
 
     if [[ "$FRONTEND_ONLY" != "true" ]]; then
-        kustomize edit set image "anvilops-api:latest=${API_IMAGE}:${IMAGE_TAG}"
+        set_kustomize_image "$overlay_dir" "anvilops-api:latest" "${API_IMAGE}:${IMAGE_TAG}"
     fi
     if [[ "$API_ONLY" != "true" ]]; then
-        kustomize edit set image "anvilops-frontend:latest=${FRONTEND_IMAGE}:${IMAGE_TAG}"
+        set_kustomize_image "$overlay_dir" "anvilops-frontend:latest" "${FRONTEND_IMAGE}:${IMAGE_TAG}"
     fi
 
-    popd >/dev/null
     log_success "Kustomize image tags updated."
 }
 
@@ -126,8 +139,8 @@ apply_manifests() {
     log_step "Applying Kustomize manifests for ${ENV}..."
     local overlay_dir="${K8S_DIR}/overlays/${ENV}"
 
-    kustomize build "$overlay_dir" | kubectl apply --dry-run=server -f -
-    kustomize build "$overlay_dir" | kubectl apply -f -
+    kubectl kustomize "$overlay_dir" | kubectl apply --dry-run=server -f -
+    kubectl kustomize "$overlay_dir" | kubectl apply -f -
     log_success "Manifests applied."
 }
 
