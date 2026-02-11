@@ -323,7 +323,7 @@ helm install external-dns external-dns/external-dns -n external-dns --create-nam
 helm install metrics-server metrics-server/metrics-server -n kube-system --wait
 
 # 5. Cluster Autoscaler
-helm install cluster-autoscaler autoscaler/cluster-autoscaler -n kube-system --set autoDiscovery.clusterName=$CLUSTER_NAME --set awsRegion=$REGION --set rbac.serviceAccount.annotations."eks\.amazonaws\.com/role-arn"=$AUTOSCALER_ROLE_ARN --wait
+helm install cluster-autoscaler autoscaler/cluster-autoscaler -n kube-system --set autoDiscovery.clusterName=$CLUSTER_NAME --set awsRegion=$REGION --set rbac.serviceAccount.name=cluster-autoscaler --set rbac.serviceAccount.annotations."eks\.amazonaws\.com/role-arn"=$AUTOSCALER_ROLE_ARN --wait
 
 # 6. KEDA (Celery worker autoscaling)
 helm install keda keda/keda -n keda --create-namespace --wait
@@ -363,7 +363,7 @@ helm install external-dns external-dns/external-dns -n external-dns --create-nam
 helm install metrics-server metrics-server/metrics-server -n kube-system --wait
 
 # 5. Cluster Autoscaler
-helm install cluster-autoscaler autoscaler/cluster-autoscaler -n kube-system --set autoDiscovery.clusterName=$ClusterName --set awsRegion=$Region --set rbac.serviceAccount.annotations."eks\.amazonaws\.com/role-arn"=$AutoscalerArn --wait
+helm install cluster-autoscaler autoscaler/cluster-autoscaler -n kube-system --set autoDiscovery.clusterName=$ClusterName --set awsRegion=$Region --set rbac.serviceAccount.name=cluster-autoscaler --set rbac.serviceAccount.annotations."eks\.amazonaws\.com/role-arn"=$AutoscalerArn --wait
 
 # 6. KEDA (Celery worker autoscaling)
 helm install keda keda/keda -n keda --create-namespace --wait

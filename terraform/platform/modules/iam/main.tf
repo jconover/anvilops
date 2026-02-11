@@ -42,7 +42,7 @@ data "aws_iam_policy_document" "irsa_trust" {
     api                = { namespace = "anvilops", service_account = "anvilops-api" }
     worker             = { namespace = "anvilops", service_account = "anvilops-worker" }
     alb_controller     = { namespace = "kube-system", service_account = "aws-load-balancer-controller" }
-    external_dns       = { namespace = "kube-system", service_account = "external-dns" }
+    external_dns       = { namespace = "external-dns", service_account = "external-dns" }
     cluster_autoscaler = { namespace = "kube-system", service_account = "cluster-autoscaler" }
     ebs_csi_driver     = { namespace = "kube-system", service_account = "ebs-csi-controller-sa" }
   }
