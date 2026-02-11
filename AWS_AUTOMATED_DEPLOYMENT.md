@@ -62,7 +62,7 @@ This guide deploys the entire AnvilOps server provisioning platform to AWS using
 | Terraform | >= 1.9.0 | Infrastructure provisioning |
 | kubectl | 1.29+ | Kubernetes cluster management |
 | Helm | v3 | Kubernetes package management |
-| kustomize | Latest | Kubernetes manifest overlays |
+| kustomize | Latest | Kubernetes manifest overlays (optional — kubectl has built-in support) |
 | Docker | Latest | Building container images |
 | jq | Latest | JSON parsing in scripts |
 
@@ -111,10 +111,12 @@ terraform/platform/
 │       └── production/
 ├── helm/                    # Helm chart values files
 └── scripts/
-    ├── bootstrap.sh         # Full deployment
-    ├── deploy-app.sh        # App build + deploy
-    ├── smoke-test.sh        # Health validation
-    └── destroy.sh           # Teardown
+    ├── bootstrap.sh         # Full deployment (bash)
+    ├── deploy-app.sh        # App build + deploy (bash)
+    ├── deploy-app.ps1       # App build + deploy (PowerShell)
+    ├── smoke-test.sh        # Health validation (bash)
+    ├── smoke-test.ps1       # Health validation (PowerShell)
+    └── destroy.sh           # Teardown (bash)
 ```
 
 ---
@@ -134,6 +136,8 @@ terraform apply -var="project_name=anvilops" -var="environment=dev"
 
 ### Initialize and Deploy
 
+**Bash / macOS / Linux:**
+
 ```bash
 cd terraform/platform
 terraform init -backend-config="bucket=<state_bucket_name>" -backend-config="key=platform/terraform.tfstate" -backend-config="region=us-east-1" -backend-config="dynamodb_table=<dynamodb_table_name>"
@@ -144,8 +148,8 @@ cp terraform.dev.tfvars.example terraform.dev.tfvars
 terraform plan -var-file terraform.dev.tfvars -out tfplan
 terraform apply tfplan
 aws eks update-kubeconfig --name $(terraform output -raw eks_cluster_name) --region us-east-1
-./scripts/deploy-app.sh dev        # PowerShell: .\scripts\deploy-app.ps1 dev
-./scripts/smoke-test.sh            # PowerShell: .\scripts\smoke-test.ps1
+./scripts/deploy-app.sh dev
+./scripts/smoke-test.sh
 
 # ── Option B: Production (~$1,740/month) ────────────────────────────
 cp terraform.production.tfvars.example terraform.production.tfvars
@@ -153,11 +157,44 @@ cp terraform.production.tfvars.example terraform.production.tfvars
 terraform plan -var-file terraform.production.tfvars -out tfplan
 terraform apply tfplan
 aws eks update-kubeconfig --name $(terraform output -raw eks_cluster_name) --region us-east-1
-./scripts/deploy-app.sh production  # PowerShell: .\scripts\deploy-app.ps1 production
-./scripts/smoke-test.sh             # PowerShell: .\scripts\smoke-test.ps1
+./scripts/deploy-app.sh production
+./scripts/smoke-test.sh
 
 # ── Option C: Custom ────────────────────────────────────────────────
 cp terraform.tfvars.example terraform.tfvars
+# Edit terraform.tfvars with your values
+terraform plan -out tfplan
+terraform apply tfplan
+```
+
+**PowerShell (Windows):**
+
+```powershell
+cd terraform\platform
+terraform init -backend-config="bucket=<state_bucket_name>" -backend-config="key=platform/terraform.tfstate" -backend-config="region=us-east-1" -backend-config="dynamodb_table=<dynamodb_table_name>"
+
+# ── Option A: Dev / Demo (~$350/month) ──────────────────────────────
+Copy-Item terraform.dev.tfvars.example terraform.dev.tfvars
+# Edit terraform.dev.tfvars with your domain and zone ID
+terraform plan -var-file terraform.dev.tfvars -out tfplan
+terraform apply tfplan
+$ClusterName = terraform output -raw eks_cluster_name
+aws eks update-kubeconfig --name $ClusterName --region us-east-1
+.\scripts\deploy-app.ps1 dev
+.\scripts\smoke-test.ps1
+
+# ── Option B: Production (~$1,740/month) ────────────────────────────
+Copy-Item terraform.production.tfvars.example terraform.production.tfvars
+# Edit terraform.production.tfvars with your domain and zone ID
+terraform plan -var-file terraform.production.tfvars -out tfplan
+terraform apply tfplan
+$ClusterName = terraform output -raw eks_cluster_name
+aws eks update-kubeconfig --name $ClusterName --region us-east-1
+.\scripts\deploy-app.ps1 production
+.\scripts\smoke-test.ps1
+
+# ── Option C: Custom ────────────────────────────────────────────────
+Copy-Item terraform.tfvars.example terraform.tfvars
 # Edit terraform.tfvars with your values
 terraform plan -out tfplan
 terraform apply tfplan
@@ -231,8 +268,18 @@ terraform apply tfplan
 
 ### Step 5: Configure kubectl
 
+**Bash / macOS / Linux:**
+
 ```bash
 aws eks update-kubeconfig --name $(terraform output -raw eks_cluster_name) --region us-east-1
+kubectl get nodes
+```
+
+**PowerShell (Windows):**
+
+```powershell
+$ClusterName = terraform output -raw eks_cluster_name
+aws eks update-kubeconfig --name $ClusterName --region us-east-1
 kubectl get nodes
 ```
 
@@ -241,6 +288,8 @@ kubectl get nodes
 EKS add-ons must be installed before deploying the application. You can use the Terraform config in `helm/` or install manually with the Helm CLI.
 
 **Option A: Helm CLI (quick setup)**
+
+**Bash / macOS / Linux:**
 
 ```bash
 # Add repos
@@ -280,14 +329,65 @@ helm install cluster-autoscaler autoscaler/cluster-autoscaler -n kube-system --s
 helm install keda keda/keda -n keda --create-namespace --wait
 ```
 
-PowerShell users: replace `$CLUSTER_NAME` etc. with `$ClusterName` and set them with normal PowerShell variable assignment, or use the Terraform option below.
+**PowerShell (Windows):**
+
+```powershell
+# Add repos
+helm repo add eks https://aws.github.io/eks-charts
+helm repo add external-secrets https://charts.external-secrets.io
+helm repo add external-dns https://kubernetes-sigs.github.io/external-dns
+helm repo add metrics-server https://kubernetes-sigs.github.io/metrics-server
+helm repo add autoscaler https://kubernetes.github.io/autoscaler
+helm repo add keda https://kedacore.github.io/charts
+helm repo update
+
+# Set variables (update these for your environment)
+$ClusterName   = terraform output -raw eks_cluster_name
+$VpcId         = terraform output -raw vpc_id
+$Region        = "us-east-1"
+$AlbRoleArn    = terraform output -raw alb_controller_role_arn
+$ExtDnsRoleArn = terraform output -raw external_dns_role_arn
+$AutoscalerArn = terraform output -raw cluster_autoscaler_role_arn
+$Domain        = "anvilops.devopsnexus.io"
+
+# 1. AWS Load Balancer Controller
+helm install aws-load-balancer-controller eks/aws-load-balancer-controller -n kube-system --set clusterName=$ClusterName --set serviceAccount.annotations."eks\.amazonaws\.com/role-arn"=$AlbRoleArn --set region=$Region --set vpcId=$VpcId --wait
+
+# 2. External Secrets Operator
+helm install external-secrets external-secrets/external-secrets -n external-secrets --create-namespace --wait
+
+# 3. External DNS
+helm install external-dns external-dns/external-dns -n external-dns --create-namespace --set serviceAccount.annotations."eks\.amazonaws\.com/role-arn"=$ExtDnsRoleArn --set provider=aws --set "domainFilters[0]=$Domain" --set policy=sync --set registry=txt --set txtOwnerId=$ClusterName --wait
+
+# 4. Metrics Server
+helm install metrics-server metrics-server/metrics-server -n kube-system --wait
+
+# 5. Cluster Autoscaler
+helm install cluster-autoscaler autoscaler/cluster-autoscaler -n kube-system --set autoDiscovery.clusterName=$ClusterName --set awsRegion=$Region --set rbac.serviceAccount.annotations."eks\.amazonaws\.com/role-arn"=$AutoscalerArn --wait
+
+# 6. KEDA (Celery worker autoscaling)
+helm install keda keda/keda -n keda --create-namespace --wait
+```
 
 **Option B: Terraform (repeatable, recommended for production)**
+
+**Bash / macOS / Linux:**
 
 ```bash
 cd terraform/platform/helm
 terraform init
 terraform apply -var="cluster_name=$CLUSTER_NAME" -var="cluster_endpoint=$(terraform -chdir=.. output -raw eks_cluster_endpoint)" -var="cluster_ca_certificate=$(terraform -chdir=.. output -raw eks_cluster_ca_certificate)" -var="cluster_token=$(aws eks get-token --cluster-name $CLUSTER_NAME --query token --output text)" -var="vpc_id=$VPC_ID" -var="region=$REGION" -var="environment=dev" -var="domain=$DOMAIN" -var="alb_controller_role_arn=$ALB_ROLE_ARN" -var="external_dns_role_arn=$EXTDNS_ROLE_ARN" -var="cluster_autoscaler_role_arn=$AUTOSCALER_ROLE_ARN" -var="redis_endpoint=placeholder"
+```
+
+**PowerShell (Windows):**
+
+```powershell
+cd terraform\platform\helm
+terraform init
+$Endpoint = terraform -chdir=.. output -raw eks_cluster_endpoint
+$CaCert   = terraform -chdir=.. output -raw eks_cluster_ca_certificate
+$Token    = aws eks get-token --cluster-name $ClusterName --query token --output text
+terraform apply -var="cluster_name=$ClusterName" -var="cluster_endpoint=$Endpoint" -var="cluster_ca_certificate=$CaCert" -var="cluster_token=$Token" -var="vpc_id=$VpcId" -var="region=$Region" -var="environment=dev" -var="domain=$Domain" -var="alb_controller_role_arn=$AlbRoleArn" -var="external_dns_role_arn=$ExtDnsRoleArn" -var="cluster_autoscaler_role_arn=$AutoscalerArn" -var="redis_endpoint=placeholder"
 ```
 
 **Verify all charts are running:**
@@ -296,7 +396,13 @@ terraform apply -var="cluster_name=$CLUSTER_NAME" -var="cluster_endpoint=$(terra
 kubectl get pods -A | grep -E "external-secrets|external-dns|aws-load-balancer|metrics-server|cluster-autoscaler|keda"
 ```
 
+```powershell
+kubectl get pods -A | Select-String "external-secrets|external-dns|aws-load-balancer|metrics-server|cluster-autoscaler|keda"
+```
+
 ### Step 7: Build and Push Container Images
+
+**Bash / macOS / Linux:**
 
 ```bash
 ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
@@ -305,6 +411,17 @@ aws ecr get-login-password --region us-east-1 | docker login --username AWS --pa
 docker build -t anvilops-api:latest ./backend
 docker tag anvilops-api:latest ${ACCOUNT_ID}.dkr.ecr.us-east-1.amazonaws.com/anvilops-api:v1.0.0
 docker push ${ACCOUNT_ID}.dkr.ecr.us-east-1.amazonaws.com/anvilops-api:v1.0.0
+```
+
+**PowerShell (Windows):**
+
+```powershell
+$AccountId = aws sts get-caller-identity --query Account --output text
+aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin "$AccountId.dkr.ecr.us-east-1.amazonaws.com"
+
+docker build -t anvilops-api:latest ./backend
+docker tag anvilops-api:latest "$AccountId.dkr.ecr.us-east-1.amazonaws.com/anvilops-api:v1.0.0"
+docker push "$AccountId.dkr.ecr.us-east-1.amazonaws.com/anvilops-api:v1.0.0"
 ```
 
 ### Step 8: Deploy to EKS
@@ -318,7 +435,11 @@ kubectl -n anvilops rollout status deployment/anvilops-api --timeout=300s
 Or use the deploy script which handles all of this:
 
 ```bash
-./scripts/deploy-app.sh production        # PowerShell: .\scripts\deploy-app.ps1 production
+./scripts/deploy-app.sh production
+```
+
+```powershell
+.\scripts\deploy-app.ps1 production
 ```
 
 ### Step 9: Run Database Migrations
@@ -329,16 +450,30 @@ kubectl -n anvilops exec deploy/anvilops-api -- alembic upgrade head
 
 ### Step 10: Create Initial Admin User
 
+**Bash / macOS / Linux:**
+
 ```bash
 USER_POOL_ID=$(terraform output -raw cognito_user_pool_id)
 aws cognito-idp admin-create-user --user-pool-id $USER_POOL_ID --username admin@example.com --user-attributes Name=email,Value=admin@example.com Name=email_verified,Value=true --temporary-password "TempPassword123!"
 aws cognito-idp admin-add-user-to-group --user-pool-id $USER_POOL_ID --username admin@example.com --group-name admin
 ```
 
+**PowerShell (Windows):**
+
+```powershell
+$UserPoolId = terraform output -raw cognito_user_pool_id
+aws cognito-idp admin-create-user --user-pool-id $UserPoolId --username admin@example.com --user-attributes Name=email,Value=admin@example.com Name=email_verified,Value=true --temporary-password "TempPassword123!"
+aws cognito-idp admin-add-user-to-group --user-pool-id $UserPoolId --username admin@example.com --group-name admin
+```
+
 ### Step 11: Validate
 
 ```bash
 ./scripts/smoke-test.sh
+```
+
+```powershell
+.\scripts\smoke-test.ps1
 ```
 
 ---
@@ -380,11 +515,23 @@ Tag images with release candidates, deploy to staging, validate, then promote to
 ## 8. Updating the Application
 
 ### Manual Deployment
+
+**Bash / macOS / Linux:**
+
 ```bash
 GIT_SHA=$(git rev-parse --short HEAD)
 docker build -t anvilops-api:${GIT_SHA} ./backend
 docker push ${ACCOUNT_ID}.dkr.ecr.us-east-1.amazonaws.com/anvilops-api:${GIT_SHA}
 kubectl set image deployment/anvilops-api api=${ACCOUNT_ID}.dkr.ecr.us-east-1.amazonaws.com/anvilops-api:${GIT_SHA} -n anvilops
+```
+
+**PowerShell (Windows):**
+
+```powershell
+$GitSha = git rev-parse --short HEAD
+docker build -t "anvilops-api:$GitSha" ./backend
+docker push "$AccountId.dkr.ecr.us-east-1.amazonaws.com/anvilops-api:$GitSha"
+kubectl set image deployment/anvilops-api "api=$AccountId.dkr.ecr.us-east-1.amazonaws.com/anvilops-api:$GitSha" -n anvilops
 ```
 
 ### Rollback
@@ -423,8 +570,13 @@ Update `terraform.tfvars` (instance types, classes) and `terraform apply`.
 ## 11. Teardown
 
 ### Full Teardown
+
 ```bash
 ./scripts/destroy.sh production
+```
+
+```powershell
+.\scripts\destroy.ps1 production
 ```
 
 ### Manual Steps
@@ -464,6 +616,17 @@ terraform apply tfplan
 | Savings Plans (compute) | 20-30% across EC2/Fargate |
 
 Monitor costs:
+
+**Bash / macOS / Linux:**
+
 ```bash
 aws ce get-cost-and-usage --time-period Start=$(date -d "$(date +%Y-%m-01)" +%Y-%m-%d),End=$(date +%Y-%m-%d) --granularity MONTHLY --metrics BlendedCost --group-by Type=DIMENSION,Key=SERVICE
+```
+
+**PowerShell (Windows):**
+
+```powershell
+$Start = (Get-Date -Day 1).ToString("yyyy-MM-dd")
+$End   = (Get-Date).ToString("yyyy-MM-dd")
+aws ce get-cost-and-usage --time-period "Start=$Start,End=$End" --granularity MONTHLY --metrics BlendedCost --group-by Type=DIMENSION,Key=SERVICE
 ```

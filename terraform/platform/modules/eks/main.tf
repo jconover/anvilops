@@ -180,8 +180,6 @@ resource "aws_eks_cluster" "this" {
 # Cluster Access — grant the deployer (caller) admin access
 # -----------------------------------------------------------------------------
 
-data "aws_caller_identity" "current" {}
-
 resource "aws_eks_access_entry" "deployer" {
   cluster_name  = aws_eks_cluster.this.name
   principal_arn = data.aws_caller_identity.current.arn
