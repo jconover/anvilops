@@ -384,8 +384,8 @@ terraform apply -var="cluster_name=$CLUSTER_NAME" -var="cluster_endpoint=$(terra
 ```powershell
 cd terraform\platform\helm
 terraform init
-$Endpoint = terraform -chdir=.. output -raw eks_cluster_endpoint
-$CaCert   = terraform -chdir=.. output -raw eks_cluster_ca_certificate
+$Endpoint = terraform "-chdir=.." output -raw eks_cluster_endpoint
+$CaCert   = terraform "-chdir=.." output -raw eks_cluster_ca_certificate
 $Token    = aws eks get-token --cluster-name $ClusterName --query token --output text
 terraform apply -var="cluster_name=$ClusterName" -var="cluster_endpoint=$Endpoint" -var="cluster_ca_certificate=$CaCert" -var="cluster_token=$Token" -var="vpc_id=$VpcId" -var="region=$Region" -var="environment=dev" -var="domain=$Domain" -var="alb_controller_role_arn=$AlbRoleArn" -var="external_dns_role_arn=$ExtDnsRoleArn" -var="cluster_autoscaler_role_arn=$AutoscalerArn" -var="redis_endpoint=placeholder"
 ```
@@ -405,6 +405,7 @@ kubectl get pods -A | Select-String "external-secrets|external-dns|aws-load-bala
 **Bash / macOS / Linux:**
 
 ```bash
+cd ../../
 ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
 aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${ACCOUNT_ID}.dkr.ecr.us-east-1.amazonaws.com
 
@@ -416,6 +417,7 @@ docker push ${ACCOUNT_ID}.dkr.ecr.us-east-1.amazonaws.com/anvilops-api:v1.0.0
 **PowerShell (Windows):**
 
 ```powershell
+cd ../../
 $AccountId = aws sts get-caller-identity --query Account --output text
 aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin "$AccountId.dkr.ecr.us-east-1.amazonaws.com"
 

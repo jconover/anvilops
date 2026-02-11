@@ -6,7 +6,6 @@ metadata:
   labels:
     app.kubernetes.io/part-of: anvilops
   annotations:
-    kubernetes.io/ingress.class: alb
     alb.ingress.kubernetes.io/scheme: internet-facing
     alb.ingress.kubernetes.io/target-type: ip
     alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:us-east-1:ACCOUNT_ID:certificate/CERTIFICATE_ID
@@ -16,6 +15,7 @@ metadata:
     alb.ingress.kubernetes.io/group.name: anvilops
     alb.ingress.kubernetes.io/tags: Environment=dev,Application=anvilops
 spec:
+  ingressClassName: alb
   rules:
     - host: anvilops.example.com
       http:

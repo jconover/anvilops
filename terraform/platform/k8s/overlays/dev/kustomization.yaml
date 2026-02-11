@@ -4,8 +4,9 @@ kind: Kustomization
 resources:
   - ../../base
 
-commonLabels:
-  environment: dev
+labels:
+  - pairs:
+      environment: dev
 
 patches:
   - target:
@@ -106,24 +107,6 @@ patches:
         value: "Environment=dev,Application=anvilops"
 
 images:
-  - name: anvilops-api
-    newName: 457780993905.dkr.ecr.us-east-1.amazonaws.com/anvilops-api
-    newTag: "eed360a"
-  - name: anvilops-frontend
-    newName: 457780993905.dkr.ecr.us-east-1.amazonaws.com/anvilops-frontend
-    newTag: "eed360a"
-  - name: anvilops-api
-    newName: 457780993905.dkr.ecr.us-east-1.amazonaws.com/anvilops-api
-    newTag: "eed360a"
-  - name: anvilops-frontend
-    newName: 457780993905.dkr.ecr.us-east-1.amazonaws.com/anvilops-frontend
-    newTag: "eed360a"
-  - name: anvilops-api
-    newName: 457780993905.dkr.ecr.us-east-1.amazonaws.com/anvilops-api
-    newTag: "eed360a"
-  - name: anvilops-frontend
-    newName: 457780993905.dkr.ecr.us-east-1.amazonaws.com/anvilops-frontend
-    newTag: "eed360a"
   - name: anvilops-api
     newName: 457780993905.dkr.ecr.us-east-1.amazonaws.com/anvilops-api
     newTag: "25c932b"

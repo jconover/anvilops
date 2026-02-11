@@ -18,6 +18,29 @@ terraform {
 }
 
 # -----------------------------------------------------------------------------
+# Providers — use explicit config when variables are provided, otherwise
+# fall back to the local kubeconfig (set by `aws eks update-kubeconfig`).
+# -----------------------------------------------------------------------------
+
+provider "helm" {
+  kubernetes {
+    host                   = var.cluster_endpoint != "" ? var.cluster_endpoint : null
+    cluster_ca_certificate = var.cluster_ca_certificate != "" ? base64decode(var.cluster_ca_certificate) : null
+    token                  = var.cluster_token != "" ? var.cluster_token : null
+
+    # Falls back to ~/.kube/config when the above are null
+    config_path = var.cluster_endpoint == "" ? "~/.kube/config" : null
+  }
+}
+
+provider "kubectl" {
+  host                   = var.cluster_endpoint != "" ? var.cluster_endpoint : null
+  cluster_ca_certificate = var.cluster_ca_certificate != "" ? base64decode(var.cluster_ca_certificate) : null
+  token                  = var.cluster_token != "" ? var.cluster_token : null
+  load_config_file       = var.cluster_endpoint == "" ? true : false
+}
+
+# -----------------------------------------------------------------------------
 # Variables
 # -----------------------------------------------------------------------------
 
@@ -27,19 +50,22 @@ variable "cluster_name" {
 }
 
 variable "cluster_endpoint" {
-  description = "EKS cluster API endpoint URL."
+  description = "EKS cluster API endpoint URL. Leave empty to use local kubeconfig."
   type        = string
+  default     = ""
 }
 
 variable "cluster_ca_certificate" {
-  description = "Base64-encoded CA certificate for the EKS cluster."
+  description = "Base64-encoded CA certificate for the EKS cluster. Leave empty to use local kubeconfig."
   type        = string
+  default     = ""
 }
 
 variable "cluster_token" {
-  description = "Authentication token for the EKS cluster."
+  description = "Authentication token for the EKS cluster. Leave empty to use local kubeconfig."
   type        = string
   sensitive   = true
+  default     = ""
 }
 
 variable "region" {

@@ -108,16 +108,33 @@ build_and_push() {
 
 set_kustomize_image() {
     local dir="$1" old_image="$2" new_image="$3"
+    local img_name="${old_image%%:*}"
+    local new_name="${new_image%%:*}"
+    local new_tag="${new_image##*:}"
+
     if command -v kustomize &>/dev/null; then
         (cd "$dir" && kustomize edit set image "${old_image}=${new_image}")
     else
-        # Fallback: append image override to kustomization.yaml
+        # Fallback: update or add image override in kustomization.yaml
         local kfile="${dir}/kustomization.yaml"
-        if ! grep -q "^images:" "$kfile" 2>/dev/null; then
-            printf '\nimages:\n' >> "$kfile"
+        local tmp="${kfile}.tmp"
+
+        if grep -q "^images:" "$kfile" 2>/dev/null && grep -q "name: ${img_name}$" "$kfile" 2>/dev/null; then
+            # Replace existing entry using awk
+            awk -v name="$img_name" -v newName="$new_name" -v newTag="$new_tag" '
+                /^  - name: / { if ($NF == name) { found=1; print "  - name: " name; next } else { found=0 } }
+                found && /newName:/ { print "    newName: " newName; next }
+                found && /newTag:/ { print "    newTag: \"" newTag "\""; found=0; next }
+                { print }
+            ' "$kfile" > "$tmp" && mv "$tmp" "$kfile"
+        else
+            # Append new entry
+            if ! grep -q "^images:" "$kfile" 2>/dev/null; then
+                printf '\nimages:\n' >> "$kfile"
+            fi
+            printf '  - name: %s\n    newName: %s\n    newTag: "%s"\n' \
+                "$img_name" "$new_name" "$new_tag" >> "$kfile"
         fi
-        printf '  - name: %s\n    newName: %s\n    newTag: "%s"\n' \
-            "${old_image%%:*}" "${new_image%%:*}" "${new_image##*:}" >> "$kfile"
     fi
 }
 

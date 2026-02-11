@@ -18,6 +18,7 @@ resources:
   - hpa.yaml
   - pdb.yaml
 
-commonLabels:
-  app.kubernetes.io/managed-by: kustomize
-  app.kubernetes.io/part-of: anvilops
+labels:
+  - pairs:
+      app.kubernetes.io/managed-by: kustomize
+      app.kubernetes.io/part-of: anvilops

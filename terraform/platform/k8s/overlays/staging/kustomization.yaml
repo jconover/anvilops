@@ -4,8 +4,9 @@ kind: Kustomization
 resources:
   - ../../base
 
-commonLabels:
-  environment: staging
+labels:
+  - pairs:
+      environment: staging
 
 patches:
   - target:

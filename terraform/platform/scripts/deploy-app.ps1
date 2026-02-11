@@ -133,17 +133,43 @@ function Set-KustomizeImage {
         try { kustomize edit set image "${OldImage}=${NewImage}" }
         finally { Pop-Location }
     } else {
-        # Fallback: append image override to kustomization.yaml
-        $kfile    = Join-Path $Dir "kustomization.yaml"
-        $name     = ($OldImage -split ":")[0]
-        $newName  = ($NewImage -split ":")[0]
-        $newTag   = ($NewImage -split ":")[-1]
-        $content  = Get-Content $kfile -Raw
+        # Fallback: update or add image override in kustomization.yaml
+        $kfile   = Join-Path $Dir "kustomization.yaml"
+        $name    = ($OldImage -split ":")[0]
+        $newName = ($NewImage -split ":")[0]
+        $newTag  = ($NewImage -split ":")[-1]
+        $content = Get-Content $kfile -Raw
 
-        if ($content -notmatch "(?m)^images:") {
-            Add-Content $kfile "`nimages:"
+        if ($content -match "(?m)^images:" -and $content -match "name: $([regex]::Escape($name))") {
+            # Replace existing entry
+            $lines   = Get-Content $kfile
+            $output  = @()
+            $skip    = $false
+            foreach ($line in $lines) {
+                if ($line -match "^\s+- name: $([regex]::Escape($name))\s*$") {
+                    $output += "  - name: $name"
+                    $skip = $true
+                    continue
+                }
+                if ($skip -and $line -match "^\s+newName:") {
+                    $output += "    newName: $newName"
+                    continue
+                }
+                if ($skip -and $line -match "^\s+newTag:") {
+                    $output += "    newTag: `"$newTag`""
+                    $skip = $false
+                    continue
+                }
+                $output += $line
+            }
+            $output | Set-Content $kfile -Encoding UTF8
+        } else {
+            # Append new entry
+            if ($content -notmatch "(?m)^images:") {
+                Add-Content $kfile "`nimages:"
+            }
+            Add-Content $kfile "  - name: $name`n    newName: $newName`n    newTag: `"$newTag`""
         }
-        Add-Content $kfile "  - name: $name`n    newName: $newName`n    newTag: `"$newTag`""
     }
 }
 
