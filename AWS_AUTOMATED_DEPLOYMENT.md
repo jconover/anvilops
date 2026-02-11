@@ -143,16 +143,18 @@ cp terraform.dev.tfvars.example terraform.dev.tfvars
 # Edit terraform.dev.tfvars with your domain and zone ID
 terraform plan -var-file terraform.dev.tfvars -out tfplan
 terraform apply tfplan
-./scripts/deploy-app.sh dev
-./scripts/smoke-test.sh
+aws eks update-kubeconfig --name $(terraform output -raw eks_cluster_name) --region us-east-1
+./scripts/deploy-app.sh dev        # PowerShell: .\scripts\deploy-app.ps1 dev
+./scripts/smoke-test.sh            # PowerShell: .\scripts\smoke-test.ps1
 
 # ── Option B: Production (~$1,740/month) ────────────────────────────
 cp terraform.production.tfvars.example terraform.production.tfvars
 # Edit terraform.production.tfvars with your domain and zone ID
 terraform plan -var-file terraform.production.tfvars -out tfplan
 terraform apply tfplan
-./scripts/deploy-app.sh production
-./scripts/smoke-test.sh
+aws eks update-kubeconfig --name $(terraform output -raw eks_cluster_name) --region us-east-1
+./scripts/deploy-app.sh production  # PowerShell: .\scripts\deploy-app.ps1 production
+./scripts/smoke-test.sh             # PowerShell: .\scripts\smoke-test.ps1
 
 # ── Option C: Custom ────────────────────────────────────────────────
 cp terraform.tfvars.example terraform.tfvars
@@ -256,8 +258,14 @@ docker push ${ACCOUNT_ID}.dkr.ecr.us-east-1.amazonaws.com/anvilops-api:v1.0.0
 
 ```bash
 cd terraform/platform/k8s
-kustomize build overlays/production | kubectl apply -f -
+kubectl kustomize overlays/production | kubectl apply -f -
 kubectl -n anvilops rollout status deployment/anvilops-api --timeout=300s
+```
+
+Or use the deploy script which handles all of this:
+
+```bash
+./scripts/deploy-app.sh production        # PowerShell: .\scripts\deploy-app.ps1 production
 ```
 
 ### Step 9: Run Database Migrations

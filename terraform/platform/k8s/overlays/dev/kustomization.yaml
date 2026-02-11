@@ -104,3 +104,23 @@ patches:
       - op: replace
         path: /metadata/annotations/alb.ingress.kubernetes.io~1tags
         value: "Environment=dev,Application=anvilops"
+
+images:
+  - name: anvilops-api
+    newName: 457780993905.dkr.ecr.us-east-1.amazonaws.com/anvilops-api
+    newTag: "eed360a"
+  - name: anvilops-frontend
+    newName: 457780993905.dkr.ecr.us-east-1.amazonaws.com/anvilops-frontend
+    newTag: "eed360a"
+  - name: anvilops-api
+    newName: 457780993905.dkr.ecr.us-east-1.amazonaws.com/anvilops-api
+    newTag: "eed360a"
+  - name: anvilops-frontend
+    newName: 457780993905.dkr.ecr.us-east-1.amazonaws.com/anvilops-frontend
+    newTag: "eed360a"
+  - name: anvilops-api
+    newName: 457780993905.dkr.ecr.us-east-1.amazonaws.com/anvilops-api
+    newTag: "eed360a"
+  - name: anvilops-frontend
+    newName: 457780993905.dkr.ecr.us-east-1.amazonaws.com/anvilops-frontend
+    newTag: "eed360a"
