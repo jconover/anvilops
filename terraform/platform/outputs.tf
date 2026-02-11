@@ -40,6 +40,31 @@ output "eks_oidc_provider_arn" {
   value       = module.eks.oidc_provider_arn
 }
 
+output "eks_cluster_ca_certificate" {
+  description = "Base64-encoded CA certificate for the EKS cluster."
+  value       = module.eks.cluster_ca_certificate
+  sensitive   = true
+}
+
+# -----------------------------------------------------------------------------
+# IAM Roles (for Helm chart IRSA configuration)
+# -----------------------------------------------------------------------------
+
+output "alb_controller_role_arn" {
+  description = "IAM role ARN for the AWS Load Balancer Controller."
+  value       = module.iam.alb_controller_role_arn
+}
+
+output "external_dns_role_arn" {
+  description = "IAM role ARN for External DNS."
+  value       = module.iam.external_dns_role_arn
+}
+
+output "cluster_autoscaler_role_arn" {
+  description = "IAM role ARN for the Cluster Autoscaler."
+  value       = module.iam.cluster_autoscaler_role_arn
+}
+
 # -----------------------------------------------------------------------------
 # RDS
 # -----------------------------------------------------------------------------

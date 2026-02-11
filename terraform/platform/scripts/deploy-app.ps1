@@ -165,8 +165,12 @@ function Invoke-ApplyManifests {
     Write-Step "Applying Kustomize manifests for $Environment..."
     $overlayDir = Join-Path $K8sDir "overlays/$Environment"
 
-    kubectl kustomize $overlayDir | kubectl apply --dry-run=server -f -
-    if ($LASTEXITCODE -ne 0) { throw "Dry-run failed." }
+    # Create namespace if it doesn't exist
+    kubectl get namespace anvilops 2>$null
+    if ($LASTEXITCODE -ne 0) {
+        kubectl create namespace anvilops
+        Write-Info "Created namespace: anvilops"
+    }
 
     kubectl kustomize $overlayDir | kubectl apply -f -
     if ($LASTEXITCODE -ne 0) { throw "kubectl apply failed." }

@@ -223,7 +223,7 @@ terraform init -backend-config="bucket=<state_bucket_name>" -backend-config="key
 ### Step 4: Plan and Apply
 
 ```bash
-terraform plan -out tfplan
+terraform plan  -var-file terraform.dev.tfvars -out tfplan
 terraform apply tfplan
 ```
 
@@ -238,9 +238,62 @@ kubectl get nodes
 
 ### Step 6: Install Helm Charts
 
+EKS add-ons must be installed before deploying the application. You can use the Terraform config in `helm/` or install manually with the Helm CLI.
+
+**Option A: Helm CLI (quick setup)**
+
 ```bash
-# ALB Controller, External Secrets, Metrics Server, External DNS, Cluster Autoscaler
-# See the helm/ directory for values files
+# Add repos
+helm repo add eks https://aws.github.io/eks-charts
+helm repo add external-secrets https://charts.external-secrets.io
+helm repo add external-dns https://kubernetes-sigs.github.io/external-dns
+helm repo add metrics-server https://kubernetes-sigs.github.io/metrics-server
+helm repo add autoscaler https://kubernetes.github.io/autoscaler
+helm repo add keda https://kedacore.github.io/charts
+helm repo update
+
+# Set variables (update these for your environment)
+CLUSTER_NAME=$(terraform output -raw eks_cluster_name)
+VPC_ID=$(terraform output -raw vpc_id)
+REGION=us-east-1
+ALB_ROLE_ARN=$(terraform output -raw alb_controller_role_arn)
+EXTDNS_ROLE_ARN=$(terraform output -raw external_dns_role_arn)
+AUTOSCALER_ROLE_ARN=$(terraform output -raw cluster_autoscaler_role_arn)
+DOMAIN=anvilops.devopsnexus.io
+
+# 1. AWS Load Balancer Controller
+helm install aws-load-balancer-controller eks/aws-load-balancer-controller -n kube-system --set clusterName=$CLUSTER_NAME --set serviceAccount.annotations."eks\.amazonaws\.com/role-arn"=$ALB_ROLE_ARN --set region=$REGION --set vpcId=$VPC_ID --wait
+
+# 2. External Secrets Operator
+helm install external-secrets external-secrets/external-secrets -n external-secrets --create-namespace --wait
+
+# 3. External DNS
+helm install external-dns external-dns/external-dns -n external-dns --create-namespace --set serviceAccount.annotations."eks\.amazonaws\.com/role-arn"=$EXTDNS_ROLE_ARN --set provider=aws --set domainFilters[0]=$DOMAIN --set policy=sync --set registry=txt --set txtOwnerId=$CLUSTER_NAME --wait
+
+# 4. Metrics Server
+helm install metrics-server metrics-server/metrics-server -n kube-system --wait
+
+# 5. Cluster Autoscaler
+helm install cluster-autoscaler autoscaler/cluster-autoscaler -n kube-system --set autoDiscovery.clusterName=$CLUSTER_NAME --set awsRegion=$REGION --set rbac.serviceAccount.annotations."eks\.amazonaws\.com/role-arn"=$AUTOSCALER_ROLE_ARN --wait
+
+# 6. KEDA (Celery worker autoscaling)
+helm install keda keda/keda -n keda --create-namespace --wait
+```
+
+PowerShell users: replace `$CLUSTER_NAME` etc. with `$ClusterName` and set them with normal PowerShell variable assignment, or use the Terraform option below.
+
+**Option B: Terraform (repeatable, recommended for production)**
+
+```bash
+cd terraform/platform/helm
+terraform init
+terraform apply -var="cluster_name=$CLUSTER_NAME" -var="cluster_endpoint=$(terraform -chdir=.. output -raw eks_cluster_endpoint)" -var="cluster_ca_certificate=$(terraform -chdir=.. output -raw eks_cluster_ca_certificate)" -var="cluster_token=$(aws eks get-token --cluster-name $CLUSTER_NAME --query token --output text)" -var="vpc_id=$VPC_ID" -var="region=$REGION" -var="environment=dev" -var="domain=$DOMAIN" -var="alb_controller_role_arn=$ALB_ROLE_ARN" -var="external_dns_role_arn=$EXTDNS_ROLE_ARN" -var="cluster_autoscaler_role_arn=$AUTOSCALER_ROLE_ARN" -var="redis_endpoint=placeholder"
+```
+
+**Verify all charts are running:**
+
+```bash
+kubectl get pods -A | grep -E "external-secrets|external-dns|aws-load-balancer|metrics-server|cluster-autoscaler|keda"
 ```
 
 ### Step 7: Build and Push Container Images

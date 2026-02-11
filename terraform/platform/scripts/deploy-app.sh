@@ -139,7 +139,12 @@ apply_manifests() {
     log_step "Applying Kustomize manifests for ${ENV}..."
     local overlay_dir="${K8S_DIR}/overlays/${ENV}"
 
-    kubectl kustomize "$overlay_dir" | kubectl apply --dry-run=server -f -
+    # Create namespace if it doesn't exist
+    if ! kubectl get namespace anvilops &>/dev/null; then
+        kubectl create namespace anvilops
+        log_info "Created namespace: anvilops"
+    fi
+
     kubectl kustomize "$overlay_dir" | kubectl apply -f -
     log_success "Manifests applied."
 }
