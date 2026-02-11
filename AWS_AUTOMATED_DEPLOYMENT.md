@@ -317,7 +317,7 @@ helm install aws-load-balancer-controller eks/aws-load-balancer-controller -n ku
 helm install external-secrets external-secrets/external-secrets -n external-secrets --create-namespace --wait
 
 # 3. External DNS
-helm install external-dns external-dns/external-dns -n external-dns --create-namespace --set serviceAccount.annotations."eks\.amazonaws\.com/role-arn"=$EXTDNS_ROLE_ARN --set provider=aws --set domainFilters[0]=$DOMAIN --set policy=sync --set registry=txt --set txtOwnerId=$CLUSTER_NAME --wait
+helm install external-dns external-dns/external-dns -n external-dns --create-namespace --set serviceAccount.annotations."eks\.amazonaws\.com/role-arn"=$EXTDNS_ROLE_ARN --set provider.name=aws --set domainFilters[0]=$DOMAIN --set policy=sync --set registry=txt --set txtOwnerId=$CLUSTER_NAME --wait
 
 # 4. Metrics Server
 helm install metrics-server metrics-server/metrics-server -n kube-system --wait
@@ -357,7 +357,7 @@ helm install aws-load-balancer-controller eks/aws-load-balancer-controller -n ku
 helm install external-secrets external-secrets/external-secrets -n external-secrets --create-namespace --wait
 
 # 3. External DNS
-helm install external-dns external-dns/external-dns -n external-dns --create-namespace --set serviceAccount.annotations."eks\.amazonaws\.com/role-arn"=$ExtDnsRoleArn --set provider=aws --set "domainFilters[0]=$Domain" --set policy=sync --set registry=txt --set txtOwnerId=$ClusterName --wait
+helm install external-dns external-dns/external-dns -n external-dns --create-namespace --set serviceAccount.annotations."eks\.amazonaws\.com/role-arn"=$ExtDnsRoleArn --set provider.name=aws --set "domainFilters[0]=$Domain" --set policy=sync --set registry=txt --set txtOwnerId=$ClusterName --wait
 
 # 4. Metrics Server
 helm install metrics-server metrics-server/metrics-server -n kube-system --wait

@@ -4,7 +4,8 @@ serviceAccount:
   annotations:
     eks.amazonaws.com/role-arn: ${external_dns_role_arn}
 
-provider: aws
+provider:
+  name: aws
 
 aws:
   region: ${region}
