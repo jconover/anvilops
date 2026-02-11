@@ -7,8 +7,16 @@
 #   Puppet Enterprise manages Day 2+ compliance on provisioned servers.
 # =============================================================================
 
+data "aws_caller_identity" "current" {}
+
 locals {
   name_prefix = "${var.project_name}-${var.environment}"
+
+  # State backend resources are bootstrapped separately (modules/state-backend).
+  # Look them up by naming convention so the platform config doesn't recreate them.
+  state_bucket_name = "${var.project_name}-terraform-state-${var.environment}-${data.aws_caller_identity.current.account_id}"
+  state_bucket_arn  = "arn:aws:s3:::${local.state_bucket_name}"
+  lock_table_name   = "${var.project_name}-terraform-locks-${var.environment}"
 
   common_tags = merge(
     {
@@ -112,7 +120,7 @@ module "iam" {
   environment           = var.environment
   eks_oidc_provider_arn = module.eks.oidc_provider_arn
   eks_oidc_provider_url = module.eks.oidc_provider_url
-  state_bucket_arn      = module.state_backend.state_bucket_arn
+  state_bucket_arn      = local.state_bucket_arn
   db_secret_arn         = module.rds.db_secret_arn
   redis_secret_arn      = module.elasticache.auth_token_secret_arn
   tags                  = local.common_tags
@@ -133,8 +141,8 @@ module "ecs_runner" {
   ecs_task_execution_role_arn   = module.iam.ecs_task_execution_role_arn
   ecs_terraform_runner_role_arn = module.iam.ecs_terraform_runner_role_arn
   terraform_runner_image        = "${module.ecr.terraform_runner_repository_url}:latest"
-  state_bucket_name             = module.state_backend.state_bucket_name
-  dynamodb_table_name           = module.state_backend.dynamodb_table_name
+  state_bucket_name             = local.state_bucket_name
+  dynamodb_table_name           = local.lock_table_name
   db_secret_arn                 = module.rds.db_secret_arn
   tags                          = local.common_tags
 }
@@ -231,11 +239,5 @@ module "puppet" {
 # -----------------------------------------------------------------------------
 # State Backend - S3 + DynamoDB for server provisioning TF state
 # -----------------------------------------------------------------------------
-
-module "state_backend" {
-  source = "./modules/state-backend"
-
-  project_name = var.project_name
-  environment  = var.environment
-  tags         = local.common_tags
-}
+# Bootstrapped separately via: terraform/platform/modules/state-backend
+# See AWS_AUTOMATED_DEPLOYMENT.md for setup instructions.

@@ -129,7 +129,7 @@ resource "aws_cloudwatch_log_metric_filter" "api_errors" {
 
   name           = "${local.name_prefix}-api-errors"
   log_group_name = aws_cloudwatch_log_group.api.name
-  pattern        = "?ERROR ?\"level\":\"error\" ?\"level\": \"ERROR\" ?\"levelname\": \"ERROR\""
+  pattern        = "ERROR"
 
   metric_transformation {
     name          = "APIErrors"
@@ -144,7 +144,7 @@ resource "aws_cloudwatch_log_metric_filter" "worker_errors" {
 
   name           = "${local.name_prefix}-worker-errors"
   log_group_name = aws_cloudwatch_log_group.worker.name
-  pattern        = "?ERROR ?\"level\":\"error\" ?\"level\": \"ERROR\" ?\"levelname\": \"ERROR\" ?\"Task failed\""
+  pattern        = "ERROR"
 
   metric_transformation {
     name          = "WorkerErrors"

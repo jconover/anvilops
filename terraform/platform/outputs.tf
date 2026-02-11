@@ -144,10 +144,10 @@ output "monitoring_sns_topic_arn" {
 
 output "state_bucket_name" {
   description = "S3 bucket for server provisioning Terraform state."
-  value       = module.state_backend.state_bucket_name
+  value       = local.state_bucket_name
 }
 
 output "state_dynamodb_table" {
   description = "DynamoDB table for server provisioning Terraform state locking."
-  value       = module.state_backend.dynamodb_table_name
+  value       = local.lock_table_name
 }

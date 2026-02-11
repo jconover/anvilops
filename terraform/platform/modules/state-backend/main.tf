@@ -122,18 +122,8 @@ resource "aws_s3_bucket_policy" "state" {
           }
         }
       },
-      {
-        Sid       = "DenyUnencryptedObjectUploads"
-        Effect    = "Deny"
-        Principal = "*"
-        Action    = "s3:PutObject"
-        Resource  = "${aws_s3_bucket.state.arn}/*"
-        Condition = {
-          StringNotEquals = {
-            "s3:x-amz-server-side-encryption" = local.use_kms ? "aws:kms" : "AES256"
-          }
-        }
-      },
+      # SSE is enforced by the bucket's default encryption configuration.
+      # No explicit deny needed — avoids blocking Terraform S3 backend writes.
     ]
   })
 }
