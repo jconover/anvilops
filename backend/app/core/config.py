@@ -4,8 +4,8 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    DATABASE_URL: str = "postgresql+asyncpg://anvilops:anvilops@localhost:5432/anvilops"
-    REDIS_URL: str = "redis://localhost:6379/0"
+    DATABASE_URL: str = "postgresql+asyncpg://anvilops:anvilops@db:5432/anvilops"
+    REDIS_URL: str = "redis://redis:6379/0"
     TERRAFORM_WORK_DIR: str = "/tmp/terraform"
     AWS_DEFAULT_REGION: str = "us-east-1"
     ALLOWED_REGIONS: list[str] = ["us-east-1", "us-west-2"]
@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     DEBUG: bool = False
 
     # AWX Configuration
-    AWX_BASE_URL: str = "http://localhost:8052"
+    AWX_BASE_URL: str = "http://awx:8052"
     AWX_USERNAME: str = "admin"
     AWX_PASSWORD: str = "password"
     AWX_VERIFY_SSL: bool = False
@@ -23,7 +23,7 @@ class Settings(BaseSettings):
     AWX_ORGANIZATION_ID: int = 1
 
     # Puppet Enterprise Configuration
-    PUPPET_BASE_URL: str = "https://puppet.anvilops.internal"
+    PUPPET_BASE_URL: str = "https://puppet:8140"
     PUPPET_API_TOKEN: str = ""
     PUPPET_VERIFY_SSL: bool = False
     PUPPET_CA_PORT: int = 8140

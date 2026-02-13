@@ -1,4 +1,5 @@
 {
+  "_comment": "Example policy for reference only. The actual bucket policy is managed by Terraform in modules/state-backend/main.tf using dynamic resource ARNs.",
   "Version": "2012-10-17",
   "Statement": [
     {
@@ -7,8 +8,8 @@
       "Principal": "*",
       "Action": "s3:*",
       "Resource": [
-        "arn:aws:s3:::anvilops-terraform-state-dev-457780993905",
-        "arn:aws:s3:::anvilops-terraform-state-dev-457780993905/*"
+        "arn:aws:s3:::anvilops-terraform-state-dev-PLACEHOLDER_ACCOUNT_ID",
+        "arn:aws:s3:::anvilops-terraform-state-dev-PLACEHOLDER_ACCOUNT_ID/*"
       ],
       "Condition": {
         "Bool": {

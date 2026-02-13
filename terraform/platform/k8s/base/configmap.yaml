@@ -9,7 +9,7 @@ data:
   ENVIRONMENT: "dev"
   AWS_REGION: "us-east-1"
   AWS_DEFAULT_REGION: "us-east-1"
-  ALLOWED_REGIONS: "us-east-1,us-west-2"
+  ALLOWED_REGIONS: '["us-east-1","us-west-2"]'
   CELERY_BROKER_URL: "redis://redis.anvilops.svc.cluster.local:6379/0"
   DATABASE_URL: "postgresql+asyncpg://anvilops:changeme@anvilops-db.anvilops.svc.cluster.local:5432/anvilops"
   REDIS_URL: "redis://redis.anvilops.svc.cluster.local:6379/0"
