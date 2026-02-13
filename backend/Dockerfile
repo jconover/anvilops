@@ -10,20 +10,31 @@ RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
 FROM python:3.12-slim
 
 # Install Terraform
+ARG TARGETARCH
 RUN apt-get update && \
     apt-get install -y --no-install-recommends curl unzip && \
-    curl -fsSL https://releases.hashicorp.com/terraform/1.9.8/terraform_1.9.8_linux_amd64.zip -o /tmp/terraform.zip && \
+    ARCH=${TARGETARCH:-amd64} && \
+    curl -fsSL "https://releases.hashicorp.com/terraform/1.9.8/terraform_1.9.8_linux_${ARCH}.zip" -o /tmp/terraform.zip && \
     unzip /tmp/terraform.zip -d /usr/local/bin/ && \
     rm /tmp/terraform.zip && \
     apt-get purge -y unzip && \
     apt-get autoremove -y && \
     rm -rf /var/lib/apt/lists/*
 
+# Create non-root user
+RUN groupadd -r appuser && useradd -r -g appuser -d /app -s /sbin/nologin appuser
+
 # Copy Python packages from builder
 COPY --from=builder /install /usr/local
 
 WORKDIR /app
 COPY . .
+
+# Change ownership of application files to appuser
+RUN chown -R appuser:appuser /app
+
+# Switch to non-root user
+USER appuser
 
 EXPOSE 8000
 
