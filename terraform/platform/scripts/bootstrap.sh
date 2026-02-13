@@ -164,7 +164,7 @@ install_helm_charts() {
     log_info "Installing External DNS..."
     helm upgrade --install external-dns external-dns/external-dns \
         --namespace kube-system \
-        --set provider=aws --set policy=sync \
+        --set provider.name=aws --set policy=sync \
         --set registry=txt --set txtOwnerId="anvilops-${env}" \
         --wait --timeout 5m
     log_success "External DNS installed."

@@ -12,11 +12,12 @@ class Settings(BaseSettings):
     API_V1_PREFIX: str = "/api/v1"
     PROJECT_NAME: str = "AnvilOps"
     DEBUG: bool = False
+    CORS_ORIGINS: list[str] = []
 
     # AWX Configuration
     AWX_BASE_URL: str = "http://awx:8052"
-    AWX_USERNAME: str = "admin"
-    AWX_PASSWORD: str = "password"
+    AWX_USERNAME: str = ""
+    AWX_PASSWORD: str = ""
     AWX_VERIFY_SSL: bool = False
     AWX_JOB_TIMEOUT: int = 600
     AWX_POLL_INTERVAL: int = 10

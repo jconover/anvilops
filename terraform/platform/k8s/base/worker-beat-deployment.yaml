@@ -41,4 +41,31 @@ spec:
             limits:
               cpu: 500m
               memory: 512Mi
+          livenessProbe:
+            exec:
+              command:
+                - celery
+                - -A
+                - app.worker.celery_app
+                - inspect
+                - ping
+                - --timeout
+                - "5"
+            initialDelaySeconds: 30
+            periodSeconds: 60
+            timeoutSeconds: 10
+            failureThreshold: 3
+          readinessProbe:
+            exec:
+              command:
+                - celery
+                - -A
+                - app.worker.celery_app
+                - inspect
+                - ping
+                - --timeout
+                - "5"
+            initialDelaySeconds: 15
+            periodSeconds: 30
+            timeoutSeconds: 10
       restartPolicy: Always

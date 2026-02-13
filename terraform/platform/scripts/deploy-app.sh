@@ -36,6 +36,7 @@ usage() {
     echo "  --skip-build      Skip Docker build, only update K8s manifests"
     echo "  --api-only        Deploy only the API and worker components"
     echo "  --frontend-only   Deploy only the frontend component"
+    echo "  --force           Skip interactive confirmations (for CI/CD)"
     exit 1
 }
 
@@ -44,6 +45,7 @@ IMAGE_TAG=""
 SKIP_BUILD=false
 API_ONLY=false
 FRONTEND_ONLY=false
+FORCE=false
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -52,6 +54,7 @@ while [[ $# -gt 0 ]]; do
         --skip-build) SKIP_BUILD=true; shift ;;
         --api-only)  API_ONLY=true; shift ;;
         --frontend-only) FRONTEND_ONLY=true; shift ;;
+        --force)     FORCE=true; shift ;;
         -h|--help)   usage ;;
         *)           log_error "Unknown argument: $1"; usage ;;
     esac
@@ -199,7 +202,7 @@ main() {
     log_info "=========================================="
     echo ""
 
-    if [[ "$ENV" == "production" ]]; then
+    if [[ "$ENV" == "production" ]] && [[ "$FORCE" != "true" ]]; then
         log_warn "Deploying to PRODUCTION."
         read -rp "Type 'deploy' to confirm: " confirm
         if [[ "$confirm" != "deploy" ]]; then

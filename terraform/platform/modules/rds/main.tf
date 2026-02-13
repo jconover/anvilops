@@ -146,10 +146,10 @@ resource "aws_db_parameter_group" "this" {
     apply_method = "pending-reboot"
   }
 
-  # work_mem = 64MB = 65536 kB
+  # work_mem = 16MB = 16384 kB (safe for db.t3.large with 200 max_connections)
   parameter {
     name         = "work_mem"
-    value        = "65536"
+    value        = "16384"
     apply_method = "immediate"
   }
 
