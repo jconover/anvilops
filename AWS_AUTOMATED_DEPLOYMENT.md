@@ -593,7 +593,7 @@ Update `terraform.tfvars` (instance types, classes) and `terraform apply`.
 | ALB 502/503 | Check target group health + security groups |
 | DB connection fail | Verify RDS status + SG rules on port 5432 |
 | Workers idle | `kubectl logs deploy/anvilops-worker -n anvilops` |
-| ExternalSecret CRD missing | Install External Secrets Operator: `helm install external-secrets external-secrets/external-secrets -n external-secrets --create-namespace --set installCRDs=true --wait` |
+| ExternalSecret CRD missing / v1beta1 error | Install or upgrade External Secrets Operator (>= 0.10 for v1 API): `helm install external-secrets external-secrets/external-secrets -n external-secrets --create-namespace --set installCRDs=true --wait` |
 | General debugging | `kubectl -n anvilops get events --sort-by='.lastTimestamp'` |
 
 ---
