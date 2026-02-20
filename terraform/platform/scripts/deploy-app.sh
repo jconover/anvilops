@@ -86,12 +86,18 @@ check_helm_prerequisites() {
     log_step "Checking cluster prerequisites..."
     local missing=0
 
-    # Check External Secrets Operator CRDs
+    # Check External Secrets Operator CRDs (v1 API required)
     if ! kubectl get crd externalsecrets.external-secrets.io &>/dev/null; then
         log_error "External Secrets Operator CRDs not found."
         log_error "Run Step 6 from AWS_AUTOMATED_DEPLOYMENT.md first, or use:"
         log_error "  helm install external-secrets external-secrets/external-secrets \\"
         log_error "    -n external-secrets --create-namespace --set installCRDs=true --wait"
+        missing=$((missing + 1))
+    elif ! kubectl api-resources --api-group=external-secrets.io 2>/dev/null | grep -q "v1"; then
+        log_error "External Secrets Operator installed but v1 API not available."
+        log_error "Upgrade to external-secrets >= 0.10:"
+        log_error "  helm upgrade external-secrets external-secrets/external-secrets \\"
+        log_error "    -n external-secrets --set installCRDs=true --wait"
         missing=$((missing + 1))
     fi
 
