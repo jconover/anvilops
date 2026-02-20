@@ -77,9 +77,9 @@ const SIZE_DISPLAY: Record<string, string> = {
  * the `useServer` and `useServerBuildSteps` hooks).
  */
 export default function RequestDetailPage() {
-  const params = useParams();
+  const params = useParams<{ id: string }>();
   const router = useRouter();
-  const id = params.id as string;
+  const id = params.id;
 
   const {
     data: server,

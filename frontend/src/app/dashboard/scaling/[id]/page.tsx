@@ -161,9 +161,9 @@ function generateScaleHistory(
 // ---------------------------------------------------------------------------
 
 export default function ScalingGroupDetailPage() {
-  const params = useParams();
+  const params = useParams<{ id: string }>();
   const router = useRouter();
-  const id = params.id as string;
+  const id = params.id;
 
   const [scaleDialogOpen, setScaleDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);

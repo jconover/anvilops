@@ -125,9 +125,9 @@ const CONFIG_LABELS: Record<string, string> = {
 // ---------------------------------------------------------------------------
 
 export default function ScheduleDetailPage() {
-  const params = useParams();
+  const params = useParams<{ id: string }>();
   const router = useRouter();
-  const id = params.id as string;
+  const id = params.id;
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
