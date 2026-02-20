@@ -148,6 +148,13 @@ cp terraform.dev.tfvars.example terraform.dev.tfvars
 terraform plan -var-file terraform.dev.tfvars -out tfplan
 terraform apply tfplan
 aws eks update-kubeconfig --name $(terraform output -raw eks_cluster_name) --region us-east-1
+
+# Install required Helm charts (see Step 6 for details)
+helm repo add external-secrets https://charts.external-secrets.io && helm repo update
+helm install external-secrets external-secrets/external-secrets \
+  -n external-secrets --create-namespace --set installCRDs=true --wait
+# See Step 6 for additional charts: ALB controller, External DNS, metrics-server, etc.
+
 ./scripts/deploy-app.sh dev
 ./scripts/smoke-test.sh
 
@@ -157,6 +164,13 @@ cp terraform.production.tfvars.example terraform.production.tfvars
 terraform plan -var-file terraform.production.tfvars -out tfplan
 terraform apply tfplan
 aws eks update-kubeconfig --name $(terraform output -raw eks_cluster_name) --region us-east-1
+
+# Install required Helm charts (see Step 6 for details)
+helm repo add external-secrets https://charts.external-secrets.io && helm repo update
+helm install external-secrets external-secrets/external-secrets \
+  -n external-secrets --create-namespace --set installCRDs=true --wait
+# See Step 6 for additional charts: ALB controller, External DNS, metrics-server, etc.
+
 ./scripts/deploy-app.sh production
 ./scripts/smoke-test.sh
 
@@ -180,6 +194,13 @@ terraform plan -var-file terraform.dev.tfvars -out tfplan
 terraform apply tfplan
 $ClusterName = terraform output -raw eks_cluster_name
 aws eks update-kubeconfig --name $ClusterName --region us-east-1
+
+# Install required Helm charts (see Step 6 for details)
+helm repo add external-secrets https://charts.external-secrets.io; helm repo update
+helm install external-secrets external-secrets/external-secrets `
+  -n external-secrets --create-namespace --set installCRDs=true --wait
+# See Step 6 for additional charts: ALB controller, External DNS, metrics-server, etc.
+
 .\scripts\deploy-app.ps1 dev
 .\scripts\smoke-test.ps1
 
@@ -190,6 +211,13 @@ terraform plan -var-file terraform.production.tfvars -out tfplan
 terraform apply tfplan
 $ClusterName = terraform output -raw eks_cluster_name
 aws eks update-kubeconfig --name $ClusterName --region us-east-1
+
+# Install required Helm charts (see Step 6 for details)
+helm repo add external-secrets https://charts.external-secrets.io; helm repo update
+helm install external-secrets external-secrets/external-secrets `
+  -n external-secrets --create-namespace --set installCRDs=true --wait
+# See Step 6 for additional charts: ALB controller, External DNS, metrics-server, etc.
+
 .\scripts\deploy-app.ps1 production
 .\scripts\smoke-test.ps1
 
@@ -565,6 +593,7 @@ Update `terraform.tfvars` (instance types, classes) and `terraform apply`.
 | ALB 502/503 | Check target group health + security groups |
 | DB connection fail | Verify RDS status + SG rules on port 5432 |
 | Workers idle | `kubectl logs deploy/anvilops-worker -n anvilops` |
+| ExternalSecret CRD missing | Install External Secrets Operator: `helm install external-secrets external-secrets/external-secrets -n external-secrets --create-namespace --set installCRDs=true --wait` |
 | General debugging | `kubectl -n anvilops get events --sort-by='.lastTimestamp'` |
 
 ---

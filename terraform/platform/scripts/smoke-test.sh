@@ -53,7 +53,7 @@ test_api_health() {
 
     local response
     response=$(kubectl exec -n "$NAMESPACE" "$api_pod" -- \
-        curl -sf -m 10 http://localhost:8000/api/v1/health 2>/dev/null || echo "TIMEOUT")
+        curl -sf -m 10 http://localhost:8000/health 2>/dev/null || echo "TIMEOUT")
 
     if echo "$response" | grep -qi '"status"'; then
         record_pass "API health: ${response}"
@@ -122,7 +122,7 @@ test_external() {
     log_step "External endpoint: ${BASE_URL}..."
 
     local health
-    health=$(curl -sf -m 15 "${BASE_URL}/api/v1/health" 2>/dev/null || echo "ERROR")
+    health=$(curl -sf -m 15 "${BASE_URL}/health" 2>/dev/null || echo "ERROR")
     if echo "$health" | grep -qi '"status"'; then
         record_pass "External API health: ${health}"
     else

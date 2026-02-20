@@ -82,6 +82,37 @@ ecr_login() {
     log_success "ECR login successful."
 }
 
+check_helm_prerequisites() {
+    log_step "Checking cluster prerequisites..."
+    local missing=0
+
+    # Check External Secrets Operator CRDs
+    if ! kubectl get crd externalsecrets.external-secrets.io &>/dev/null; then
+        log_error "External Secrets Operator CRDs not found."
+        log_error "Run Step 6 from AWS_AUTOMATED_DEPLOYMENT.md first, or use:"
+        log_error "  helm install external-secrets external-secrets/external-secrets \\"
+        log_error "    -n external-secrets --create-namespace --set installCRDs=true --wait"
+        missing=$((missing + 1))
+    fi
+
+    # Check AWS Load Balancer Controller (needed for Ingress)
+    if ! kubectl get deployment aws-load-balancer-controller -n kube-system &>/dev/null; then
+        log_warn "AWS Load Balancer Controller not found. Ingress may not work."
+    fi
+
+    # Check metrics-server (needed for HPA)
+    if ! kubectl get deployment metrics-server -n kube-system &>/dev/null; then
+        log_warn "metrics-server not found. HPA will not function."
+    fi
+
+    if [[ $missing -gt 0 ]]; then
+        log_error "$missing required prerequisite(s) missing. Aborting."
+        exit 1
+    fi
+
+    log_success "Cluster prerequisites verified."
+}
+
 build_and_push() {
     log_step "Building and pushing Docker images (tag: ${IMAGE_TAG})..."
 
@@ -210,6 +241,8 @@ main() {
             exit 1
         fi
     fi
+
+    check_helm_prerequisites
 
     if [[ "$SKIP_BUILD" != "true" ]]; then
         ecr_login
