@@ -11,8 +11,8 @@ must never fail because ServiceNow is unreachable.
 
 import logging
 
+from app.services.db import get_server_request, get_sync_db
 from app.worker.celery_app import celery_app
-from app.services.db import get_sync_db, get_server_request
 
 logger = logging.getLogger(__name__)
 
@@ -222,9 +222,9 @@ def cmdb_full_sync(self) -> dict:
     # Load all server requests
     try:
         with get_sync_db() as session:
-            from app.models.server import ServerRequest as SR
+            from app.models.server import ServerRequest
 
-            servers = session.query(SR).all()
+            servers = session.query(ServerRequest).all()
 
             server_list = []
             for sr in servers:

@@ -7,8 +7,8 @@ but never re-raised.
 
 import logging
 
-from app.worker.celery_app import celery_app
 from app.services.slack import get_slack_notifier
+from app.worker.celery_app import celery_app
 
 logger = logging.getLogger(__name__)
 

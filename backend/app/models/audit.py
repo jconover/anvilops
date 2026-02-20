@@ -8,7 +8,7 @@ and authentication event is recorded here.
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import DateTime, Index, JSON, String, Text, text
+from sqlalchemy import JSON, DateTime, Index, String, Text, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base

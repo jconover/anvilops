@@ -9,7 +9,6 @@ isolation between regions.
 import logging
 from typing import Any
 
-from app.core.config import settings
 from app.services.regions import SUPPORTED_REGIONS, RegionService
 
 logger = logging.getLogger(__name__)

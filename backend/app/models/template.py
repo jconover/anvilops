@@ -4,7 +4,7 @@ Templates pre-fill the server builder wizard with sensible defaults
 for common server archetypes (web server, database, app server, etc.).
 """
 
-from sqlalchemy import Boolean, Integer, JSON, String, Text, text
+from sqlalchemy import JSON, Boolean, Integer, String, Text, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base

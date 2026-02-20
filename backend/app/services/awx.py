@@ -23,7 +23,6 @@ from app.services.awx_exceptions import (
     AWXAuthError,
     AWXConnectionError,
     AWXError,
-    AWXJobError,
     AWXTimeoutError,
 )
 

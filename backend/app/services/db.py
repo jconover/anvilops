@@ -16,7 +16,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.core.config import settings
-from app.models.server import ServerRequest, BuildStep
+from app.models.server import BuildStep, ServerRequest
 
 logger = logging.getLogger(__name__)
 
@@ -88,7 +88,6 @@ def get_server_request(session: Session, server_request_id: str) -> dict:
         "dns_name": sr.dns_name,
         "awx_host_id": getattr(sr, "awx_host_id", None),
         "puppet_certname": getattr(sr, "puppet_certname", None),
-        "puppet_role": sr.puppet_role,
         "cmdb_sys_id": getattr(sr, "cmdb_sys_id", None),
     }
 

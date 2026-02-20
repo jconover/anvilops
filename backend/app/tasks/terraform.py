@@ -9,10 +9,9 @@ import logging
 import os
 from datetime import datetime, timezone
 
-from app.worker.celery_app import celery_app
-from app.services.db import get_sync_db, update_build_step, get_server_request
+from app.services.db import get_server_request, get_sync_db, update_build_step
 from app.services.terraform import TerraformService
-from app.core.config import settings
+from app.worker.celery_app import celery_app
 
 logger = logging.getLogger(__name__)
 

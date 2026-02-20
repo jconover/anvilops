@@ -12,17 +12,16 @@ Tasks:
   - awx_decommission -- Remove a host from AWX during server teardown.
 """
 
-import json
 import logging
 from datetime import datetime, timezone
 
-from app.worker.celery_app import celery_app
+from app.core.config import settings
 from app.services.db import (
-    get_sync_db,
     get_server_request,
+    get_sync_db,
     update_build_step,
 )
-from app.core.config import settings
+from app.worker.celery_app import celery_app
 
 try:
     from app.services.awx import AWXServiceSync

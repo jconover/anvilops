@@ -6,7 +6,6 @@ network selection dropdowns when a user picks a target region.
 """
 
 import logging
-from typing import Any
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field

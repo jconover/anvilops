@@ -8,7 +8,6 @@ approval logic.
 
 import hashlib
 import hmac
-import json
 import logging
 import time
 
@@ -88,7 +87,6 @@ class SlackInteractiveHandler:
         original Slack message with an updated status.
         """
         try:
-            callback_id = payload.get("callback_id", "")
             actions = payload.get("actions", [])
             user = payload.get("user", {})
             slack_username = user.get("name", user.get("id", "unknown"))
@@ -173,7 +171,10 @@ class SlackInteractiveHandler:
 
             # TODO: Wire into actual approval service once it exists.
             #   from app.services.approvals import reject_request
-            #   reject_request(request_id, approver=rejector, reason="Rejected via Slack", source="slack")
+            #   reject_request(
+            #       request_id, approver=rejector,
+            #       reason="Rejected via Slack", source="slack"
+            #   )
             #
             # For now, send the approval-rejected notification.
             notifier = get_slack_notifier()

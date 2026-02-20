@@ -16,10 +16,10 @@ Coordinates the full server provisioning workflow:
 import logging
 from datetime import datetime, timezone
 
-from app.worker.celery_app import celery_app
-from app.services.db import get_sync_db, update_server_status, create_build_steps
-from app.tasks.terraform import terraform_plan, terraform_apply, terraform_destroy
+from app.services.db import create_build_steps, get_sync_db, update_server_status
 from app.tasks.awx import awx_configure
+from app.tasks.terraform import terraform_apply, terraform_destroy, terraform_plan
+from app.worker.celery_app import celery_app
 
 try:
     from app.tasks.puppet import puppet_enroll

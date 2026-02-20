@@ -12,9 +12,10 @@ All notifications are best-effort: failures are logged but never raise
 exceptions that could affect the build pipeline.
 """
 
-import httpx
 import logging
 from datetime import datetime, timezone
+
+import httpx
 
 logger = logging.getLogger(__name__)
 
@@ -146,7 +147,11 @@ class SlackNotifier:
             fields.append({"title": "DNS", "value": dns_name, "short": True})
         if duration_seconds is not None:
             fields.append(
-                {"title": "Duration", "value": self._format_duration(duration_seconds), "short": True}
+                {
+                    "title": "Duration",
+                    "value": self._format_duration(duration_seconds),
+                    "short": True,
+                }
             )
 
         attachment = self._build_attachment(

@@ -17,11 +17,11 @@ import secrets
 from datetime import datetime, timezone
 from uuid import uuid4
 
-from app.worker.celery_app import celery_app
-from app.services.db import get_sync_db
 from app.models.schedule import BuildSchedule, ScheduleExecution
 from app.models.server import ServerRequest
 from app.services.cron_parser import get_next_run
+from app.services.db import get_sync_db
+from app.worker.celery_app import celery_app
 
 logger = logging.getLogger(__name__)
 

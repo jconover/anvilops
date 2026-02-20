@@ -4,8 +4,8 @@ Provides CRUD operations for build schedules plus lifecycle actions
 (pause, resume, run-now) and execution history queries.
 """
 
-import uuid
 import logging
+import uuid
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -23,7 +23,7 @@ from app.schemas.schedule import (
     ScheduleResponse,
     ScheduleUpdate,
 )
-from app.services.cron_parser import describe_cron, get_next_run, validate_cron
+from app.services.cron_parser import get_next_run, validate_cron
 
 logger = logging.getLogger(__name__)
 router = APIRouter()

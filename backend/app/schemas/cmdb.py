@@ -1,7 +1,6 @@
 """Pydantic schemas for CMDB API requests and responses."""
 
 import uuid
-from datetime import datetime
 
 from pydantic import BaseModel, Field
 

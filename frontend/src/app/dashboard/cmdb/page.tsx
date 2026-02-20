@@ -196,7 +196,7 @@ export default function CMDBPage() {
     data: serversData,
     isLoading: serversLoading,
     isError: serversError,
-  } = useServers({ page_size: 100 });
+  } = useServers({ limit: 100 });
 
   // Filter to only show servers that are ready or in a buildable state.
   const servers = useMemo(() => {

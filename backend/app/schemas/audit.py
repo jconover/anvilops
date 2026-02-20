@@ -47,7 +47,9 @@ class AuditQueryParams(BaseModel):
     resource_id: str | None = Field(None, description="Filter by resource UUID")
     start_date: datetime | None = Field(None, description="Include logs on or after this timestamp")
     end_date: datetime | None = Field(None, description="Include logs on or before this timestamp")
-    status: str | None = Field(None, description="Filter by outcome status (success, failure, error)")
+    status: str | None = Field(
+        None, description="Filter by outcome status (success, failure, error)"
+    )
 
 
 class AuditDailyCounts(BaseModel):

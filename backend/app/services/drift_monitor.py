@@ -15,9 +15,8 @@ from datetime import datetime, timedelta, timezone
 from typing import Any
 from uuid import uuid4
 
-from sqlalchemy import and_, case, distinct, func, select
+from sqlalchemy import and_, distinct, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import Session
 
 from app.models.drift import DriftAlert, DriftEvent
 from app.models.server import ServerRequest
@@ -338,8 +337,11 @@ class DriftMonitor:
 
             if report_hashes:
                 result = session.execute(
-                    select(DriftEvent.report_hash, DriftEvent.resource_title, DriftEvent.property_name)
-                    .where(DriftEvent.report_hash.in_(report_hashes))
+                    select(
+                        DriftEvent.report_hash,
+                        DriftEvent.resource_title,
+                        DriftEvent.property_name,
+                    ).where(DriftEvent.report_hash.in_(report_hashes))
                 )
                 for row in result:
                     existing_hashes.add(
@@ -663,7 +665,8 @@ class DriftMonitor:
             ]
 
             for alert_data in critical_alerts:
-                severity_emoji = ":rotating_light:" if alert_data["severity"] == "critical" else ":warning:"
+                sev = alert_data["severity"]
+                severity_emoji = ":rotating_light:" if sev == "critical" else ":warning:"
                 payload = {
                     "attachments": [{
                         "color": "#F44336" if alert_data["severity"] == "critical" else "#FFC107",

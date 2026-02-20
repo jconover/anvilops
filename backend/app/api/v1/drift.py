@@ -6,7 +6,7 @@ for the AnvilOps frontend dashboard.
 
 import logging
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -89,8 +89,13 @@ async def get_drift_summary(
 @router.get("/events", response_model=DriftEventListResponse)
 async def list_drift_events(
     server_id: uuid.UUID | None = Query(None, description="Filter by server request ID"),
-    severity: str | None = Query(None, description="Filter by severity: critical, high, medium, low"),
-    category: str | None = Query(None, description="Filter by category: security, configuration, package, service, file"),
+    severity: str | None = Query(
+        None, description="Filter by severity: critical, high, medium, low"
+    ),
+    category: str | None = Query(
+        None,
+        description="Filter by category: security, configuration, package, service, file",
+    ),
     is_resolved: bool | None = Query(None, description="Filter by resolution status"),
     date_from: datetime | None = Query(None, description="Start of date range (ISO 8601)"),
     date_to: datetime | None = Query(None, description="End of date range (ISO 8601)"),

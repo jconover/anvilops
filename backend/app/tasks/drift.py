@@ -137,11 +137,12 @@ def generate_drift_report() -> dict:
     logger.info("generate_drift_report starting")
 
     try:
-        from app.services.db import get_sync_db
-        from sqlalchemy import func, select, distinct
         from datetime import timedelta
-        from app.models.drift import DriftEvent, DriftAlert
-        from app.models.server import ServerRequest
+
+        from sqlalchemy import distinct, func, select
+
+        from app.models.drift import DriftAlert, DriftEvent
+        from app.services.db import get_sync_db
 
         now = datetime.now(timezone.utc)
         cutoff_24h = now - timedelta(hours=24)
@@ -274,14 +275,33 @@ def _send_daily_digest_slack(report: dict) -> None:
         notifier = get_slack_notifier()
 
         severity = report.get("by_severity", {})
-        category = report.get("by_category", {})
 
         fields = [
-            {"title": "New Events (24h)", "value": str(report.get("new_events", 0)), "short": True},
-            {"title": "Unresolved Total", "value": str(report.get("unresolved_total", 0)), "short": True},
-            {"title": "Auto-Corrected", "value": str(report.get("auto_corrected", 0)), "short": True},
-            {"title": "Affected Servers", "value": str(report.get("affected_servers", 0)), "short": True},
-            {"title": "Active Alerts", "value": str(report.get("active_alerts", 0)), "short": True},
+            {
+                "title": "New Events (24h)",
+                "value": str(report.get("new_events", 0)),
+                "short": True,
+            },
+            {
+                "title": "Unresolved Total",
+                "value": str(report.get("unresolved_total", 0)),
+                "short": True,
+            },
+            {
+                "title": "Auto-Corrected",
+                "value": str(report.get("auto_corrected", 0)),
+                "short": True,
+            },
+            {
+                "title": "Affected Servers",
+                "value": str(report.get("affected_servers", 0)),
+                "short": True,
+            },
+            {
+                "title": "Active Alerts",
+                "value": str(report.get("active_alerts", 0)),
+                "short": True,
+            },
             {
                 "title": "By Severity",
                 "value": (

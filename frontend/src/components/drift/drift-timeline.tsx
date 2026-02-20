@@ -14,7 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useDriftTimeline } from '@/lib/api/drift';
+import { useDriftTimeline, type DriftTimelineEvent } from '@/lib/api/drift';
 
 // ---------------------------------------------------------------------------
 // Severity dot colors
@@ -101,9 +101,9 @@ export function DriftTimeline({ serverId, serverLabel }: DriftTimelineProps) {
 
   // Group events by date
   function groupByDate(
-    events: typeof data extends { events: infer E } ? E : never,
-  ): Map<string, typeof events> {
-    const groups = new Map<string, typeof events>();
+    events: DriftTimelineEvent[],
+  ): Map<string, DriftTimelineEvent[]> {
+    const groups = new Map<string, DriftTimelineEvent[]>();
     for (const event of events) {
       const dateKey = formatDate(event.detected_at);
       const existing = groups.get(dateKey) || [];

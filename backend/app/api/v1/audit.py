@@ -7,12 +7,12 @@ All endpoints require authentication (to be enforced once Cognito RBAC
 is wired up). In the future, only Admins and Viewers will be permitted.
 """
 
-import uuid
 import logging
+import uuid
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import cast, func, select, Date
+from sqlalchemy import Date, cast, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
@@ -138,8 +138,12 @@ async def list_audit_logs(
     category: str | None = Query(None, description="Filter by category"),
     actor_email: str | None = Query(None, description="Filter by actor email"),
     resource_id: str | None = Query(None, description="Filter by resource UUID"),
-    start_date: datetime | None = Query(None, description="Include logs on or after this timestamp"),
-    end_date: datetime | None = Query(None, description="Include logs on or before this timestamp"),
+    start_date: datetime | None = Query(
+        None, description="Include logs on or after this timestamp"
+    ),
+    end_date: datetime | None = Query(
+        None, description="Include logs on or before this timestamp"
+    ),
     status: str | None = Query(None, description="Filter by outcome status"),
     db: AsyncSession = Depends(get_db),
 ):

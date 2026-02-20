@@ -8,12 +8,12 @@ against their scaling policies and triggers adjustments.
 
 import logging
 import uuid
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 
-from app.worker.celery_app import celery_app
-from app.services.db import get_sync_db
 from app.models.scaling import ScalingGroup, ScalingGroupMember
+from app.services.db import get_sync_db
 from app.services.scaling import ScalingService
+from app.worker.celery_app import celery_app
 
 logger = logging.getLogger(__name__)
 

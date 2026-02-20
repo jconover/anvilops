@@ -15,13 +15,12 @@ Tasks:
 import logging
 from datetime import datetime, timezone
 
-from app.worker.celery_app import celery_app
 from app.services.db import (
-    get_sync_db,
     get_server_request,
+    get_sync_db,
     update_build_step,
-    update_server_status,
 )
+from app.worker.celery_app import celery_app
 
 try:
     from app.services.puppet import PuppetEnterpriseServiceSync

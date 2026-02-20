@@ -26,7 +26,6 @@ Responsibilities:
   - Node purge for decommission workflows
 """
 
-import json
 import logging
 import time
 from datetime import datetime, timezone
@@ -39,7 +38,6 @@ from app.services.puppet_exceptions import (
     PuppetClassificationError,
     PuppetConnectionError,
     PuppetError,
-    PuppetNodeError,
     PuppetTimeoutError,
 )
 
@@ -56,7 +54,7 @@ def _build_url(base_url: str, port: int, path: str) -> str:
     """
     # Strip any existing port from the base URL so we can substitute.
     # E.g. "https://puppet:8140" -> "https://puppet"
-    from urllib.parse import urlparse, urlunparse
+    from urllib.parse import urlparse
 
     parsed = urlparse(base_url)
     # Reconstruct with the desired port and no path (path comes from arg).
@@ -384,10 +382,6 @@ class PuppetEnterpriseService:
         """
         url = self._puppetdb_url("/reports")
         query = ["=", "certname", certname]
-        params = {
-            "limit": limit,
-            "order_by": json.dumps([{"field": "receive_time", "order": "desc"}]),
-        }
         response = await self._post(url, json_body={"query": query})
 
         reports = response.json()
@@ -1040,10 +1034,6 @@ class PuppetEnterpriseServiceSync:
         """
         url = self._puppetdb_url("/reports")
         query = ["=", "certname", certname]
-        params = {
-            "limit": limit,
-            "order_by": json.dumps([{"field": "receive_time", "order": "desc"}]),
-        }
         response = self._post(url, json_body={"query": query})
 
         reports = response.json()

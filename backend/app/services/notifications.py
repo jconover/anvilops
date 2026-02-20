@@ -9,7 +9,6 @@ a notification failure never breaks the calling operation.
 """
 
 import logging
-from datetime import datetime, timezone
 from uuid import uuid4
 
 from sqlalchemy.ext.asyncio import AsyncSession

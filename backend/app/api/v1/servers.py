@@ -1,8 +1,8 @@
 """Server API endpoints."""
 
+import logging
 import secrets
 import uuid
-import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, select

@@ -2,19 +2,19 @@
 
 from fastapi import APIRouter
 
-from app.api.v1.servers import router as servers_router
-from app.api.v1.puppet import router as puppet_router
-from app.api.v1.compliance import router as compliance_router
-from app.api.v1.templates import router as templates_router
-from app.api.v1.costs import router as costs_router
-from app.api.v1.slack import router as slack_router
-from app.api.v1.notifications import router as notifications_router
 from app.api.v1.audit import router as audit_router
+from app.api.v1.cmdb import router as cmdb_router
+from app.api.v1.compliance import router as compliance_router
+from app.api.v1.costs import router as costs_router
+from app.api.v1.drift import router as drift_router
+from app.api.v1.notifications import router as notifications_router
+from app.api.v1.puppet import router as puppet_router
 from app.api.v1.regions import router as regions_router
 from app.api.v1.scaling import router as scaling_router
-from app.api.v1.cmdb import router as cmdb_router
 from app.api.v1.schedules import router as schedules_router
-from app.api.v1.drift import router as drift_router
+from app.api.v1.servers import router as servers_router
+from app.api.v1.slack import router as slack_router
+from app.api.v1.templates import router as templates_router
 
 api_v1_router = APIRouter()
 api_v1_router.include_router(servers_router, prefix="/servers", tags=["servers"])
