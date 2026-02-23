@@ -94,10 +94,29 @@ remove_k8s_resources() {
 
     kubectl delete namespace anvilops --timeout=120s 2>/dev/null || true
 
-    helm uninstall external-dns -n kube-system 2>/dev/null || true
+    # Uninstall Helm charts in reverse dependency order
+    log_info "Uninstalling KEDA..."
+    helm uninstall keda -n keda 2>/dev/null || true
+
+    log_info "Uninstalling Cluster Autoscaler..."
+    helm uninstall cluster-autoscaler -n kube-system 2>/dev/null || true
+
+    log_info "Uninstalling External DNS..."
+    helm uninstall external-dns -n external-dns 2>/dev/null || true
+
+    log_info "Uninstalling Metrics Server..."
     helm uninstall metrics-server -n kube-system 2>/dev/null || true
+
+    log_info "Uninstalling External Secrets..."
     helm uninstall external-secrets -n external-secrets 2>/dev/null || true
+
+    log_info "Uninstalling AWS Load Balancer Controller..."
     helm uninstall aws-load-balancer-controller -n kube-system 2>/dev/null || true
+
+    # Clean up namespaces created by Helm charts
+    log_info "Deleting chart namespaces..."
+    kubectl delete namespace keda --ignore-not-found --timeout=60s || true
+    kubectl delete namespace external-dns --ignore-not-found --timeout=60s || true
     kubectl delete namespace external-secrets --ignore-not-found --timeout=60s || true
 
     log_success "Kubernetes resources removed."

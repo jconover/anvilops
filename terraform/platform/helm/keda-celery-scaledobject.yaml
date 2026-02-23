@@ -17,5 +17,5 @@ spec:
         listName: celery
         listLength: "10"
         enableTLS: "true"
-        authenticationRef:
-          name: redis-auth
+      authenticationRef:
+        name: redis-auth

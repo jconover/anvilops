@@ -14,9 +14,9 @@ aws:
 domainFilters:
   - ${domain}
 
-policy: upsert-only
+policy: sync
 
-txtOwnerId: anvilops-${environment}
+txtOwnerId: ${cluster_name}
 
 resources:
   requests:
