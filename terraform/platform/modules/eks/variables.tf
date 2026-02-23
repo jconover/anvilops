@@ -47,6 +47,12 @@ variable "node_desired_size" {
   default     = 3
 }
 
+variable "cluster_version" {
+  description = "Kubernetes version for the EKS cluster."
+  type        = string
+  default     = "1.35"
+}
+
 variable "tags" {
   description = "Additional tags to apply to all resources."
   type        = map(string)

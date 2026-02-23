@@ -139,7 +139,7 @@ resource "aws_iam_role_policy_attachment" "cluster_vpc_resource_controller" {
 
 resource "aws_eks_cluster" "this" {
   name     = local.cluster_name
-  version  = "1.31"
+  version  = var.cluster_version
   role_arn = aws_iam_role.cluster.arn
 
   vpc_config {

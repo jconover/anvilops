@@ -202,6 +202,7 @@ install_helm_charts() {
         alb_args+=(--set "serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn=${alb_role_arn}")
     fi
     helm upgrade --install aws-load-balancer-controller eks/aws-load-balancer-controller \
+        --version 1.12.0 \
         "${alb_args[@]}" \
         --wait --timeout 5m
     log_success "AWS Load Balancer Controller installed."
@@ -211,6 +212,7 @@ install_helm_charts() {
     # -------------------------------------------------------------------------
     log_info "Installing External Secrets Operator..."
     helm upgrade --install external-secrets external-secrets/external-secrets \
+        --version 0.14.3 \
         --namespace external-secrets --create-namespace \
         --set installCRDs=true \
         --wait --timeout 5m
@@ -234,6 +236,7 @@ install_helm_charts() {
         extdns_args+=(--set "serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn=${extdns_role_arn}")
     fi
     helm upgrade --install external-dns external-dns/external-dns \
+        --version 1.16.1 \
         "${extdns_args[@]}" \
         --wait --timeout 5m
     log_success "External DNS installed."
@@ -243,6 +246,7 @@ install_helm_charts() {
     # -------------------------------------------------------------------------
     log_info "Installing Metrics Server..."
     helm upgrade --install metrics-server metrics-server/metrics-server \
+        --version 3.13.0 \
         --namespace kube-system \
         --wait --timeout 5m
     log_success "Metrics Server installed."
@@ -262,6 +266,7 @@ install_helm_charts() {
         autoscaler_args+=(--set "rbac.serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn=${autoscaler_role_arn}")
     fi
     helm upgrade --install cluster-autoscaler autoscaler/cluster-autoscaler \
+        --version 9.44.0 \
         "${autoscaler_args[@]}" \
         --wait --timeout 5m
     log_success "Cluster Autoscaler installed."
@@ -271,6 +276,7 @@ install_helm_charts() {
     # -------------------------------------------------------------------------
     log_info "Installing KEDA..."
     helm upgrade --install keda keda/keda \
+        --version 2.17.0 \
         --namespace keda --create-namespace \
         --wait --timeout 10m
     log_success "KEDA installed."

@@ -81,6 +81,12 @@ variable "single_nat_gateway" {
 # EKS Cluster
 # -----------------------------------------------------------------------------
 
+variable "eks_cluster_version" {
+  description = "Kubernetes version for the EKS cluster. AWS requires sequential minor version upgrades."
+  type        = string
+  default     = "1.35"
+}
+
 variable "eks_node_instance_types" {
   description = "EC2 instance types for the EKS managed node group."
   type        = list(string)

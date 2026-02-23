@@ -51,15 +51,16 @@ module "networking" {
 module "eks" {
   source = "./modules/eks"
 
-  project_name        = var.project_name
-  environment         = var.environment
-  private_subnet_ids  = module.networking.private_subnet_ids
+  project_name          = var.project_name
+  environment           = var.environment
+  cluster_version       = var.eks_cluster_version
+  private_subnet_ids    = module.networking.private_subnet_ids
   eks_security_group_id = module.networking.eks_security_group_id
-  node_instance_types = var.eks_node_instance_types
-  node_min_size       = var.eks_node_min_size
-  node_max_size       = var.eks_node_max_size
-  node_desired_size   = var.eks_node_desired_size
-  tags                = local.common_tags
+  node_instance_types   = var.eks_node_instance_types
+  node_min_size         = var.eks_node_min_size
+  node_max_size         = var.eks_node_max_size
+  node_desired_size     = var.eks_node_desired_size
+  tags                  = local.common_tags
 }
 
 # -----------------------------------------------------------------------------
@@ -69,15 +70,15 @@ module "eks" {
 module "rds" {
   source = "./modules/rds"
 
-  project_name              = var.project_name
-  environment               = var.environment
-  isolated_subnet_ids       = module.networking.isolated_subnet_ids
-  rds_security_group_id     = module.networking.rds_security_group_id
-  db_instance_class         = var.db_instance_class
-  db_allocated_storage      = var.db_allocated_storage
-  db_name                   = var.db_name
+  project_name               = var.project_name
+  environment                = var.environment
+  isolated_subnet_ids        = module.networking.isolated_subnet_ids
+  rds_security_group_id      = module.networking.rds_security_group_id
+  db_instance_class          = var.db_instance_class
+  db_allocated_storage       = var.db_allocated_storage
+  db_name                    = var.db_name
   enable_deletion_protection = var.enable_deletion_protection
-  tags                      = local.common_tags
+  tags                       = local.common_tags
 }
 
 # -----------------------------------------------------------------------------
@@ -154,12 +155,12 @@ module "ecs_runner" {
 module "cognito" {
   source = "./modules/cognito"
 
-  project_name              = var.project_name
-  environment               = var.environment
-  callback_urls             = var.cognito_callback_urls
-  logout_urls               = var.cognito_logout_urls
+  project_name               = var.project_name
+  environment                = var.environment
+  callback_urls              = var.cognito_callback_urls
+  logout_urls                = var.cognito_logout_urls
   enable_deletion_protection = var.enable_deletion_protection
-  tags                      = local.common_tags
+  tags                       = local.common_tags
 }
 
 # -----------------------------------------------------------------------------
@@ -169,16 +170,16 @@ module "cognito" {
 module "alb" {
   source = "./modules/alb"
 
-  project_name              = var.project_name
-  environment               = var.environment
-  domain_name               = var.domain_name
-  vpc_id                    = module.networking.vpc_id
-  public_subnet_ids         = module.networking.public_subnet_ids
-  alb_security_group_id     = module.networking.alb_security_group_id
-  route53_zone_id           = module.dns.hosted_zone_id
-  enable_waf                = var.enable_waf
+  project_name               = var.project_name
+  environment                = var.environment
+  domain_name                = var.domain_name
+  vpc_id                     = module.networking.vpc_id
+  public_subnet_ids          = module.networking.public_subnet_ids
+  alb_security_group_id      = module.networking.alb_security_group_id
+  route53_zone_id            = module.dns.hosted_zone_id
+  enable_waf                 = var.enable_waf
   enable_deletion_protection = var.enable_deletion_protection
-  tags                      = local.common_tags
+  tags                       = local.common_tags
 }
 
 # -----------------------------------------------------------------------------
@@ -207,15 +208,15 @@ module "dns" {
 module "monitoring" {
   source = "./modules/monitoring"
 
-  project_name                      = var.project_name
-  environment                       = var.environment
-  alert_email                       = var.alert_email
-  rds_instance_id                   = module.rds.db_instance_id
-  elasticache_replication_group_id  = module.elasticache.replication_group_id
-  alb_arn_suffix                    = module.alb.alb_arn_suffix
-  ecs_cluster_name                  = module.ecs_runner.ecs_cluster_name
-  eks_cluster_name                  = module.eks.cluster_name
-  tags                              = local.common_tags
+  project_name                     = var.project_name
+  environment                      = var.environment
+  alert_email                      = var.alert_email
+  rds_instance_id                  = module.rds.db_instance_id
+  elasticache_replication_group_id = module.elasticache.replication_group_id
+  alb_arn_suffix                   = module.alb.alb_arn_suffix
+  ecs_cluster_name                 = module.ecs_runner.ecs_cluster_name
+  eks_cluster_name                 = module.eks.cluster_name
+  tags                             = local.common_tags
 }
 
 # -----------------------------------------------------------------------------
