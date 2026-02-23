@@ -255,6 +255,8 @@ install_helm_charts() {
         --namespace kube-system
         --set autoDiscovery.clusterName="${cluster_name}"
         --set awsRegion="${region}"
+        --set rbac.serviceAccount.create=true
+        --set rbac.serviceAccount.name=cluster-autoscaler
     )
     if [[ -n "$autoscaler_role_arn" ]]; then
         autoscaler_args+=(--set "rbac.serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn=${autoscaler_role_arn}")
