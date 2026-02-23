@@ -117,7 +117,7 @@ resource "helm_release" "aws_load_balancer_controller" {
   name       = "aws-load-balancer-controller"
   repository = "https://aws.github.io/eks-charts"
   chart      = "aws-load-balancer-controller"
-  version    = "1.7.2"
+  version    = "1.12.0"
   namespace  = "kube-system"
 
   values = [
@@ -141,7 +141,7 @@ resource "helm_release" "external_secrets" {
   name             = "external-secrets"
   repository       = "https://charts.external-secrets.io"
   chart            = "external-secrets"
-  version          = "0.9.13"
+  version          = "0.14.3"
   namespace        = "external-secrets"
   create_namespace = true
 
@@ -159,7 +159,7 @@ resource "helm_release" "external_dns" {
   name             = "external-dns"
   repository       = "https://kubernetes-sigs.github.io/external-dns"
   chart            = "external-dns"
-  version          = "1.14.3"
+  version          = "1.16.1"
   namespace        = "external-dns"
   create_namespace = true
 
@@ -184,7 +184,7 @@ resource "helm_release" "metrics_server" {
   name       = "metrics-server"
   repository = "https://kubernetes-sigs.github.io/metrics-server"
   chart      = "metrics-server"
-  version    = "3.12.0"
+  version    = "3.13.0"
   namespace  = "kube-system"
 
   values = [file("${path.module}/metrics-server-values.yaml")]
@@ -201,13 +201,13 @@ resource "helm_release" "cluster_autoscaler" {
   name       = "cluster-autoscaler"
   repository = "https://kubernetes.github.io/autoscaler"
   chart      = "cluster-autoscaler"
-  version    = "9.35.0"
+  version    = "9.44.0"
   namespace  = "kube-system"
 
   values = [
     templatefile("${path.module}/cluster-autoscaler-values.yaml", {
-      cluster_name               = var.cluster_name
-      region                     = var.region
+      cluster_name                = var.cluster_name
+      region                      = var.region
       cluster_autoscaler_role_arn = var.cluster_autoscaler_role_arn
     })
   ]
@@ -225,7 +225,7 @@ resource "helm_release" "keda" {
   name             = "keda"
   repository       = "https://kedacore.github.io/charts"
   chart            = "keda"
-  version          = "2.13.1"
+  version          = "2.17.0"
   namespace        = "keda"
   create_namespace = true
 
