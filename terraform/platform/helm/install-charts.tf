@@ -168,7 +168,7 @@ resource "helm_release" "external_dns" {
       external_dns_role_arn = var.external_dns_role_arn
       region                = var.region
       domain                = var.domain
-      environment           = var.environment
+      cluster_name          = var.cluster_name
     })
   ]
 

@@ -135,39 +135,143 @@ install_helm_charts() {
     local env="$1"
     log_step "Installing Helm charts..."
 
+    # -------------------------------------------------------------------------
+    # Gather variables from Terraform outputs and environment
+    # -------------------------------------------------------------------------
+    local cluster_name="anvilops-${env}"
+    local region
+    region=$(aws configure get region 2>/dev/null || echo "us-east-1")
+
+    local vpc_id alb_role_arn extdns_role_arn autoscaler_role_arn domain
+
+    pushd "$TF_DIR" > /dev/null
+    vpc_id=$(terraform output -raw vpc_id 2>/dev/null || echo "")
+    alb_role_arn=$(terraform output -raw alb_controller_role_arn 2>/dev/null || echo "")
+    extdns_role_arn=$(terraform output -raw external_dns_role_arn 2>/dev/null || echo "")
+    autoscaler_role_arn=$(terraform output -raw cluster_autoscaler_role_arn 2>/dev/null || echo "")
+    domain=$(terraform output -raw domain_name 2>/dev/null || echo "")
+    popd > /dev/null
+
+    # Allow override via ANVILOPS_DOMAIN environment variable
+    domain="${ANVILOPS_DOMAIN:-$domain}"
+
+    if [[ -z "$vpc_id" ]]; then
+        log_warn "vpc_id not available from Terraform outputs. ALB Controller may not function correctly."
+    fi
+    if [[ -z "$alb_role_arn" ]]; then
+        log_warn "alb_controller_role_arn not available. ALB Controller will run without IRSA."
+    fi
+    if [[ -z "$extdns_role_arn" ]]; then
+        log_warn "external_dns_role_arn not available. External DNS will run without IRSA."
+    fi
+    if [[ -z "$autoscaler_role_arn" ]]; then
+        log_warn "cluster_autoscaler_role_arn not available. Cluster Autoscaler will run without IRSA."
+    fi
+    if [[ -z "$domain" ]]; then
+        log_warn "Domain not set (no Terraform output and ANVILOPS_DOMAIN is unset). External DNS domain filter will be skipped."
+    fi
+
+    # -------------------------------------------------------------------------
+    # Add all required Helm repositories
+    # -------------------------------------------------------------------------
+    log_info "Adding Helm repositories..."
     helm repo add eks https://aws.github.io/eks-charts 2>/dev/null || true
     helm repo add external-secrets https://charts.external-secrets.io 2>/dev/null || true
-    helm repo add metrics-server https://kubernetes-sigs.github.io/metrics-server/ 2>/dev/null || true
     helm repo add external-dns https://kubernetes-sigs.github.io/external-dns/ 2>/dev/null || true
+    helm repo add metrics-server https://kubernetes-sigs.github.io/metrics-server/ 2>/dev/null || true
+    helm repo add autoscaler https://kubernetes.github.io/autoscaler 2>/dev/null || true
+    helm repo add keda https://kedacore.github.io/charts 2>/dev/null || true
     helm repo update
+    log_success "Helm repositories updated."
 
+    # -------------------------------------------------------------------------
+    # 1. AWS Load Balancer Controller (kube-system, with IRSA)
+    # -------------------------------------------------------------------------
     log_info "Installing AWS Load Balancer Controller..."
+    local alb_args=(
+        --namespace kube-system
+        --set clusterName="${cluster_name}"
+        --set serviceAccount.create=true
+        --set serviceAccount.name=aws-load-balancer-controller
+        --set region="${region}"
+    )
+    if [[ -n "$vpc_id" ]]; then
+        alb_args+=(--set vpcId="${vpc_id}")
+    fi
+    if [[ -n "$alb_role_arn" ]]; then
+        alb_args+=(--set "serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn=${alb_role_arn}")
+    fi
     helm upgrade --install aws-load-balancer-controller eks/aws-load-balancer-controller \
-        --namespace kube-system \
-        --set clusterName="anvilops-${env}" \
-        --set serviceAccount.create=true \
-        --set serviceAccount.name=aws-load-balancer-controller \
+        "${alb_args[@]}" \
         --wait --timeout 5m
     log_success "AWS Load Balancer Controller installed."
 
+    # -------------------------------------------------------------------------
+    # 2. External Secrets Operator (external-secrets namespace)
+    # -------------------------------------------------------------------------
     log_info "Installing External Secrets Operator..."
     helm upgrade --install external-secrets external-secrets/external-secrets \
         --namespace external-secrets --create-namespace \
-        --set installCRDs=true --wait --timeout 5m
+        --set installCRDs=true \
+        --wait --timeout 5m
     log_success "External Secrets Operator installed."
 
-    log_info "Installing metrics-server..."
-    helm upgrade --install metrics-server metrics-server/metrics-server \
-        --namespace kube-system --wait --timeout 5m
-    log_success "metrics-server installed."
-
+    # -------------------------------------------------------------------------
+    # 3. External DNS (external-dns namespace, with IRSA)
+    # -------------------------------------------------------------------------
     log_info "Installing External DNS..."
+    local extdns_args=(
+        --namespace external-dns --create-namespace
+        --set provider.name=aws
+        --set policy=sync
+        --set registry=txt
+        --set txtOwnerId="${cluster_name}"
+    )
+    if [[ -n "$domain" ]]; then
+        extdns_args+=(--set "domainFilters[0]=${domain}")
+    fi
+    if [[ -n "$extdns_role_arn" ]]; then
+        extdns_args+=(--set "serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn=${extdns_role_arn}")
+    fi
     helm upgrade --install external-dns external-dns/external-dns \
-        --namespace kube-system \
-        --set provider.name=aws --set policy=sync \
-        --set registry=txt --set txtOwnerId="anvilops-${env}" \
+        "${extdns_args[@]}" \
         --wait --timeout 5m
     log_success "External DNS installed."
+
+    # -------------------------------------------------------------------------
+    # 4. Metrics Server (kube-system)
+    # -------------------------------------------------------------------------
+    log_info "Installing Metrics Server..."
+    helm upgrade --install metrics-server metrics-server/metrics-server \
+        --namespace kube-system \
+        --wait --timeout 5m
+    log_success "Metrics Server installed."
+
+    # -------------------------------------------------------------------------
+    # 5. Cluster Autoscaler (kube-system, with IRSA)
+    # -------------------------------------------------------------------------
+    log_info "Installing Cluster Autoscaler..."
+    local autoscaler_args=(
+        --namespace kube-system
+        --set autoDiscovery.clusterName="${cluster_name}"
+        --set awsRegion="${region}"
+    )
+    if [[ -n "$autoscaler_role_arn" ]]; then
+        autoscaler_args+=(--set "rbac.serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn=${autoscaler_role_arn}")
+    fi
+    helm upgrade --install cluster-autoscaler autoscaler/cluster-autoscaler \
+        "${autoscaler_args[@]}" \
+        --wait --timeout 5m
+    log_success "Cluster Autoscaler installed."
+
+    # -------------------------------------------------------------------------
+    # 6. KEDA (keda namespace)
+    # -------------------------------------------------------------------------
+    log_info "Installing KEDA..."
+    helm upgrade --install keda keda/keda \
+        --namespace keda --create-namespace \
+        --wait --timeout 10m
+    log_success "KEDA installed."
 }
 
 apply_kustomize() {
