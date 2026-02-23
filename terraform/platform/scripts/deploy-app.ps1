@@ -127,15 +127,17 @@ function Invoke-BuildAndPush {
 function Set-KustomizeImage {
     param([string]$Dir, [string]$OldImage, [string]$NewImage)
 
+    # Strip any tag from OldImage so we match the kustomization.yaml 'name' field
+    $name = ($OldImage -split ":")[0]
+
     $hasKustomize = Get-Command kustomize -ErrorAction SilentlyContinue
     if ($hasKustomize) {
         Push-Location $Dir
-        try { kustomize edit set image "${OldImage}=${NewImage}" }
+        try { kustomize edit set image "${name}=${NewImage}" }
         finally { Pop-Location }
     } else {
         # Fallback: update or add image override in kustomization.yaml
         $kfile   = Join-Path $Dir "kustomization.yaml"
-        $name    = ($OldImage -split ":")[0]
         $newName = ($NewImage -split ":")[0]
         $newTag  = ($NewImage -split ":")[-1]
         $content = Get-Content $kfile -Raw
@@ -178,10 +180,10 @@ function Update-KustomizeImages {
     $overlayDir = Join-Path $K8sDir "overlays/$Environment"
 
     if (-not $FrontendOnly) {
-        Set-KustomizeImage -Dir $overlayDir -OldImage "anvilops-api:latest" -NewImage "${ApiImage}:${Tag}"
+        Set-KustomizeImage -Dir $overlayDir -OldImage "anvilops-api" -NewImage "${ApiImage}:${Tag}"
     }
     if (-not $ApiOnly) {
-        Set-KustomizeImage -Dir $overlayDir -OldImage "anvilops-frontend:latest" -NewImage "${FrontendImage}:${Tag}"
+        Set-KustomizeImage -Dir $overlayDir -OldImage "anvilops-frontend" -NewImage "${FrontendImage}:${Tag}"
     }
 
     Write-Ok "Kustomize image tags updated."

@@ -153,7 +153,7 @@ set_kustomize_image() {
     local new_tag="${new_image##*:}"
 
     if command -v kustomize &>/dev/null; then
-        (cd "$dir" && kustomize edit set image "${old_image}=${new_image}")
+        (cd "$dir" && kustomize edit set image "${img_name}=${new_image}")
     else
         # Fallback: update or add image override in kustomization.yaml
         local kfile="${dir}/kustomization.yaml"
@@ -183,10 +183,10 @@ update_kustomize_images() {
     local overlay_dir="${K8S_DIR}/overlays/${ENV}"
 
     if [[ "$FRONTEND_ONLY" != "true" ]]; then
-        set_kustomize_image "$overlay_dir" "anvilops-api:latest" "${API_IMAGE}:${IMAGE_TAG}"
+        set_kustomize_image "$overlay_dir" "anvilops-api" "${API_IMAGE}:${IMAGE_TAG}"
     fi
     if [[ "$API_ONLY" != "true" ]]; then
-        set_kustomize_image "$overlay_dir" "anvilops-frontend:latest" "${FRONTEND_IMAGE}:${IMAGE_TAG}"
+        set_kustomize_image "$overlay_dir" "anvilops-frontend" "${FRONTEND_IMAGE}:${IMAGE_TAG}"
     fi
 
     log_success "Kustomize image tags updated."
