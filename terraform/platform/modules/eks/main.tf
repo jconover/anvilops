@@ -262,6 +262,7 @@ resource "aws_eks_node_group" "workers" {
   subnet_ids      = var.private_subnet_ids
 
   instance_types = var.node_instance_types
+  version        = var.cluster_version
   ami_type       = "AL2023_x86_64_STANDARD"
   capacity_type  = "ON_DEMAND"
   disk_size      = 50
