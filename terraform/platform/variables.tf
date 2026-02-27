@@ -111,6 +111,18 @@ variable "eks_node_desired_size" {
   default     = 3
 }
 
+variable "eks_enable_public_endpoint" {
+  description = "Whether to enable public access to the EKS API server endpoint. Should be false for staging and production."
+  type        = bool
+  default     = false
+}
+
+variable "eks_public_access_cidrs" {
+  description = "List of CIDR blocks allowed to access the EKS API server when public endpoint is enabled. Must be set when eks_enable_public_endpoint is true."
+  type        = list(string)
+  default     = []
+}
+
 # -----------------------------------------------------------------------------
 # RDS PostgreSQL
 # -----------------------------------------------------------------------------
@@ -152,6 +164,17 @@ variable "redis_num_cache_clusters" {
 # -----------------------------------------------------------------------------
 # Cognito
 # -----------------------------------------------------------------------------
+
+variable "cognito_mfa_configuration" {
+  description = "MFA enforcement level for the Cognito user pool. Use ON to require MFA for all users."
+  type        = string
+  default     = "ON"
+
+  validation {
+    condition     = contains(["ON", "OPTIONAL"], var.cognito_mfa_configuration)
+    error_message = "MFA configuration must be one of: ON, OPTIONAL."
+  }
+}
 
 variable "cognito_callback_urls" {
   description = "List of allowed OAuth2 callback URLs for Cognito."

@@ -70,8 +70,10 @@ redis_node_type          = "cache.t3.medium"
 redis_num_cache_clusters = 2
 
 # -----------------------------------------------------------------------------
-# Cognito
+# Cognito — MFA enforced by default; set to OPTIONAL only for dev
 # -----------------------------------------------------------------------------
+
+cognito_mfa_configuration = "ON"
 
 cognito_callback_urls = [
   "https://anvilops.example.com/api/auth/callback",
