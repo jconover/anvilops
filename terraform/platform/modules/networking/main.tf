@@ -391,11 +391,56 @@ resource "aws_vpc_security_group_ingress_rule" "eks_self" {
   description                  = "All traffic from self (node-to-node)"
 }
 
-resource "aws_vpc_security_group_egress_rule" "eks_all" {
+# EKS node egress - VPC internal (all protocols)
+resource "aws_vpc_security_group_egress_rule" "eks_to_vpc" {
   security_group_id = aws_security_group.eks.id
   ip_protocol       = "-1"
+  cidr_ipv4         = var.vpc_cidr
+  description       = "All traffic within VPC"
+  tags              = var.tags
+}
+
+# EKS node egress - HTTPS to internet (AWS APIs, ECR, package repos)
+resource "aws_vpc_security_group_egress_rule" "eks_to_internet_https" {
+  security_group_id = aws_security_group.eks.id
+  from_port         = 443
+  to_port           = 443
+  ip_protocol       = "tcp"
   cidr_ipv4         = "0.0.0.0/0"
-  description       = "All outbound"
+  description       = "HTTPS to internet for AWS APIs and external dependencies"
+  tags              = var.tags
+}
+
+# EKS node egress - DNS
+resource "aws_vpc_security_group_egress_rule" "eks_to_dns_udp" {
+  security_group_id = aws_security_group.eks.id
+  from_port         = 53
+  to_port           = 53
+  ip_protocol       = "udp"
+  cidr_ipv4         = var.vpc_cidr
+  description       = "DNS resolution within VPC"
+  tags              = var.tags
+}
+
+resource "aws_vpc_security_group_egress_rule" "eks_to_dns_tcp" {
+  security_group_id = aws_security_group.eks.id
+  from_port         = 53
+  to_port           = 53
+  ip_protocol       = "tcp"
+  cidr_ipv4         = var.vpc_cidr
+  description       = "DNS resolution within VPC (TCP)"
+  tags              = var.tags
+}
+
+# EKS node egress - NTP
+resource "aws_vpc_security_group_egress_rule" "eks_to_ntp" {
+  security_group_id = aws_security_group.eks.id
+  from_port         = 123
+  to_port           = 123
+  ip_protocol       = "udp"
+  cidr_ipv4         = "0.0.0.0/0"
+  description       = "NTP time synchronization"
+  tags              = var.tags
 }
 
 # =============================================================================

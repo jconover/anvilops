@@ -5,17 +5,67 @@ compliance summaries, per-node detail, and drift reports suitable for
 dashboards and audit exports.
 """
 
+from __future__ import annotations
+
 import logging
 from datetime import datetime, timedelta, timezone
-from typing import Any
+from typing import TYPE_CHECKING, Any, TypedDict
+
+if TYPE_CHECKING:
+    from app.services.puppet import PuppetEnterpriseServiceSync
 
 logger = logging.getLogger(__name__)
+
+
+class ResourceCounts(TypedDict):
+    """Resource-level metrics from a Puppet report."""
+
+    total: int
+    changed: int
+    failed: int
+    skipped: int
+
+
+class NodeCompliance(TypedDict):
+    """Compliance status for a single Puppet node."""
+
+    certname: str
+    status: str
+    last_report_time: str | None
+    last_report_status: str
+    resource_counts: ResourceCounts
+    corrective_changes: int
+    uptime_hours: float | None
+    puppet_version: str | None
+    environment: str
+
+
+class FleetCompliance(TypedDict):
+    """Compliance summary across a fleet of Puppet nodes."""
+
+    total: int
+    compliant: int
+    changed: int
+    failed: int
+    unresponsive: int
+    compliance_rate: float
+    nodes: list[NodeCompliance]
+
+
+class NodeDriftReport(TypedDict):
+    """Drift report for a single node over a time period."""
+
+    certname: str
+    period_hours: int
+    total_runs: int
+    drift_events: int
+    resources_corrected: list[str]
 
 
 class PuppetComplianceService:
     """Aggregates Puppet report data for compliance dashboards."""
 
-    def __init__(self, puppet_service: Any) -> None:
+    def __init__(self, puppet_service: PuppetEnterpriseServiceSync) -> None:
         """
         Args:
             puppet_service: PuppetEnterpriseServiceSync instance providing
@@ -27,7 +77,7 @@ class PuppetComplianceService:
     # Single-node compliance
     # ------------------------------------------------------------------
 
-    def get_node_compliance(self, certname: str) -> dict:
+    def get_node_compliance(self, certname: str) -> NodeCompliance:
         """Get compliance status for a single node.
 
         Queries PuppetDB for the node's latest status, report, and facts,
@@ -105,7 +155,7 @@ class PuppetComplianceService:
     # Fleet compliance
     # ------------------------------------------------------------------
 
-    def get_fleet_compliance(self, certnames: list[str]) -> dict:
+    def get_fleet_compliance(self, certnames: list[str]) -> FleetCompliance:
         """Get compliance summary for a fleet of nodes.
 
         Iterates over every certname, calling ``get_node_compliance`` for
@@ -123,7 +173,7 @@ class PuppetComplianceService:
                 "nodes": [<per-node dicts>],
             }
         """
-        nodes: list[dict] = []
+        nodes: list[NodeCompliance] = []
         counts = {
             "compliant": 0,
             "changed": 0,
@@ -184,7 +234,7 @@ class PuppetComplianceService:
     # Drift report
     # ------------------------------------------------------------------
 
-    def get_node_drift_report(self, certname: str, hours: int = 24) -> dict:
+    def get_node_drift_report(self, certname: str, hours: int = 24) -> NodeDriftReport:
         """Get drift events for a node over a time period.
 
         Examines reports within the specified window and identifies runs
@@ -318,7 +368,7 @@ class PuppetComplianceService:
     # ------------------------------------------------------------------
 
     @staticmethod
-    def _extract_resource_counts(report: dict) -> dict:
+    def _extract_resource_counts(report: dict[str, Any]) -> ResourceCounts:
         """Pull resource counts from a PuppetDB report dict.
 
         PuppetDB reports include a ``metrics`` section with a ``resources``
@@ -361,7 +411,7 @@ class PuppetComplianceService:
         return result
 
     @staticmethod
-    def _extract_corrective_changes(report: dict) -> int:
+    def _extract_corrective_changes(report: dict[str, Any]) -> int:
         """Count corrective changes from a PuppetDB report.
 
         Puppet Enterprise tracks whether a change was intentional

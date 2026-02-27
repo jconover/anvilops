@@ -1,0 +1,74 @@
+# Production-like Docker Compose Override File
+#
+# This override file removes dev-specific settings for production-like local testing.
+# It removes volume mounts for hot-reload, adds read-only root filesystems,
+# and applies realistic resource constraints.
+#
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up --build
+#
+# This allows testing built images without hot-reload, with read-only filesystems,
+# and resource limits matching production constraints.
+
+services:
+  api:
+    # Remove dev volume mount for hot-reload; use only built image
+    volumes: []
+    # Add read-only root filesystem for enhanced security
+    read_only: true
+    tmpfs:
+      - /tmp
+    # Production-like resource limits (stricter than dev)
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+
+  worker:
+    # Remove dev volume mounts
+    volumes: []
+    # Add read-only root filesystem for enhanced security
+    read_only: true
+    tmpfs:
+      - /tmp:size=1G
+    # Production-like resource limits (stricter than dev)
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+  beat:
+    # Remove dev volume mount
+    volumes: []
+    # Add read-only root filesystem for enhanced security
+    read_only: true
+    tmpfs:
+      - /tmp
+    # Production-like resource limits (stricter than dev)
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.1'
+          memory: 128M
+
+  db:
+    # Add read-only root filesystem for enhanced security
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /run/postgresql
+
+  redis:
+    # Add read-only root filesystem for enhanced security
+    read_only: true

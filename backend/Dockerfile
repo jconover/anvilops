@@ -27,6 +27,18 @@ FROM python:3.12.8-slim-bookworm
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
+ARG BUILD_DATE
+ARG GIT_SHA
+ARG VERSION=dev
+
+LABEL org.opencontainers.image.title="AnvilOps API" \
+      org.opencontainers.image.description="Server provisioning platform API and Celery workers" \
+      org.opencontainers.image.source="https://github.com/jconover/anvilops" \
+      org.opencontainers.image.vendor="AnvilOps" \
+      org.opencontainers.image.version="${VERSION}" \
+      org.opencontainers.image.created="${BUILD_DATE}" \
+      org.opencontainers.image.revision="${GIT_SHA}"
+
 # Copy Terraform binary from builder
 COPY --from=builder /usr/local/bin/terraform /usr/local/bin/terraform
 

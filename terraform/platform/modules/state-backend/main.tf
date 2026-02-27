@@ -15,7 +15,24 @@ locals {
   state_bucket_name = "${var.project_name}-terraform-state-${var.environment}-${local.account_id}"
   plans_bucket_name = "${var.project_name}-terraform-plans-${var.environment}-${local.account_id}"
   lock_table_name   = "${var.project_name}-terraform-locks-${var.environment}"
-  use_kms           = var.kms_key_arn != ""
+  effective_kms_arn = var.kms_key_arn != "" ? var.kms_key_arn : aws_kms_key.state.arn
+}
+
+# =============================================================================
+# KMS Key for State Encryption
+# =============================================================================
+
+resource "aws_kms_key" "state" {
+  description             = "KMS key for Terraform state encryption"
+  deletion_window_in_days = 30
+  enable_key_rotation     = true
+
+  tags = var.tags
+}
+
+resource "aws_kms_alias" "state" {
+  name          = "alias/${var.project_name}-terraform-state"
+  target_key_id = aws_kms_key.state.key_id
 }
 
 # =============================================================================
@@ -48,10 +65,10 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "state" {
 
   rule {
     apply_server_side_encryption_by_default {
-      sse_algorithm     = local.use_kms ? "aws:kms" : "AES256"
-      kms_master_key_id = local.use_kms ? var.kms_key_arn : null
+      sse_algorithm     = "aws:kms"
+      kms_master_key_id = local.effective_kms_arn
     }
-    bucket_key_enabled = local.use_kms
+    bucket_key_enabled = true
   }
 }
 
@@ -148,7 +165,7 @@ resource "aws_dynamodb_table" "locks" {
 
   server_side_encryption {
     enabled     = true
-    kms_key_arn = local.use_kms ? var.kms_key_arn : null
+    kms_key_arn = local.effective_kms_arn
   }
 
   lifecycle {
@@ -190,10 +207,10 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "plans" {
 
   rule {
     apply_server_side_encryption_by_default {
-      sse_algorithm     = local.use_kms ? "aws:kms" : "AES256"
-      kms_master_key_id = local.use_kms ? var.kms_key_arn : null
+      sse_algorithm     = "aws:kms"
+      kms_master_key_id = local.effective_kms_arn
     }
-    bucket_key_enabled = local.use_kms
+    bucket_key_enabled = true
   }
 }
 

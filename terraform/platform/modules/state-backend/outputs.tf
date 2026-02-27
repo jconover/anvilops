@@ -33,6 +33,16 @@ output "plans_bucket_arn" {
   value       = var.enable_plans_bucket ? aws_s3_bucket.plans[0].arn : ""
 }
 
+output "kms_key_arn" {
+  description = "ARN of the KMS key used for state encryption."
+  value       = aws_kms_key.state.arn
+}
+
+output "kms_key_alias" {
+  description = "Alias of the KMS key used for state encryption."
+  value       = aws_kms_alias.state.name
+}
+
 output "backend_config" {
   description = "Map with all values needed to configure an S3 backend block."
   value = {
