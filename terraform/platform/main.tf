@@ -51,16 +51,18 @@ module "networking" {
 module "eks" {
   source = "./modules/eks"
 
-  project_name          = var.project_name
-  environment           = var.environment
-  cluster_version       = var.eks_cluster_version
-  private_subnet_ids    = module.networking.private_subnet_ids
-  eks_security_group_id = module.networking.eks_security_group_id
-  node_instance_types   = var.eks_node_instance_types
-  node_min_size         = var.eks_node_min_size
-  node_max_size         = var.eks_node_max_size
-  node_desired_size     = var.eks_node_desired_size
-  tags                  = local.common_tags
+  project_name           = var.project_name
+  environment            = var.environment
+  cluster_version        = var.eks_cluster_version
+  private_subnet_ids     = module.networking.private_subnet_ids
+  eks_security_group_id  = module.networking.eks_security_group_id
+  node_instance_types    = var.eks_node_instance_types
+  node_min_size          = var.eks_node_min_size
+  node_max_size          = var.eks_node_max_size
+  node_desired_size      = var.eks_node_desired_size
+  enable_public_endpoint = var.eks_enable_public_endpoint
+  public_access_cidrs    = var.eks_public_access_cidrs
+  tags                   = local.common_tags
 }
 
 # -----------------------------------------------------------------------------
@@ -124,6 +126,7 @@ module "iam" {
   state_bucket_arn      = local.state_bucket_arn
   db_secret_arn         = module.rds.db_secret_arn
   redis_secret_arn      = module.elasticache.auth_token_secret_arn
+  route53_zone_id       = module.dns.hosted_zone_id
   tags                  = local.common_tags
 }
 
@@ -157,6 +160,7 @@ module "cognito" {
 
   project_name               = var.project_name
   environment                = var.environment
+  mfa_configuration          = var.cognito_mfa_configuration
   callback_urls              = var.cognito_callback_urls
   logout_urls                = var.cognito_logout_urls
   enable_deletion_protection = var.enable_deletion_protection

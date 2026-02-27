@@ -48,8 +48,9 @@ locals {
 # =============================================================================
 
 resource "aws_sns_topic" "alerts" {
-  name = "${var.project_name}-alerts-${var.environment}"
-  tags = local.common_tags
+  name              = "${var.project_name}-alerts-${var.environment}"
+  kms_master_key_id = "alias/aws/sns"
+  tags              = local.common_tags
 }
 
 resource "aws_sns_topic_subscription" "email" {

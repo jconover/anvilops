@@ -1,0 +1,39 @@
+# Dependencies — installed fresh inside the container
+node_modules
+
+# Build output — rebuilt inside the container
+.next
+out
+
+# Version control
+.git
+.gitignore
+
+# Documentation
+*.md
+
+# Environment files — secrets must be injected at runtime, not baked in
+.env
+.env.*
+
+# Editor / IDE config
+.vscode
+.idea
+*.swp
+*.swo
+
+# Docker meta (prevent recursive context inclusion)
+Dockerfile
+docker-compose*
+.dockerignore
+
+# Test / coverage artifacts
+coverage
+.nyc_output
+
+# Turborepo cache
+.turbo
+
+# OS artifacts
+.DS_Store
+Thumbs.db

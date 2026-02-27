@@ -8,9 +8,10 @@ parameter (defaults to ``"all"`` so every notification is visible).
 import logging
 import uuid
 from datetime import datetime, timezone
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import func, or_, select, update
+from sqlalchemy import ColumnElement, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
@@ -28,7 +29,7 @@ router = APIRouter()
 DEFAULT_USER = "all"
 
 
-def _user_filter(user_email: str):
+def _user_filter(user_email: str) -> ColumnElement[bool]:
     """Return a SQLAlchemy filter matching the given user or broadcasts."""
     return or_(
         Notification.user_email == user_email,
@@ -50,7 +51,7 @@ async def list_notifications(
     is_read: bool | None = Query(None, description="Filter by read status"),
     severity: str | None = Query(None, description="Filter by severity"),
     db: AsyncSession = Depends(get_db),
-):
+) -> NotificationListResponse:
     """List notifications for the current user, newest first."""
     base_filter = _user_filter(user_email)
 
@@ -107,7 +108,7 @@ async def list_notifications(
 async def get_unread_count(
     user_email: str = Query(DEFAULT_USER, description="Recipient email"),
     db: AsyncSession = Depends(get_db),
-):
+) -> dict[str, Any]:
     """Return the number of unread notifications for the user."""
     result = await db.execute(
         select(func.count(Notification.id)).where(
@@ -128,7 +129,7 @@ async def mark_read(
     body: NotificationMarkReadRequest,
     user_email: str = Query(DEFAULT_USER, description="Recipient email"),
     db: AsyncSession = Depends(get_db),
-):
+) -> list[NotificationResponse]:
     """Mark specific notifications as read."""
     now = datetime.now(timezone.utc)
 
@@ -161,7 +162,7 @@ async def mark_read(
 async def mark_all_read(
     user_email: str = Query(DEFAULT_USER, description="Recipient email"),
     db: AsyncSession = Depends(get_db),
-):
+) -> dict[str, Any]:
     """Mark every unread notification for the user as read."""
     now = datetime.now(timezone.utc)
 
@@ -191,7 +192,7 @@ async def delete_notification(
     notification_id: uuid.UUID,
     user_email: str = Query(DEFAULT_USER, description="Recipient email"),
     db: AsyncSession = Depends(get_db),
-):
+) -> NotificationDeleteResponse:
     """Delete a single notification."""
     result = await db.execute(
         select(Notification).where(

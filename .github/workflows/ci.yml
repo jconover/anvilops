@@ -1,0 +1,282 @@
+# =============================================================================
+# AnvilOps - Continuous Integration Pipeline
+#
+# Runs on every pull request and push to main. Validates code quality, runs
+# tests, builds container images, scans for vulnerabilities, and checks
+# Terraform configuration.
+# =============================================================================
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: ["*"]
+
+# Cancel in-progress runs for the same branch/PR to save runner minutes
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # 1. Backend Linting (ruff check + format verification)
+  # ---------------------------------------------------------------------------
+  lint-backend:
+    name: Lint Backend (Ruff)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: backend/
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install ruff
+        run: pip install ruff
+
+      - name: Ruff lint check
+        run: ruff check app/
+
+      - name: Ruff format check
+        run: ruff format --check app/
+
+  # ---------------------------------------------------------------------------
+  # 2. Frontend Linting (ESLint via Next.js)
+  # ---------------------------------------------------------------------------
+  lint-frontend:
+    name: Lint Frontend (ESLint)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: frontend/
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run ESLint
+        run: npm run lint
+
+  # ---------------------------------------------------------------------------
+  # 3. Backend Tests (pytest with Postgres + Redis services)
+  # ---------------------------------------------------------------------------
+  test-backend:
+    name: Test Backend (pytest)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: backend/
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: anvilops_test
+          POSTGRES_PASSWORD: testpassword
+          POSTGRES_DB: anvilops_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U anvilops_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql+asyncpg://anvilops_test:testpassword@localhost:5432/anvilops_test
+      REDIS_URL: redis://localhost:6379/0
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install application dependencies
+        run: pip install -r requirements.txt
+
+      - name: Install test dependencies
+        run: pip install pytest pytest-asyncio httpx
+
+      - name: Run tests
+        run: pytest tests/ -v --tb=short
+
+  # ---------------------------------------------------------------------------
+  # 4. Docker Image Build Validation (build only, no push)
+  # ---------------------------------------------------------------------------
+  build-images:
+    name: Build Docker Images
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: [lint-backend, lint-frontend, test-backend]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build backend image
+        uses: docker/build-push-action@v6
+        with:
+          context: backend/
+          file: backend/Dockerfile
+          push: false
+          tags: anvilops-api:${{ github.sha }}
+          cache-from: type=gha,scope=backend
+          cache-to: type=gha,mode=max,scope=backend
+
+      - name: Build frontend image
+        uses: docker/build-push-action@v6
+        with:
+          context: frontend/
+          file: frontend/Dockerfile
+          push: false
+          tags: anvilops-frontend:${{ github.sha }}
+          cache-from: type=gha,scope=frontend
+          cache-to: type=gha,mode=max,scope=frontend
+
+  # ---------------------------------------------------------------------------
+  # 5. Security Scan (Trivy container vulnerability scanning)
+  # ---------------------------------------------------------------------------
+  security-scan:
+    name: Security Scan (Trivy)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [build-images]
+    permissions:
+      contents: read
+      security-events: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Rebuild images locally so Trivy can scan them. The layer cache from
+      # the build-images job (stored in GitHub Actions cache) keeps this fast.
+      - name: Build backend image for scanning
+        uses: docker/build-push-action@v6
+        with:
+          context: backend/
+          file: backend/Dockerfile
+          push: false
+          load: true
+          tags: anvilops-api:scan
+          cache-from: type=gha,scope=backend
+
+      - name: Build frontend image for scanning
+        uses: docker/build-push-action@v6
+        with:
+          context: frontend/
+          file: frontend/Dockerfile
+          push: false
+          load: true
+          tags: anvilops-frontend:scan
+          cache-from: type=gha,scope=frontend
+
+      - name: Scan backend image
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: anvilops-api:scan
+          format: sarif
+          output: backend-trivy-results.sarif
+          severity: CRITICAL,HIGH
+          exit-code: "1"
+
+      - name: Scan frontend image
+        uses: aquasecurity/trivy-action@0.28.0
+        if: success() || failure()
+        with:
+          image-ref: anvilops-frontend:scan
+          format: sarif
+          output: frontend-trivy-results.sarif
+          severity: CRITICAL,HIGH
+          exit-code: "1"
+
+      - name: Upload backend scan results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: backend-trivy-results.sarif
+          category: trivy-backend
+
+      - name: Upload frontend scan results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: frontend-trivy-results.sarif
+          category: trivy-frontend
+
+  # ---------------------------------------------------------------------------
+  # 6. Terraform Validation (init, validate, format check)
+  # ---------------------------------------------------------------------------
+  terraform-validate:
+    name: Terraform Validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: terraform/platform/
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "~> 1.9.0"
+
+      - name: Terraform fmt check (recursive)
+        run: terraform fmt -check -recursive
+        # Run fmt from the repo root to catch all .tf files in modules/ too
+        working-directory: terraform/
+
+      - name: Terraform init (no backend)
+        run: terraform init -backend=false
+
+      - name: Terraform validate
+        run: terraform validate

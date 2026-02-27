@@ -66,7 +66,10 @@ if [[ -z "$ENV" ]]; then
 fi
 
 if [[ -z "$IMAGE_TAG" ]]; then
-    IMAGE_TAG=$(git -C "$PROJECT_ROOT" rev-parse --short HEAD 2>/dev/null || echo "latest")
+    IMAGE_TAG=$(git -C "$PROJECT_ROOT" rev-parse --short HEAD 2>/dev/null) || {
+        log_error "Cannot determine git SHA for image tag. Use --tag to specify an image tag."
+        exit 1
+    }
 fi
 
 ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
@@ -124,10 +127,9 @@ build_and_push() {
 
     if [[ "$FRONTEND_ONLY" != "true" ]]; then
         log_info "Building API image..."
-        docker build -t "${API_IMAGE}:${IMAGE_TAG}" -t "${API_IMAGE}:latest" \
+        docker build -t "${API_IMAGE}:${IMAGE_TAG}" \
             -f "${PROJECT_ROOT}/backend/Dockerfile" "${PROJECT_ROOT}/backend"
         docker push "${API_IMAGE}:${IMAGE_TAG}"
-        docker push "${API_IMAGE}:latest"
         log_success "API image pushed: ${API_IMAGE}:${IMAGE_TAG}"
     fi
 
@@ -135,10 +137,9 @@ build_and_push() {
         local frontend_dir="${PROJECT_ROOT}/frontend"
         if [[ -d "$frontend_dir" ]] && [[ -f "${frontend_dir}/Dockerfile" ]]; then
             log_info "Building frontend image..."
-            docker build -t "${FRONTEND_IMAGE}:${IMAGE_TAG}" -t "${FRONTEND_IMAGE}:latest" \
+            docker build -t "${FRONTEND_IMAGE}:${IMAGE_TAG}" \
                 -f "${frontend_dir}/Dockerfile" "$frontend_dir"
             docker push "${FRONTEND_IMAGE}:${IMAGE_TAG}"
-            docker push "${FRONTEND_IMAGE}:latest"
             log_success "Frontend image pushed: ${FRONTEND_IMAGE}:${IMAGE_TAG}"
         else
             log_warn "Frontend Dockerfile not found. Skipping frontend build."

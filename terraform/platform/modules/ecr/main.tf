@@ -50,6 +50,23 @@ locals {
 }
 
 # ---------------------------------------------------------------------------
+# KMS Key for ECR Repository Encryption
+# ---------------------------------------------------------------------------
+
+resource "aws_kms_key" "ecr" {
+  description             = "KMS key for ECR repository encryption"
+  deletion_window_in_days = 30
+  enable_key_rotation     = true
+
+  tags = var.tags
+}
+
+resource "aws_kms_alias" "ecr" {
+  name          = "alias/${var.project_name}-${var.environment}-ecr"
+  target_key_id = aws_kms_key.ecr.key_id
+}
+
+# ---------------------------------------------------------------------------
 # ECR Repositories
 # ---------------------------------------------------------------------------
 
@@ -57,15 +74,16 @@ resource "aws_ecr_repository" "this" {
   for_each = local.repositories
 
   name                 = each.value
-  image_tag_mutability = "MUTABLE"
-  force_delete         = true
+  image_tag_mutability = "IMMUTABLE"
+  force_delete         = false
 
   image_scanning_configuration {
     scan_on_push = true
   }
 
   encryption_configuration {
-    encryption_type = "AES256"
+    encryption_type = "KMS"
+    kms_key         = aws_kms_key.ecr.arn
   }
 
   tags = merge(local.common_tags, {

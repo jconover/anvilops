@@ -1,3 +1,5 @@
+from collections.abc import AsyncGenerator
+
 import pytest
 from httpx import ASGITransport, AsyncClient
 
@@ -7,7 +9,7 @@ from app.services.scaling import ScalingService
 
 
 @pytest.fixture
-async def client():
+async def client() -> AsyncGenerator[AsyncClient, None]:
     async with AsyncClient(
         transport=ASGITransport(app=app),
         base_url="http://test",
@@ -16,10 +18,10 @@ async def client():
 
 
 @pytest.fixture
-def cost_estimator():
+def cost_estimator() -> CostEstimator:
     return CostEstimator()
 
 
 @pytest.fixture
-def scaling_service():
+def scaling_service() -> ScalingService:
     return ScalingService()

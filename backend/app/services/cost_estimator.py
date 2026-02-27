@@ -6,9 +6,71 @@ boto3 Pricing API integration for production.
 """
 
 import logging
-from typing import Any
+from typing import Any, TypedDict
 
 logger = logging.getLogger(__name__)
+
+
+class CostBreakdownItem(TypedDict):
+    """A single line item in the cost breakdown."""
+
+    category: str
+    description: str
+    monthly_cost: float
+
+
+class CostEstimate(TypedDict):
+    """Full cost estimate returned by ``CostEstimator.estimate()``."""
+
+    instance_type: str
+    instance_cost: float
+    storage_cost: float
+    os_license_cost: float
+    total_monthly: float
+    total_annual: float
+    currency: str
+    breakdown: list[CostBreakdownItem]
+
+
+class RegionInstanceEntry(TypedDict):
+    """Pricing entry for one instance type within a region."""
+
+    instance_type: str
+    size_label: str | None
+    vcpu: int | None
+    memory_gb: int | None
+    hourly_rate: float
+    monthly_rate: float
+    windows_surcharge_hourly: float
+    windows_surcharge_monthly: float
+
+
+class EbsPriceEntry(TypedDict):
+    """EBS volume type pricing."""
+
+    price_per_gb_month: float
+
+
+class SurchargeEntry(TypedDict):
+    """Hourly and monthly surcharge for a given instance type."""
+
+    hourly: float
+    monthly: float
+
+
+class PricingTable(TypedDict):
+    """Full pricing table returned by ``CostEstimator.get_pricing_table()``."""
+
+    regions: dict[str, list[RegionInstanceEntry]]
+    sizes: dict[str, str]
+    ebs: dict[str, EbsPriceEntry]
+    windows_surcharge: dict[str, SurchargeEntry]
+    rhel_surcharge_hourly: float
+    rhel_surcharge_monthly: float
+    root_volumes: dict[str, int]
+    hours_per_month: int
+    instance_specs: dict[str, dict[str, Any]]
+    currency: str
 
 
 class CostEstimator:
@@ -87,7 +149,7 @@ class CostEstimator:
     # Public API
     # ------------------------------------------------------------------
 
-    def estimate(self, config: dict) -> dict:
+    def estimate(self, config: dict[str, Any]) -> CostEstimate:
         """Calculate a full cost estimate for a server configuration.
 
         Args:
@@ -158,7 +220,7 @@ class CostEstimator:
             "breakdown": breakdown,
         }
 
-    def get_pricing_table(self) -> dict:
+    def get_pricing_table(self) -> PricingTable:
         """Return the full static pricing data for frontend display.
 
         The response is structured so the UI can render region tabs,
@@ -169,7 +231,7 @@ class CostEstimator:
             ``windows_surcharge``, ``rhel_surcharge_hourly``,
             ``root_volumes``, ``hours_per_month``, and ``instance_specs``.
         """
-        regions: dict[str, list[dict]] = {}
+        regions: dict[str, list[RegionInstanceEntry]] = {}
         for region, prices in self.INSTANCE_PRICING.items():
             region_entries = []
             for instance_type, hourly in sorted(prices.items()):
@@ -307,13 +369,13 @@ class CostEstimator:
         base_cost: float,
         license_cost: float,
         additional_storage: list[dict],
-    ) -> list[dict]:
+    ) -> list[CostBreakdownItem]:
         """Produce a list of line-item cost entries for the UI.
 
         Each entry is a dict with ``category``, ``description``, and
         ``monthly_cost``.
         """
-        breakdown: list[dict] = []
+        breakdown: list[CostBreakdownItem] = []
 
         # Compute
         specs = self.INSTANCE_SPECS.get(instance_type, {})

@@ -43,6 +43,11 @@ variable "cognito_user_pool_arn" {
   default     = ""
 }
 
+variable "route53_zone_id" {
+  description = "Route 53 hosted zone ID that External DNS is permitted to manage. Scopes the ChangeResourceRecordSets permission to this single zone."
+  type        = string
+}
+
 variable "tags" {
   description = "Additional tags to apply to all resources created by this module."
   type        = map(string)

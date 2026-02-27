@@ -12,7 +12,6 @@ history is tracked in a separate table for auditability.
 
 import uuid
 from datetime import datetime
-from typing import Optional
 
 from sqlalchemy import JSON, DateTime, ForeignKey, Index, Integer, String, Text, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -38,7 +37,7 @@ class BuildSchedule(Base):
     name: Mapped[str] = mapped_column(
         String(100), nullable=False
     )
-    description: Mapped[Optional[str]] = mapped_column(
+    description: Mapped[str | None] = mapped_column(
         Text, nullable=True
     )
     status: Mapped[str] = mapped_column(
@@ -52,19 +51,19 @@ class BuildSchedule(Base):
     )
 
     # Timing ------------------------------------------------------------------
-    scheduled_at: Mapped[Optional[datetime]] = mapped_column(
+    scheduled_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
-    cron_expression: Mapped[Optional[str]] = mapped_column(
+    cron_expression: Mapped[str | None] = mapped_column(
         String(100), nullable=True
     )
     timezone: Mapped[str] = mapped_column(
         String(50), nullable=False, server_default=text("'UTC'")
     )
-    next_run_at: Mapped[Optional[datetime]] = mapped_column(
+    next_run_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
-    last_run_at: Mapped[Optional[datetime]] = mapped_column(
+    last_run_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
 
@@ -74,7 +73,7 @@ class BuildSchedule(Base):
     )
 
     # Limits ------------------------------------------------------------------
-    max_runs: Mapped[Optional[int]] = mapped_column(
+    max_runs: Mapped[int | None] = mapped_column(
         Integer, nullable=True
     )
     run_count: Mapped[int] = mapped_column(
@@ -82,7 +81,7 @@ class BuildSchedule(Base):
     )
 
     # Who ---------------------------------------------------------------------
-    created_by: Mapped[Optional[str]] = mapped_column(
+    created_by: Mapped[str | None] = mapped_column(
         String(255), nullable=True
     )
 
@@ -125,7 +124,7 @@ class ScheduleExecution(Base):
         index=True,
         nullable=False,
     )
-    server_request_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+    server_request_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("server_requests.id", ondelete="SET NULL"),
         nullable=True,
     )
@@ -138,13 +137,13 @@ class ScheduleExecution(Base):
     scheduled_for: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False
     )
-    started_at: Mapped[Optional[datetime]] = mapped_column(
+    started_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
-    completed_at: Mapped[Optional[datetime]] = mapped_column(
+    completed_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
-    error_message: Mapped[Optional[str]] = mapped_column(
+    error_message: Mapped[str | None] = mapped_column(
         Text, nullable=True
     )
 

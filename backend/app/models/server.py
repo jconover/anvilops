@@ -1,6 +1,5 @@
 import uuid
 from datetime import datetime
-from typing import Optional
 
 from sqlalchemy import JSON, DateTime, ForeignKey, Index, String, Text, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -48,7 +47,7 @@ class ServerRequest(Base):
     puppet_role: Mapped[str] = mapped_column(
         String(64), nullable=False, server_default=text("'base'")
     )
-    template_id: Mapped[Optional[str]] = mapped_column(
+    template_id: Mapped[str | None] = mapped_column(
         String(64), nullable=True
     )
     status: Mapped[str] = mapped_column(
@@ -57,49 +56,49 @@ class ServerRequest(Base):
         nullable=False,
         server_default=text("'pending'"),
     )
-    status_message: Mapped[Optional[str]] = mapped_column(
+    status_message: Mapped[str | None] = mapped_column(
         String(512), nullable=True
     )
-    aws_instance_id: Mapped[Optional[str]] = mapped_column(
+    aws_instance_id: Mapped[str | None] = mapped_column(
         String(64), nullable=True
     )
-    private_ip: Mapped[Optional[str]] = mapped_column(
+    private_ip: Mapped[str | None] = mapped_column(
         String(45), nullable=True
     )
-    public_ip: Mapped[Optional[str]] = mapped_column(
+    public_ip: Mapped[str | None] = mapped_column(
         String(45), nullable=True
     )
-    dns_name: Mapped[Optional[str]] = mapped_column(
+    dns_name: Mapped[str | None] = mapped_column(
         String(256), nullable=True
     )
-    terraform_workspace: Mapped[Optional[str]] = mapped_column(
+    terraform_workspace: Mapped[str | None] = mapped_column(
         String(128), nullable=True
     )
-    terraform_state_key: Mapped[Optional[str]] = mapped_column(
+    terraform_state_key: Mapped[str | None] = mapped_column(
         String(256), nullable=True
     )
 
     # AWX metadata (populated after configuration)
-    awx_host_id: Mapped[Optional[int]] = mapped_column(nullable=True)
-    awx_inventory_id: Mapped[Optional[int]] = mapped_column(nullable=True)
-    awx_job_ids: Mapped[Optional[list]] = mapped_column(JSON, nullable=True)
+    awx_host_id: Mapped[int | None] = mapped_column(nullable=True)
+    awx_inventory_id: Mapped[int | None] = mapped_column(nullable=True)
+    awx_job_ids: Mapped[list | None] = mapped_column(JSON, nullable=True)
 
     # Puppet metadata (populated after enrollment)
-    puppet_certname: Mapped[Optional[str]] = mapped_column(
+    puppet_certname: Mapped[str | None] = mapped_column(
         String(256), nullable=True
     )
-    puppet_node_group_id: Mapped[Optional[str]] = mapped_column(
+    puppet_node_group_id: Mapped[str | None] = mapped_column(
         String(64), nullable=True
     )
-    puppet_last_report_status: Mapped[Optional[str]] = mapped_column(
+    puppet_last_report_status: Mapped[str | None] = mapped_column(
         String(32), nullable=True
     )
-    puppet_enrolled_at: Mapped[Optional[datetime]] = mapped_column(
+    puppet_enrolled_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
 
     # ServiceNow CMDB metadata (populated after CMDB sync)
-    cmdb_sys_id: Mapped[Optional[str]] = mapped_column(
+    cmdb_sys_id: Mapped[str | None] = mapped_column(
         String(64), nullable=True
     )
 
@@ -141,14 +140,14 @@ class BuildStep(Base):
         nullable=False,
         server_default=text("'pending'"),
     )
-    started_at: Mapped[Optional[datetime]] = mapped_column(
+    started_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
-    completed_at: Mapped[Optional[datetime]] = mapped_column(
+    completed_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
-    output_log: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    error_message: Mapped[Optional[str]] = mapped_column(
+    output_log: Mapped[str | None] = mapped_column(Text, nullable=True)
+    error_message: Mapped[str | None] = mapped_column(
         String(1024), nullable=True
     )
 

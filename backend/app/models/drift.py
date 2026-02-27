@@ -6,7 +6,6 @@ and drift alerts generated when patterns or thresholds are met.
 
 import uuid
 from datetime import datetime
-from typing import Optional
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, Index, String, Text, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -38,7 +37,7 @@ class DriftEvent(Base):
     detected_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, index=True
     )
-    resolved_at: Mapped[Optional[datetime]] = mapped_column(
+    resolved_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
 
@@ -52,8 +51,8 @@ class DriftEvent(Base):
     property_name: Mapped[str] = mapped_column(
         String(100), nullable=False
     )
-    old_value: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    new_value: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    old_value: Mapped[str | None] = mapped_column(Text, nullable=True)
+    new_value: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # Classification
     severity: Mapped[str] = mapped_column(
@@ -65,7 +64,7 @@ class DriftEvent(Base):
     is_resolved: Mapped[bool] = mapped_column(
         Boolean, nullable=False, server_default=text("false")
     )
-    resolution_type: Mapped[Optional[str]] = mapped_column(
+    resolution_type: Mapped[str | None] = mapped_column(
         String(30), nullable=True
     )
 
@@ -73,12 +72,12 @@ class DriftEvent(Base):
     drift_category: Mapped[str] = mapped_column(
         String(50), nullable=False, server_default=text("'configuration'")
     )
-    cis_control_id: Mapped[Optional[str]] = mapped_column(
+    cis_control_id: Mapped[str | None] = mapped_column(
         String(20), nullable=True
     )
 
     # Puppet report hash for deduplication
-    report_hash: Mapped[Optional[str]] = mapped_column(
+    report_hash: Mapped[str | None] = mapped_column(
         String(64), nullable=True, index=True
     )
 
@@ -137,12 +136,12 @@ class DriftAlert(Base):
 
     __tablename__ = "drift_alerts"
 
-    drift_event_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+    drift_event_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("drift_events.id", ondelete="SET NULL"),
         nullable=True,
         index=True,
     )
-    server_request_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+    server_request_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("server_requests.id", ondelete="SET NULL"),
         nullable=True,
         index=True,
@@ -160,15 +159,15 @@ class DriftAlert(Base):
     is_acknowledged: Mapped[bool] = mapped_column(
         Boolean, nullable=False, server_default=text("false")
     )
-    acknowledged_by: Mapped[Optional[str]] = mapped_column(
+    acknowledged_by: Mapped[str | None] = mapped_column(
         String(255), nullable=True
     )
-    acknowledged_at: Mapped[Optional[datetime]] = mapped_column(
+    acknowledged_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
 
     # Relationships
-    drift_event: Mapped[Optional["DriftEvent"]] = relationship(
+    drift_event: Mapped["DriftEvent" | None] = relationship(
         "DriftEvent",
         back_populates="alerts",
     )

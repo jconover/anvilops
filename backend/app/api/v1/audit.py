@@ -33,7 +33,7 @@ router = APIRouter()
 @router.get("/actions", response_model=list[str])
 async def list_audit_actions(
     db: AsyncSession = Depends(get_db),
-):
+) -> list[str]:
     """Return all distinct action types recorded in the audit log.
 
     Useful for populating filter dropdowns in the frontend.
@@ -51,7 +51,7 @@ async def list_audit_actions(
 async def audit_summary(
     days: int = Query(30, ge=1, le=365, description="Number of days to look back"),
     db: AsyncSession = Depends(get_db),
-):
+) -> AuditSummaryResponse:
     """Aggregate audit statistics for dashboards.
 
     Returns:
@@ -146,7 +146,7 @@ async def list_audit_logs(
     ),
     status: str | None = Query(None, description="Filter by outcome status"),
     db: AsyncSession = Depends(get_db),
-):
+) -> AuditLogListResponse:
     """List audit logs with pagination and optional filters.
 
     Returns newest entries first. All filter parameters are optional
@@ -200,7 +200,7 @@ async def list_audit_logs(
 async def get_audit_log(
     audit_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-):
+) -> AuditLogResponse:
     """Get a single audit log entry by ID."""
     result = await db.execute(
         select(AuditLog).where(AuditLog.id == audit_id)

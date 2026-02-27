@@ -80,7 +80,7 @@ def _compute_next_run(schedule: BuildSchedule) -> datetime | None:
 async def create_schedule(
     request: ScheduleCreate,
     db: AsyncSession = Depends(get_db),
-):
+) -> ScheduleResponse:
     """Create a new build schedule.
 
     For ``one_time`` schedules, ``scheduled_at`` is required.
@@ -146,7 +146,7 @@ async def list_schedules(
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=200),
     db: AsyncSession = Depends(get_db),
-):
+) -> ScheduleListResponse:
     """List all build schedules with optional filtering."""
     query = select(BuildSchedule)
     count_query = select(func.count(BuildSchedule.id))
@@ -173,7 +173,7 @@ async def list_schedules(
 async def get_schedule(
     schedule_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-):
+) -> ScheduleDetailResponse:
     """Get a specific build schedule with its recent execution history."""
     result = await db.execute(
         select(BuildSchedule).where(BuildSchedule.id == schedule_id)
@@ -191,7 +191,7 @@ async def update_schedule(
     schedule_id: uuid.UUID,
     request: ScheduleUpdate,
     db: AsyncSession = Depends(get_db),
-):
+) -> ScheduleResponse:
     """Update an existing build schedule.
 
     Only ``active`` or ``paused`` schedules can be updated.  Completed
@@ -247,7 +247,7 @@ async def update_schedule(
 async def delete_schedule(
     schedule_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-):
+) -> ScheduleResponse:
     """Cancel and soft-delete a build schedule.
 
     Sets the schedule status to ``cancelled`` and clears
@@ -288,7 +288,7 @@ async def delete_schedule(
 async def pause_schedule(
     schedule_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-):
+) -> ScheduleResponse:
     """Pause an active schedule.
 
     The schedule retains its configuration but ``next_run_at`` is
@@ -323,7 +323,7 @@ async def pause_schedule(
 async def resume_schedule(
     schedule_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-):
+) -> ScheduleResponse:
     """Resume a paused schedule.
 
     Re-computes ``next_run_at`` from the current time and restores
@@ -358,7 +358,7 @@ async def resume_schedule(
 async def run_schedule_now(
     schedule_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-):
+) -> ExecutionResponse:
     """Trigger an immediate execution of a schedule.
 
     Creates a new ScheduleExecution with ``scheduled_for`` set to now
@@ -419,7 +419,7 @@ async def list_executions(
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=200),
     db: AsyncSession = Depends(get_db),
-):
+) -> ExecutionListResponse:
     """List execution history for a specific schedule."""
     # Verify the schedule exists
     sched_result = await db.execute(

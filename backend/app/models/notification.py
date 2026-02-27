@@ -1,7 +1,6 @@
 """SQLAlchemy model for in-app notifications."""
 
 from datetime import datetime
-from typing import Optional
 
 from sqlalchemy import JSON, Boolean, DateTime, Index, String, Text, text
 from sqlalchemy.orm import Mapped, mapped_column
@@ -40,24 +39,24 @@ class Notification(Base):
         index=True,
         server_default=text("false"),
     )
-    read_at: Mapped[Optional[datetime]] = mapped_column(
+    read_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
 
     # Link to related resource
-    resource_type: Mapped[Optional[str]] = mapped_column(
+    resource_type: Mapped[str | None] = mapped_column(
         String(50), nullable=True
     )
-    resource_id: Mapped[Optional[str]] = mapped_column(
+    resource_id: Mapped[str | None] = mapped_column(
         String(36), nullable=True
     )
-    action_url: Mapped[Optional[str]] = mapped_column(
+    action_url: Mapped[str | None] = mapped_column(
         String(500), nullable=True
     )
 
     # Metadata
-    icon: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
-    details: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    icon: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    details: Mapped[dict | None] = mapped_column(JSON, nullable=True)
 
     __table_args__ = (
         Index(

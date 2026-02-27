@@ -51,7 +51,7 @@ def _get_monitor(db: AsyncSession) -> AsyncDriftMonitor:
 @router.get("/summary", response_model=DriftSummaryResponse)
 async def get_drift_summary(
     db: AsyncSession = Depends(get_db),
-):
+) -> DriftSummaryResponse:
     """Fleet-wide drift summary.
 
     Returns total drift events, counts by severity and category,
@@ -102,7 +102,7 @@ async def list_drift_events(
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(50, ge=1, le=200, description="Items per page"),
     db: AsyncSession = Depends(get_db),
-):
+) -> DriftEventListResponse:
     """List drift events with filtering and pagination.
 
     Supports filtering by server, severity, category, resolution status,
@@ -145,7 +145,7 @@ async def list_drift_events(
 async def get_drift_event(
     event_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-):
+) -> DriftEventResponse:
     """Get a single drift event by ID."""
     monitor = _get_monitor(db)
 
@@ -174,7 +174,7 @@ async def get_server_drift_timeline(
     server_id: uuid.UUID,
     hours: int = Query(168, ge=1, le=8760, description="Lookback period in hours (default 7 days)"),
     db: AsyncSession = Depends(get_db),
-):
+) -> DriftTimelineResponse:
     """Drift timeline for a specific server.
 
     Returns drift events over the specified time period, suitable for
@@ -235,7 +235,7 @@ async def list_drift_alerts(
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(50, ge=1, le=200, description="Items per page"),
     db: AsyncSession = Depends(get_db),
-):
+) -> DriftAlertListResponse:
     """List drift alerts with filtering and pagination.
 
     By default returns all alerts. Use ``is_acknowledged=false`` to see
@@ -275,7 +275,7 @@ async def acknowledge_alert(
     alert_id: uuid.UUID,
     body: AcknowledgeAlertRequest,
     db: AsyncSession = Depends(get_db),
-):
+) -> AcknowledgeAlertResponse:
     """Acknowledge a drift alert.
 
     Marks the alert as acknowledged with the identity of the person
@@ -317,7 +317,7 @@ async def acknowledge_alert(
 async def get_drift_trends(
     days: int = Query(30, ge=1, le=365, description="Number of days to trend (default 30)"),
     db: AsyncSession = Depends(get_db),
-):
+) -> DriftTrendsResponse:
     """Drift trending data over a time period.
 
     Returns daily event counts broken down by category for chart

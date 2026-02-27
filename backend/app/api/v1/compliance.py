@@ -7,6 +7,7 @@ dashboards, per-node detail views, drift analysis, and audit exports.
 import logging
 import uuid
 from datetime import datetime, timezone
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
@@ -24,7 +25,7 @@ router = APIRouter()
 # ---------------------------------------------------------------------------
 
 
-def _get_puppet_service():
+def _get_puppet_service() -> Any:
     """Instantiate PuppetEnterpriseServiceSync for compliance queries.
 
     Uses try/except so the compliance module loads even if the puppet
@@ -56,7 +57,7 @@ def _get_puppet_service():
         )
 
 
-def _get_compliance_service():
+def _get_compliance_service() -> Any:
     """Instantiate PuppetComplianceService with a live Puppet client.
 
     Returns:
@@ -120,7 +121,7 @@ async def _get_server_with_certname(
 @router.get("/summary")
 async def get_compliance_summary(
     db: AsyncSession = Depends(get_db),
-):
+) -> dict[str, Any]:
     """Fleet-wide compliance summary.
 
     Queries all server requests with status ``ready`` and a non-null
@@ -167,7 +168,7 @@ async def get_compliance_summary(
 async def get_node_compliance(
     server_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-):
+) -> dict[str, Any]:
     """Single node compliance detail.
 
     Returns detailed compliance information for the given server,
@@ -201,7 +202,7 @@ async def get_node_drift(
     server_id: uuid.UUID,
     hours: int = Query(24, ge=1, le=720, description="Lookback period in hours"),
     db: AsyncSession = Depends(get_db),
-):
+) -> dict[str, Any]:
     """Drift report for a single node.
 
     Returns drift events detected over the specified lookback window.
@@ -236,7 +237,7 @@ async def get_node_drift(
 @router.get("/report")
 async def get_compliance_report(
     db: AsyncSession = Depends(get_db),
-):
+) -> dict[str, Any]:
     """Downloadable compliance report for all managed nodes.
 
     Returns a JSON document suitable for audit purposes containing

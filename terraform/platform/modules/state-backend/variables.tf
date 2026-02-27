@@ -44,7 +44,7 @@ variable "plans_expiration_days" {
 }
 
 variable "kms_key_arn" {
-  description = "ARN of a KMS key for S3 encryption. If empty, AES256 (SSE-S3) is used."
+  description = "ARN of an external KMS key to use for state encryption. If empty, a dedicated KMS key is created by this module."
   type        = string
   default     = ""
 }

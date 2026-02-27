@@ -44,7 +44,7 @@ resource "aws_cognito_user_pool" "this" {
   deletion_protection      = var.enable_deletion_protection ? "ACTIVE" : "INACTIVE"
   username_attributes      = ["email"]
   auto_verified_attributes = ["email"]
-  mfa_configuration        = "OPTIONAL"
+  mfa_configuration        = var.mfa_configuration
 
   username_configuration {
     case_sensitive = false
@@ -118,7 +118,7 @@ resource "aws_cognito_user_pool" "this" {
   }
 
   admin_create_user_config {
-    allow_admin_create_user_only = var.environment == "production"
+    allow_admin_create_user_only = true
 
     invite_message_template {
       email_message = "Your AnvilOps account has been created. Username: {username}, Temporary password: {####}"

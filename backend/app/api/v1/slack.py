@@ -30,7 +30,7 @@ async def slack_interactions(
     payload: str = Form(...),
     x_slack_request_timestamp: str = Header("", alias="X-Slack-Request-Timestamp"),
     x_slack_signature: str = Header("", alias="X-Slack-Signature"),
-):
+) -> JSONResponse:
     """Receive and process Slack interactive message callbacks.
 
     Slack sends the payload as a URL-encoded form field named ``payload``

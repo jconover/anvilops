@@ -1,0 +1,221 @@
+# =============================================================================
+# AnvilOps - Deployment Pipeline
+#
+# Triggered on push to main after CI succeeds. Builds production container
+# images, pushes to ECR, and deploys to EKS via Kustomize.
+#
+# This is a deployment skeleton -- org-specific values (AWS account IDs,
+# cluster names, domain names) are referenced via GitHub environment secrets
+# and must be configured before first use.
+# =============================================================================
+
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+# Only one deployment per environment at a time
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  id-token: write  # Required for OIDC authentication with AWS
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Gate: Wait for CI to pass on the same commit
+  # ---------------------------------------------------------------------------
+  ci-check:
+    name: Verify CI Passed
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Wait for CI workflow
+        uses: lewagon/wait-on-check-action@v1.3.4
+        with:
+          ref: ${{ github.sha }}
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          check-name: "Build Docker Images"
+          wait-interval: 15
+          allowed-conclusions: success
+
+  # ---------------------------------------------------------------------------
+  # 1. Deploy to Dev Environment
+  # ---------------------------------------------------------------------------
+  deploy-dev:
+    name: Deploy to Dev
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: [ci-check]
+    environment:
+      name: dev
+      # TODO: Configure environment protection rules in GitHub Settings:
+      #   - Required reviewers (optional for dev, recommended for staging/prod)
+      #   - Deployment branch restrictions (main only)
+      url: https://dev.anvilops.example.com  # TODO: Replace with actual dev URL
+
+    env:
+      ENVIRONMENT: dev
+      # TODO: Set these in your GitHub environment secrets:
+      #   AWS_ROLE_ARN        - IAM role ARN for OIDC federation
+      #   AWS_REGION          - Target AWS region (e.g., us-east-1)
+      #   ECR_REGISTRY        - ECR registry URL (e.g., 123456789012.dkr.ecr.us-east-1.amazonaws.com)
+      #   EKS_CLUSTER_NAME    - EKS cluster name
+      #   API_URL             - Backend API URL for frontend build arg
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # -- AWS Authentication via OIDC ----------------------------------------
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+          # TODO: Ensure the IAM OIDC provider is configured for GitHub Actions:
+          #   https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/configuring-openid-connect-in-amazon-web-services
+
+      - name: Login to Amazon ECR
+        id: ecr-login
+        uses: aws-actions/amazon-ecr-login@v2
+
+      # -- Build and Push Container Images ------------------------------------
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Compute image tag
+        id: meta
+        env:
+          COMMIT_SHA: ${{ github.sha }}
+        run: |
+          SHA_SHORT=$(echo "$COMMIT_SHA" | cut -c1-7)
+          echo "tag=${SHA_SHORT}" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push backend image
+        uses: docker/build-push-action@v6
+        with:
+          context: backend/
+          file: backend/Dockerfile
+          push: true
+          tags: |
+            ${{ secrets.ECR_REGISTRY }}/anvilops-api:${{ steps.meta.outputs.tag }}
+            ${{ secrets.ECR_REGISTRY }}/anvilops-api:latest
+          cache-from: type=gha,scope=backend
+          cache-to: type=gha,mode=max,scope=backend
+          # TODO: Add build args if needed:
+          # build-args: |
+          #   TERRAFORM_VERSION=1.9.8
+
+      - name: Build and push frontend image
+        uses: docker/build-push-action@v6
+        with:
+          context: frontend/
+          file: frontend/Dockerfile
+          push: true
+          tags: |
+            ${{ secrets.ECR_REGISTRY }}/anvilops-frontend:${{ steps.meta.outputs.tag }}
+            ${{ secrets.ECR_REGISTRY }}/anvilops-frontend:latest
+          cache-from: type=gha,scope=frontend
+          cache-to: type=gha,mode=max,scope=frontend
+          build-args: |
+            NEXT_PUBLIC_API_URL=${{ secrets.API_URL }}
+
+      # -- Deploy to EKS via Kustomize ----------------------------------------
+      - name: Configure kubectl
+        env:
+          EKS_CLUSTER: ${{ secrets.EKS_CLUSTER_NAME }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+        run: |
+          aws eks update-kubeconfig \
+            --name "$EKS_CLUSTER" \
+            --region "$AWS_REGION"
+
+      - name: Set image tags in Kustomize overlay
+        env:
+          ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}
+          IMAGE_TAG: ${{ steps.meta.outputs.tag }}
+        working-directory: terraform/platform/k8s/overlays/dev
+        run: |
+          # TODO: Verify these kustomization image names match your k8s manifests
+          kustomize edit set image \
+            "anvilops-api=${ECR_REGISTRY}/anvilops-api:${IMAGE_TAG}" \
+            "anvilops-frontend=${ECR_REGISTRY}/anvilops-frontend:${IMAGE_TAG}"
+
+      - name: Deploy with Kustomize
+        run: |
+          kustomize build terraform/platform/k8s/overlays/dev | kubectl apply -f -
+
+      - name: Wait for rollout to complete
+        run: |
+          # TODO: Adjust deployment names and namespace to match your k8s manifests
+          kubectl rollout status deployment/anvilops-api \
+            --namespace anvilops \
+            --timeout=300s
+
+          kubectl rollout status deployment/anvilops-frontend \
+            --namespace anvilops \
+            --timeout=300s
+
+      # -- Post-Deployment Verification ----------------------------------------
+      - name: Run smoke tests
+        run: |
+          # TODO: Replace with actual dev endpoint or use port-forward
+          # bash scripts/smoke-test.sh
+          echo "Smoke tests placeholder -- configure scripts/smoke-test.sh for CI"
+
+      - name: Deployment summary
+        if: always()
+        env:
+          IMAGE_TAG: ${{ steps.meta.outputs.tag }}
+          DEPLOY_ENV: dev
+          ACTOR: ${{ github.actor }}
+          COMMIT_SHA: ${{ github.sha }}
+          RUN_ID: ${{ github.run_id }}
+          SERVER_URL: ${{ github.server_url }}
+          REPO: ${{ github.repository }}
+        run: |
+          {
+            echo "## Deployment Summary"
+            echo ""
+            echo "| Field | Value |"
+            echo "|-------|-------|"
+            echo "| Environment | \`${DEPLOY_ENV}\` |"
+            echo "| Commit | \`${COMMIT_SHA}\` |"
+            echo "| Image Tag | \`${IMAGE_TAG}\` |"
+            echo "| Triggered By | ${ACTOR} |"
+            echo "| Workflow Run | [${RUN_ID}](${SERVER_URL}/${REPO}/actions/runs/${RUN_ID}) |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # ---------------------------------------------------------------------------
+  # Future: Deploy to Staging (uncomment and configure when ready)
+  # ---------------------------------------------------------------------------
+  # deploy-staging:
+  #   name: Deploy to Staging
+  #   runs-on: ubuntu-latest
+  #   timeout-minutes: 30
+  #   needs: [deploy-dev]
+  #   environment:
+  #     name: staging
+  #     url: https://staging.anvilops.example.com
+  #   steps:
+  #     - name: Placeholder
+  #       run: echo "TODO: Implement staging deployment (mirrors deploy-dev steps with staging secrets)"
+
+  # ---------------------------------------------------------------------------
+  # Future: Deploy to Production (uncomment and configure when ready)
+  # ---------------------------------------------------------------------------
+  # deploy-production:
+  #   name: Deploy to Production
+  #   runs-on: ubuntu-latest
+  #   timeout-minutes: 30
+  #   needs: [deploy-staging]
+  #   environment:
+  #     name: production
+  #     url: https://anvilops.example.com
+  #   steps:
+  #     - name: Placeholder
+  #       run: echo "TODO: Implement production deployment with canary/blue-green strategy"

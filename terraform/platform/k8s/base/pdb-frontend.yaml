@@ -1,0 +1,14 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: anvilops-frontend-pdb
+  namespace: anvilops
+  labels:
+    app.kubernetes.io/name: anvilops-frontend
+    app.kubernetes.io/part-of: anvilops
+    app.kubernetes.io/component: frontend
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: anvilops-frontend
