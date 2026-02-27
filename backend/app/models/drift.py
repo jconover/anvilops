@@ -4,8 +4,11 @@ Tracks individual drift events detected by PuppetDB report polling,
 and drift alerts generated when patterns or thresholds are met.
 """
 
+from __future__ import annotations
+
 import uuid
 from datetime import datetime
+from typing import Optional
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, Index, String, Text, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -167,7 +170,7 @@ class DriftAlert(Base):
     )
 
     # Relationships
-    drift_event: Mapped["DriftEvent" | None] = relationship(
+    drift_event: Mapped[Optional["DriftEvent"]] = relationship(
         "DriftEvent",
         back_populates="alerts",
     )
