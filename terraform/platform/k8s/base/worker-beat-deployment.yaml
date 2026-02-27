@@ -27,15 +27,17 @@ spec:
         fsGroup: 1000
         seccompProfile:
           type: RuntimeDefault
+      terminationGracePeriodSeconds: 60
       containers:
         - name: beat
-          image: anvilops-api:latest
+          image: anvilops-api:MUST_BE_OVERRIDDEN
           command:
             - celery
             - -A
             - app.worker.celery_app
             - beat
             - --loglevel=info
+            - --pidfile=/tmp/celerybeat.pid
           envFrom:
             - configMapRef:
                 name: anvilops-config
@@ -57,6 +59,16 @@ spec:
           volumeMounts:
             - name: tmp
               mountPath: /tmp
+          startupProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - "test -f /tmp/celerybeat.pid && kill -0 $(cat /tmp/celerybeat.pid)"
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 18
           livenessProbe:
             exec:
               command:

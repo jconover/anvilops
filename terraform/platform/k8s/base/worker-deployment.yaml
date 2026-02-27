@@ -27,9 +27,10 @@ spec:
         fsGroup: 1000
         seccompProfile:
           type: RuntimeDefault
+      terminationGracePeriodSeconds: 300
       containers:
         - name: worker
-          image: anvilops-api:latest
+          image: anvilops-api:MUST_BE_OVERRIDDEN
           command:
             - celery
             - -A
@@ -60,6 +61,20 @@ spec:
           volumeMounts:
             - name: tmp
               mountPath: /tmp
+          startupProbe:
+            exec:
+              command:
+                - celery
+                - -A
+                - app.worker.celery_app
+                - inspect
+                - ping
+                - --timeout
+                - "5"
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 10
+            failureThreshold: 30
           readinessProbe:
             exec:
               command:

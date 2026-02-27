@@ -458,11 +458,24 @@ resource "aws_security_group" "ecs_runner" {
   tags        = merge(var.tags, { Name = "${local.name_prefix}-ecs-runner-sg" })
 }
 
-resource "aws_vpc_security_group_ingress_rule" "ecs_runner_from_eks" {
+resource "aws_vpc_security_group_ingress_rule" "ecs_runner_from_eks_https" {
   security_group_id            = aws_security_group.ecs_runner.id
-  ip_protocol                  = "-1"
+  from_port                    = 443
+  to_port                      = 443
+  ip_protocol                  = "tcp"
   referenced_security_group_id = aws_security_group.eks.id
-  description                  = "All traffic from EKS (callbacks)"
+  description                  = "HTTPS callbacks from EKS"
+  tags                         = var.tags
+}
+
+resource "aws_vpc_security_group_ingress_rule" "ecs_runner_from_eks_callback" {
+  security_group_id            = aws_security_group.ecs_runner.id
+  from_port                    = 8080
+  to_port                      = 8080
+  ip_protocol                  = "tcp"
+  referenced_security_group_id = aws_security_group.eks.id
+  description                  = "Terraform state callback port from EKS"
+  tags                         = var.tags
 }
 
 resource "aws_vpc_security_group_egress_rule" "ecs_runner_all" {

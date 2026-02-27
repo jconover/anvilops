@@ -530,7 +530,7 @@ data "aws_iam_policy_document" "external_dns_permissions" {
       "route53:ChangeResourceRecordSets",
     ]
     resources = [
-      "arn:aws:route53:::hostedzone/*",
+      "arn:aws:route53:::hostedzone/${var.route53_zone_id}",
     ]
   }
 
