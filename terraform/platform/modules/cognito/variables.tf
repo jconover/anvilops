@@ -41,6 +41,17 @@ variable "ses_from_email" {
   default     = ""
 }
 
+variable "mfa_configuration" {
+  description = "MFA enforcement level for the Cognito user pool. Use ON to require MFA for all users."
+  type        = string
+  default     = "ON"
+
+  validation {
+    condition     = contains(["ON", "OPTIONAL"], var.mfa_configuration)
+    error_message = "MFA configuration must be one of: ON, OPTIONAL."
+  }
+}
+
 variable "tags" {
   description = "Additional tags to apply to all Cognito resources."
   type        = map(string)
