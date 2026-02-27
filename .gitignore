@@ -15,11 +15,14 @@ venv/
 env/
 myenv
 
-# IDE
+# IDE / AI tools
 .vscode/
 .idea/
 *.swp
 *.swo
+.claude/
+.omc/
+CLAUDE.md
 
 # Environment
 .env
