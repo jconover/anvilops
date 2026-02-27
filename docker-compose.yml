@@ -92,14 +92,16 @@ services:
       retries: 3
       start_period: 30s
 
+  # Local development database - override credentials via environment variables or .env file
+  # Do NOT use these defaults in staging or production environments
   db:
     image: postgres:16-alpine
     ports:
       - "127.0.0.1:5432:5432"
     environment:
-      POSTGRES_USER: anvilops
-      POSTGRES_PASSWORD: anvilops
-      POSTGRES_DB: anvilops
+      POSTGRES_USER: ${POSTGRES_USER:-anvilops}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-anvilops}
+      POSTGRES_DB: ${POSTGRES_DB:-anvilops}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
@@ -112,7 +114,7 @@ services:
           cpus: '0.25'
           memory: 256M
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U anvilops"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-anvilops}"]
       interval: 5s
       timeout: 5s
       retries: 5

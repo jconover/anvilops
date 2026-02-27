@@ -1,3 +1,8 @@
+# NOTE: The anvilops-worker deployment is NOT managed by a standalone HPA.
+# KEDA manages autoscaling for the worker via a ScaledObject (keda-celery-scaledobject)
+# defined in terraform/platform/helm/install-charts.tf. KEDA creates and owns its own
+# HPA internally, so a separate HPA here would conflict and cause scaling oscillation.
+# Only the API HPA is defined below.
 ---
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
@@ -36,48 +41,6 @@ spec:
           periodSeconds: 60
     scaleUp:
       stabilizationWindowSeconds: 60
-      policies:
-        - type: Pods
-          value: 2
-          periodSeconds: 60
----
-apiVersion: autoscaling/v2
-kind: HorizontalPodAutoscaler
-metadata:
-  name: anvilops-worker-hpa
-  namespace: anvilops
-  labels:
-    app.kubernetes.io/part-of: anvilops
-    app.kubernetes.io/component: worker
-spec:
-  scaleTargetRef:
-    apiVersion: apps/v1
-    kind: Deployment
-    name: anvilops-worker
-  minReplicas: 2
-  maxReplicas: 8
-  metrics:
-    - type: Resource
-      resource:
-        name: cpu
-        target:
-          type: Utilization
-          averageUtilization: 70
-    - type: Resource
-      resource:
-        name: memory
-        target:
-          type: Utilization
-          averageUtilization: 80
-  behavior:
-    scaleDown:
-      stabilizationWindowSeconds: 300
-      policies:
-        - type: Pods
-          value: 1
-          periodSeconds: 60
-    scaleUp:
-      stabilizationWindowSeconds: 30
       policies:
         - type: Pods
           value: 2

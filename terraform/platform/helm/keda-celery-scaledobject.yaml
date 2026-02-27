@@ -1,3 +1,8 @@
+# KEDA ScaledObject — primary autoscaler for the anvilops-worker deployment.
+# KEDA creates and manages its own HPA internally for this target.
+# Do NOT create a separate HPA for anvilops-worker in k8s/base/hpa.yaml or
+# overlays, as dual HPAs cause scaling oscillation (both controllers fight
+# over the replica count).
 apiVersion: keda.sh/v1alpha1
 kind: ScaledObject
 metadata:

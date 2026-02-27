@@ -68,16 +68,8 @@ patches:
         path: /spec/maxReplicas
         value: 20
 
-  - target:
-      kind: HorizontalPodAutoscaler
-      name: anvilops-worker-hpa
-    patch: |
-      - op: replace
-        path: /spec/minReplicas
-        value: 4
-      - op: replace
-        path: /spec/maxReplicas
-        value: 16
+  # Worker HPA patch removed — KEDA ScaledObject manages worker autoscaling.
+  # See terraform/platform/helm/keda-celery-scaledobject.yaml
 
   - target:
       kind: PodDisruptionBudget

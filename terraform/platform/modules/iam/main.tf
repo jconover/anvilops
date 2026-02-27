@@ -792,8 +792,16 @@ resource "aws_iam_role" "terraform_runner" {
 }
 
 data "aws_iam_policy_document" "terraform_runner_permissions" {
+  # CRIT-01: Removed network infrastructure modification actions (CreateSubnet,
+  # DeleteSubnet, CreateRouteTable, DeleteRouteTable, CreateRoute, DeleteRoute,
+  # AssociateRouteTable, DisassociateRouteTable, CreateInternetGateway,
+  # DeleteInternetGateway, AttachInternetGateway, DetachInternetGateway,
+  # CreateNatGateway, DeleteNatGateway, ModifyVpcAttribute,
+  # CreateNetworkInterface, DeleteNetworkInterface, AttachNetworkInterface,
+  # DetachNetworkInterface, AllocateAddress, ReleaseAddress, AssociateAddress,
+  # DisassociateAddress). Server provisioning must not modify network topology.
   statement {
-    sid    = "EC2Full"
+    sid    = "EC2ServerProvisioning"
     effect = "Allow"
     actions = [
       "ec2:RunInstances",
@@ -810,10 +818,6 @@ data "aws_iam_policy_document" "terraform_runner_permissions" {
       "ec2:RevokeSecurityGroupEgress",
       "ec2:CreateTags",
       "ec2:DeleteTags",
-      "ec2:AllocateAddress",
-      "ec2:ReleaseAddress",
-      "ec2:AssociateAddress",
-      "ec2:DisassociateAddress",
       "ec2:CreateVolume",
       "ec2:DeleteVolume",
       "ec2:AttachVolume",
@@ -821,25 +825,6 @@ data "aws_iam_policy_document" "terraform_runner_permissions" {
       "ec2:CreateSnapshot",
       "ec2:DeleteSnapshot",
       "ec2:ModifyInstanceAttribute",
-      "ec2:CreateNetworkInterface",
-      "ec2:DeleteNetworkInterface",
-      "ec2:AttachNetworkInterface",
-      "ec2:DetachNetworkInterface",
-      "ec2:CreateSubnet",
-      "ec2:DeleteSubnet",
-      "ec2:CreateRouteTable",
-      "ec2:DeleteRouteTable",
-      "ec2:CreateRoute",
-      "ec2:DeleteRoute",
-      "ec2:AssociateRouteTable",
-      "ec2:DisassociateRouteTable",
-      "ec2:CreateInternetGateway",
-      "ec2:DeleteInternetGateway",
-      "ec2:AttachInternetGateway",
-      "ec2:DetachInternetGateway",
-      "ec2:CreateNatGateway",
-      "ec2:DeleteNatGateway",
-      "ec2:ModifyVpcAttribute",
     ]
     resources = ["*"]
 
@@ -847,6 +832,12 @@ data "aws_iam_policy_document" "terraform_runner_permissions" {
       test     = "StringEquals"
       variable = "aws:RequestedRegion"
       values   = ["us-east-1", "us-west-2"]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "aws:RequestTag/ManagedBy"
+      values   = ["AnvilOps"]
     }
   }
 
@@ -940,25 +931,25 @@ data "aws_iam_policy_document" "terraform_runner_permissions" {
     ]
   }
 
+  # CRIT-01: Reduced ELB permissions from full management to target registration
+  # only. Server provisioning should register/deregister instances with existing
+  # target groups but must not create or delete load balancers, listeners, or
+  # target groups. Infrastructure-level ELB changes belong in the platform module.
   statement {
-    sid    = "ELBManagement"
+    sid    = "ELBTargetRegistration"
     effect = "Allow"
     actions = [
-      "elasticloadbalancing:CreateLoadBalancer",
-      "elasticloadbalancing:DeleteLoadBalancer",
       "elasticloadbalancing:Describe*",
-      "elasticloadbalancing:CreateTargetGroup",
-      "elasticloadbalancing:DeleteTargetGroup",
       "elasticloadbalancing:RegisterTargets",
       "elasticloadbalancing:DeregisterTargets",
-      "elasticloadbalancing:CreateListener",
-      "elasticloadbalancing:DeleteListener",
-      "elasticloadbalancing:ModifyLoadBalancerAttributes",
-      "elasticloadbalancing:ModifyTargetGroup",
-      "elasticloadbalancing:AddTags",
-      "elasticloadbalancing:RemoveTags",
     ]
     resources = ["*"]
+
+    condition {
+      test     = "StringEquals"
+      variable = "aws:RequestTag/ManagedBy"
+      values   = ["AnvilOps"]
+    }
   }
 
   statement {
