@@ -53,6 +53,23 @@ variable "cluster_version" {
   default     = "1.35"
 }
 
+variable "enable_public_endpoint" {
+  description = "Whether to enable public access to the EKS API server endpoint."
+  type        = bool
+  default     = false
+}
+
+variable "public_access_cidrs" {
+  description = "List of CIDR blocks allowed to access the EKS API server when public endpoint is enabled."
+  type        = list(string)
+  default     = []
+
+  validation {
+    condition     = length(var.public_access_cidrs) == 0 || alltrue([for cidr in var.public_access_cidrs : can(cidrhost(cidr, 0))])
+    error_message = "All entries in public_access_cidrs must be valid CIDR blocks."
+  }
+}
+
 variable "tags" {
   description = "Additional tags to apply to all resources."
   type        = map(string)

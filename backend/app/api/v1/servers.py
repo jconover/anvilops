@@ -41,7 +41,7 @@ def generate_server_name(environment: str, puppet_role: str) -> str:
 async def create_server(
     request: ServerCreateRequest,
     db: AsyncSession = Depends(get_db),
-):
+) -> ServerResponse:
     """Create a new server build request."""
     server_name = request.server_name or generate_server_name(
         request.environment, request.puppet_role
@@ -87,7 +87,7 @@ async def list_servers(
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=200),
     db: AsyncSession = Depends(get_db),
-):
+) -> ServerListResponse:
     """List all server requests with optional filtering."""
     query = select(ServerRequest)
     count_query = select(func.count(ServerRequest.id))
@@ -111,7 +111,7 @@ async def list_servers(
 async def get_server(
     server_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-):
+) -> ServerResponse:
     """Get a specific server request."""
     result = await db.execute(
         select(ServerRequest).where(ServerRequest.id == server_id)
@@ -128,7 +128,7 @@ async def get_server(
 async def decommission_server(
     server_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-):
+) -> ServerResponse:
     """Trigger server decommission workflow.
 
     Validates the server is in a decommissionable state (``ready`` or
@@ -181,7 +181,7 @@ async def decommission_server(
 async def delete_server(
     server_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-):
+) -> ServerResponse:
     """Delete a decommissioned server request record.
 
     Only servers in ``decommissioned`` status can be deleted.  For active

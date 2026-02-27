@@ -6,7 +6,6 @@ and authentication event is recorded here.
 """
 
 from datetime import datetime
-from typing import Optional
 
 from sqlalchemy import JSON, DateTime, Index, String, Text, text
 from sqlalchemy.orm import Mapped, mapped_column
@@ -38,32 +37,32 @@ class AuditLog(Base):
     )
 
     # Actor information
-    actor_email: Mapped[Optional[str]] = mapped_column(
+    actor_email: Mapped[str | None] = mapped_column(
         String(255), nullable=True, index=True
     )
-    actor_role: Mapped[Optional[str]] = mapped_column(
+    actor_role: Mapped[str | None] = mapped_column(
         String(30), nullable=True
     )
 
     # Resource that was acted upon
-    resource_type: Mapped[Optional[str]] = mapped_column(
+    resource_type: Mapped[str | None] = mapped_column(
         String(50), nullable=True
     )
-    resource_id: Mapped[Optional[str]] = mapped_column(
+    resource_id: Mapped[str | None] = mapped_column(
         String(36), nullable=True, index=True
     )
-    resource_name: Mapped[Optional[str]] = mapped_column(
+    resource_name: Mapped[str | None] = mapped_column(
         String(255), nullable=True
     )
 
     # Additional context
-    details: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    details: Mapped[dict | None] = mapped_column(JSON, nullable=True)
 
     # Request metadata
-    ip_address: Mapped[Optional[str]] = mapped_column(
+    ip_address: Mapped[str | None] = mapped_column(
         String(45), nullable=True
     )
-    user_agent: Mapped[Optional[str]] = mapped_column(
+    user_agent: Mapped[str | None] = mapped_column(
         String(500), nullable=True
     )
 
@@ -71,7 +70,7 @@ class AuditLog(Base):
     status: Mapped[str] = mapped_column(
         String(20), nullable=False, server_default=text("'success'")
     )
-    error_message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     __table_args__ = (
         Index("ix_audit_logs_category_action", "category", "action"),

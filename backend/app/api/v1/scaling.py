@@ -33,7 +33,7 @@ async def list_scaling_groups(
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=200),
     db: AsyncSession = Depends(get_db),
-):
+) -> ScalingGroupListResponse:
     """List all scaling groups with optional status filtering."""
     query = select(ScalingGroup)
     count_query = select(func.count(ScalingGroup.id))
@@ -62,7 +62,7 @@ async def list_scaling_groups(
 async def get_scaling_group(
     group_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-):
+) -> ScalingGroupResponse:
     """Get a specific scaling group with its members."""
     result = await db.execute(
         select(ScalingGroup).where(ScalingGroup.id == group_id)
@@ -84,7 +84,7 @@ async def get_scaling_group(
 async def create_scaling_group(
     request: ScalingGroupCreate,
     db: AsyncSession = Depends(get_db),
-):
+) -> ScalingGroupResponse:
     """Create a new scaling group and trigger initial provisioning.
 
     After persisting the group configuration, a Celery ``scale_group``
@@ -157,7 +157,7 @@ async def update_scaling_group(
     group_id: uuid.UUID,
     request: ScalingGroupUpdate,
     db: AsyncSession = Depends(get_db),
-):
+) -> ScalingGroupResponse:
     """Update a scaling group's configuration.
 
     Only non-``None`` fields in the request body are applied (partial
@@ -256,7 +256,7 @@ async def update_scaling_group(
 async def delete_scaling_group(
     group_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-):
+) -> ScalingGroupResponse:
     """Delete a scaling group and decommission all its members.
 
     Marks the group as ``deleted`` and dispatches a ``scale_group`` task
@@ -310,7 +310,7 @@ async def manual_scale(
     group_id: uuid.UUID,
     action: ScaleAction,
     db: AsyncSession = Depends(get_db),
-):
+) -> ScalingGroupResponse:
     """Manually scale a group to a specific desired count.
 
     Validates that the requested count is within the group's
@@ -379,7 +379,7 @@ async def manual_scale(
 async def pause_scaling_group(
     group_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-):
+) -> ScalingGroupResponse:
     """Pause auto-scaling for a group.
 
     The group's existing members remain running, but the periodic
@@ -423,7 +423,7 @@ async def pause_scaling_group(
 async def resume_scaling_group(
     group_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-):
+) -> ScalingGroupResponse:
     """Resume auto-scaling for a previously paused group."""
     result = await db.execute(
         select(ScalingGroup).where(ScalingGroup.id == group_id)
@@ -457,7 +457,7 @@ async def list_scaling_group_members(
     group_id: uuid.UUID,
     status: str | None = Query(None, description="Filter by member status"),
     db: AsyncSession = Depends(get_db),
-):
+) -> list[ScalingGroupMemberResponse]:
     """List all members of a scaling group with optional status filtering."""
     # Verify group exists
     group_result = await db.execute(

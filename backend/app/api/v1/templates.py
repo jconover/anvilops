@@ -32,7 +32,7 @@ async def list_templates(
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=200),
     db: AsyncSession = Depends(get_db),
-):
+) -> TemplateListResponse:
     """List server templates, sorted by sort_order then name.
 
     By default only active templates are returned. Pass
@@ -65,7 +65,7 @@ async def list_templates(
 async def get_template(
     template_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-):
+) -> TemplateResponse:
     """Get a single server template by ID."""
     result = await db.execute(
         select(ServerTemplate).where(ServerTemplate.id == template_id)
@@ -82,7 +82,7 @@ async def get_template(
 async def create_template(
     payload: TemplateCreate,
     db: AsyncSession = Depends(get_db),
-):
+) -> TemplateResponse:
     """Create a new server template.
 
     .. note:: This endpoint will be restricted to admins once RBAC is wired up.
@@ -115,7 +115,7 @@ async def update_template(
     template_id: uuid.UUID,
     payload: TemplateUpdate,
     db: AsyncSession = Depends(get_db),
-):
+) -> TemplateResponse:
     """Update an existing template (partial update).
 
     Only fields included in the request body are modified.
@@ -159,7 +159,7 @@ async def update_template(
 async def delete_template(
     template_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-):
+) -> TemplateResponse:
     """Soft-delete a template by setting is_active to False.
 
     The template remains in the database for historical reference but

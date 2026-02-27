@@ -145,7 +145,8 @@ resource "aws_eks_cluster" "this" {
   vpc_config {
     subnet_ids              = var.private_subnet_ids
     endpoint_private_access = true
-    endpoint_public_access  = true
+    endpoint_public_access  = var.enable_public_endpoint
+    public_access_cidrs     = var.enable_public_endpoint ? var.public_access_cidrs : []
     security_group_ids      = [var.eks_security_group_id]
   }
 
@@ -174,6 +175,13 @@ resource "aws_eks_cluster" "this" {
     aws_iam_role_policy_attachment.cluster_eks_policy,
     aws_iam_role_policy_attachment.cluster_vpc_resource_controller,
   ]
+
+  lifecycle {
+    precondition {
+      condition     = !var.enable_public_endpoint || length(var.public_access_cidrs) > 0
+      error_message = "public_access_cidrs must contain at least one CIDR block when enable_public_endpoint is true. An empty list defaults to 0.0.0.0/0."
+    }
+  }
 }
 
 # -----------------------------------------------------------------------------

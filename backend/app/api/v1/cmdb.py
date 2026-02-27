@@ -32,7 +32,7 @@ router = APIRouter()
 async def get_cmdb_status(
     server_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-):
+) -> CMDBSyncStatusResponse:
     """Get CMDB sync status for a server.
 
     Returns the server's CMDB ``sys_id`` and, if the ServiceNow
@@ -82,7 +82,7 @@ async def get_cmdb_status(
 async def trigger_cmdb_sync(
     server_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-):
+) -> CMDBSyncTriggerResponse:
     """Trigger manual CMDB sync for a server.
 
     Dispatches a Celery task to sync the server's data with ServiceNow.
@@ -145,7 +145,7 @@ async def trigger_cmdb_sync(
 
 
 @router.post("/sync", response_model=CMDBFullSyncResponse)
-async def trigger_full_cmdb_sync():
+async def trigger_full_cmdb_sync() -> CMDBFullSyncResponse:
     """Trigger full CMDB reconciliation.
 
     Dispatches a Celery task that loads all servers and reconciles
@@ -177,7 +177,7 @@ async def trigger_full_cmdb_sync():
 @router.get("/stats", response_model=CMDBSyncStatsResponse)
 async def get_cmdb_stats(
     db: AsyncSession = Depends(get_db),
-):
+) -> CMDBSyncStatsResponse:
     """CMDB sync statistics.
 
     Returns counts of synced vs. unsynced servers, grouped by status,

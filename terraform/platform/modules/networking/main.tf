@@ -427,6 +427,14 @@ resource "aws_vpc_security_group_ingress_rule" "rds_from_ecs" {
   description                  = "PostgreSQL from ECS runner"
 }
 
+resource "aws_vpc_security_group_egress_rule" "rds_to_vpc" {
+  security_group_id = aws_security_group.rds.id
+  ip_protocol       = "-1"
+  cidr_ipv4         = var.vpc_cidr
+  description       = "All traffic within VPC only"
+  tags              = var.tags
+}
+
 # =============================================================================
 # Security Groups — Redis
 # =============================================================================
@@ -445,6 +453,14 @@ resource "aws_vpc_security_group_ingress_rule" "redis_from_eks" {
   ip_protocol                  = "tcp"
   referenced_security_group_id = aws_security_group.eks.id
   description                  = "Redis from EKS"
+}
+
+resource "aws_vpc_security_group_egress_rule" "redis_to_vpc" {
+  security_group_id = aws_security_group.redis.id
+  ip_protocol       = "-1"
+  cidr_ipv4         = var.vpc_cidr
+  description       = "All traffic within VPC only"
+  tags              = var.tags
 }
 
 # =============================================================================

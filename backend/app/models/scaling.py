@@ -2,7 +2,6 @@
 
 import uuid
 from datetime import datetime
-from typing import Optional
 
 from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, Text, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -22,7 +21,7 @@ class ScalingGroup(Base):
     name: Mapped[str] = mapped_column(
         String(100), unique=True, nullable=False, index=True
     )
-    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
     status: Mapped[str] = mapped_column(
         String(30),
         nullable=False,
@@ -69,7 +68,7 @@ class ScalingGroup(Base):
         Integer, nullable=False, server_default=text("300")
     )
 
-    last_scaled_at: Mapped[Optional[datetime]] = mapped_column(
+    last_scaled_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
 
