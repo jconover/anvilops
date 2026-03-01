@@ -263,6 +263,39 @@ resource "aws_iam_role_policy_attachment" "node_ssm" {
 # EKS Managed Node Group
 # -----------------------------------------------------------------------------
 
+resource "aws_launch_template" "workers" {
+  name_prefix = "${local.cluster_name}-workers-"
+
+  block_device_mappings {
+    device_name = "/dev/xvda"
+    ebs {
+      volume_size = 50
+      volume_type = "gp3"
+      encrypted   = true
+    }
+  }
+
+  tag_specifications {
+    resource_type = "instance"
+    tags = merge(var.tags, {
+      Name = "${local.cluster_name}-worker"
+    })
+  }
+
+  tag_specifications {
+    resource_type = "volume"
+    tags = merge(var.tags, {
+      Name = "${local.cluster_name}-worker-vol"
+    })
+  }
+
+  tags = var.tags
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
 resource "aws_eks_node_group" "workers" {
   cluster_name    = aws_eks_cluster.this.name
   node_group_name = "${local.cluster_name}-workers"
@@ -273,7 +306,11 @@ resource "aws_eks_node_group" "workers" {
   version        = var.cluster_version
   ami_type       = "AL2023_x86_64_STANDARD"
   capacity_type  = "ON_DEMAND"
-  disk_size      = 50
+
+  launch_template {
+    id      = aws_launch_template.workers.id
+    version = aws_launch_template.workers.latest_version
+  }
 
   scaling_config {
     min_size     = var.node_min_size
