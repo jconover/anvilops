@@ -9,9 +9,10 @@ real Puppet Enterprise instance is required.
 
 from __future__ import annotations
 
-import pytest
-import httpx
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import httpx
+import pytest
 
 from app.services.puppet import (
     PuppetEnterpriseService,
@@ -25,7 +26,6 @@ from app.services.puppet_exceptions import (
     PuppetError,
     PuppetTimeoutError,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers

@@ -4,13 +4,11 @@ All database interactions are fully mocked -- no real DB connections needed.
 """
 
 import logging
-from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from app.services.audit import AuditActions, AuditLogger
-
 
 # ---------------------------------------------------------------------------
 # AuditActions constants

@@ -12,7 +12,6 @@ import pytest
 
 from app.services.terraform import INSTANCE_SIZE_MAP, TerraformService
 
-
 # ---------------------------------------------------------------------------
 # Helpers / fixtures
 # ---------------------------------------------------------------------------

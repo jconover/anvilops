@@ -7,10 +7,7 @@ and _send_daily_digest_notification. All external calls are mocked.
 import logging
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from app.tasks.drift import _send_daily_digest_notification, _send_daily_digest_slack
-
 
 # ---------------------------------------------------------------------------
 # _send_daily_digest_slack

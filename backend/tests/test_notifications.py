@@ -4,13 +4,12 @@ Tests both async (FastAPI) and sync (Celery) creation paths.
 Database sessions are mocked -- no real DB connections required.
 """
 
-from unittest.mock import AsyncMock, MagicMock, call, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import UUID
 
 import pytest
 
 from app.services.notifications import NotificationService
-
 
 # ---------------------------------------------------------------------------
 # Fixtures

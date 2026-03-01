@@ -11,14 +11,11 @@ code path inject a fake boto3 module via sys.modules.
 import sys
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from app.tasks.validation import (
     _check_instance_status,
     _check_puppet_enrollment,
     _check_ssm_connectivity,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers

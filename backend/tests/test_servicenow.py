@@ -9,12 +9,11 @@ import httpx
 import pytest
 
 from app.services.servicenow import (
-    ServiceNowClient,
     _OS_TYPE_MAP,
     _STATUS_MAP,
+    ServiceNowClient,
     get_servicenow_client,
 )
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -246,7 +245,9 @@ class TestCreateCi:
     def test_create_ci_uses_sys_id_as_ci_number_when_no_asset_tag(
         self, client: ServiceNowClient, server_data: dict
     ):
-        mock_resp = _mock_httpx_response(201, {"result": {"sys_id": "fallback_id", "asset_tag": ""}})
+        mock_resp = _mock_httpx_response(
+            201, {"result": {"sys_id": "fallback_id", "asset_tag": ""}},
+        )
         with patch("httpx.Client") as mock_client_cls:
             mock_http = MagicMock()
             mock_http.request.return_value = mock_resp

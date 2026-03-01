@@ -7,9 +7,8 @@ check_scaling_triggers.
 
 import pytest
 
-from app.tasks.scaling import _get_group_metrics
 from app.services.scaling import ScalingService
-
+from app.tasks.scaling import _get_group_metrics
 
 # ---------------------------------------------------------------------------
 # _get_group_metrics stub

@@ -4,7 +4,6 @@ All SQLAlchemy session interactions are fully mocked so no real database
 connection is required.
 """
 
-from datetime import datetime, timezone
 from unittest.mock import MagicMock, patch
 from uuid import uuid4
 
@@ -18,7 +17,6 @@ from app.services.db import (
     update_build_step,
     update_server_status,
 )
-
 
 # ---------------------------------------------------------------------------
 # _build_sync_url
@@ -73,7 +71,7 @@ class TestGetSyncDb:
         session = self._make_session()
         with patch("app.services.db.SyncSessionLocal", return_value=session):
             with pytest.raises(ValueError):
-                with get_sync_db() as db:
+                with get_sync_db() as _db:
                     raise ValueError("boom")
         session.rollback.assert_called_once()
         session.close.assert_called_once()
@@ -184,7 +182,10 @@ class TestUpdateServerStatus:
         sr = self._make_sr()
         session = MagicMock()
         session.get = MagicMock(return_value=sr)
-        update_server_status(session, "sr-id", "complete", aws_instance_id="i-abc", private_ip="10.0.0.1")
+        update_server_status(
+            session, "sr-id", "complete",
+            aws_instance_id="i-abc", private_ip="10.0.0.1",
+        )
         assert sr.aws_instance_id == "i-abc"
         assert sr.private_ip == "10.0.0.1"
 

@@ -4,9 +4,9 @@ All tests are synchronous and require no database, Redis, or external services.
 """
 
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 import pytest
-from zoneinfo import ZoneInfo
 
 from app.services.cron_parser import (
     CRON_PRESETS,

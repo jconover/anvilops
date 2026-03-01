@@ -4,17 +4,16 @@ All region validation and VPC/subnet discovery calls are mocked
 so no AWS credentials are needed.
 """
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
 from app.services.multi_region import (
-    MultiRegionManager,
     _LOCK_TABLE_TEMPLATE,
     _STATE_BUCKET_TEMPLATE,
+    MultiRegionManager,
 )
 from app.services.regions import RegionService
-
 
 # ---------------------------------------------------------------------------
 # Fixtures

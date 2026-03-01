@@ -7,7 +7,6 @@ no database, Redis, or external APIs are needed.
 
 import pytest
 
-
 # ------------------------------------------------------------------
 # POST /api/v1/costs/estimate
 # ------------------------------------------------------------------

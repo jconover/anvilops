@@ -10,7 +10,6 @@ import pytest
 
 from app.services.scaling import ScalingService, _generate_server_name
 
-
 # ------------------------------------------------------------------
 # _generate_server_name
 # ------------------------------------------------------------------

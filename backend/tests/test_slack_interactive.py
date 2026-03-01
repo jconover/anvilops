@@ -11,8 +11,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from app.services.slack_interactive import SlackInteractiveHandler, _MAX_TIMESTAMP_AGE
-
+from app.services.slack_interactive import _MAX_TIMESTAMP_AGE, SlackInteractiveHandler
 
 # ---------------------------------------------------------------------------
 # Fixtures

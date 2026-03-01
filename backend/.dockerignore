@@ -22,6 +22,22 @@ build/
 .gitignore
 .env
 .env.*
-README.md
-tests/
 *.md
+
+# Tests
+tests/
+
+# Docker meta (prevent recursive context inclusion)
+Dockerfile
+docker-compose*
+.dockerignore
+
+# Editor / IDE config
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS artifacts
+.DS_Store
+Thumbs.db

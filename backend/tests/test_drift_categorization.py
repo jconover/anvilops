@@ -4,10 +4,8 @@ All tests exercise pure in-memory logic -- no database, Redis,
 or external API connections are required.
 """
 
-import pytest
 
 from app.services.drift_monitor import categorize_drift
-
 
 # ------------------------------------------------------------------
 # SSH configuration -- critical security (CIS-5.2.8)

@@ -4,12 +4,11 @@ Uses AsyncMock to avoid any real database connections.
 """
 
 import uuid
-from unittest.mock import AsyncMock, MagicMock, call, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from app.services.template_seed import DEFAULT_TEMPLATES, seed_default_templates
-
 
 # ---------------------------------------------------------------------------
 # Helpers

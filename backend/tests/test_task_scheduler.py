@@ -4,10 +4,8 @@ Tests _generate_server_name (pure function) and related constants.
 No DB or Celery connections required.
 """
 
-import pytest
 
 from app.tasks.scheduler import _ENV_ABBREV, _ROLE_ABBREV, _generate_server_name
-
 
 # ---------------------------------------------------------------------------
 # _ENV_ABBREV / _ROLE_ABBREV constants

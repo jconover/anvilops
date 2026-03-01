@@ -39,6 +39,10 @@ LABEL org.opencontainers.image.title="AnvilOps API" \
       org.opencontainers.image.created="${BUILD_DATE}" \
       org.opencontainers.image.revision="${GIT_SHA}"
 
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/app
+
 # Copy Terraform binary from builder
 COPY --from=builder /usr/local/bin/terraform /usr/local/bin/terraform
 
@@ -57,6 +61,8 @@ USER appuser
 EXPOSE 8000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
-  CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')" || exit 1
+  CMD python -c "import urllib.request; r = urllib.request.urlopen('http://localhost:8000/health'); assert r.status == 200" || exit 1
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Default: run API server. Override for Celery worker:
+#   docker run <image> celery -A app.worker.celery_app worker --loglevel=info
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--no-access-log"]

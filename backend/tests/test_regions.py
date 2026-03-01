@@ -9,13 +9,12 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from app.services.regions import (
-    SUPPORTED_REGIONS,
-    RegionService,
     _STATIC_AZS,
     _STATIC_SUBNETS,
     _STATIC_VPCS,
+    SUPPORTED_REGIONS,
+    RegionService,
 )
-
 
 # ---------------------------------------------------------------------------
 # Fixtures

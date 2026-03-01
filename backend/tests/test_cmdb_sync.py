@@ -11,7 +11,6 @@ import pytest
 from app.services.cmdb_sync import CMDBSyncService
 from app.services.servicenow import ServiceNowClient
 
-
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
@@ -159,7 +158,9 @@ class TestSyncServerUpdated:
         assert result is not None
         assert result["action"] == "updated"
         assert result["sys_id"] == "known_id"
-        mock_client.update_ci.assert_called_once_with("known_id", mock_client.update_ci.call_args[0][1])
+        mock_client.update_ci.assert_called_once_with(
+            "known_id", mock_client.update_ci.call_args[0][1]
+        )
 
     def test_looks_up_ci_when_no_sys_id_provided(
         self, service: CMDBSyncService, mock_client: MagicMock, server_data: dict
@@ -178,7 +179,9 @@ class TestSyncServerUpdated:
     ):
         mock_client.find_ci_by_name.return_value = None
         # sync_server_created path
-        mock_client.create_ci.return_value = {"sys_id": "brand_new", "ci_number": "CI9", "result": {}}
+        mock_client.create_ci.return_value = {
+            "sys_id": "brand_new", "ci_number": "CI9", "result": {}
+        }
 
         result = service.sync_server_updated(server_data, "")
 

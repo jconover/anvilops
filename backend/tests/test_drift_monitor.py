@@ -15,8 +15,8 @@ Covers:
 from __future__ import annotations
 
 import json
-from datetime import datetime, timedelta, timezone
-from unittest.mock import AsyncMock, MagicMock, call, patch
+from datetime import datetime, timezone
+from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import UUID, uuid4
 
 import pytest
@@ -25,9 +25,7 @@ from app.services.drift_monitor import (
     AsyncDriftMonitor,
     DriftMonitor,
     _map_severity_to_notification,
-    categorize_drift,
 )
-
 
 # ---------------------------------------------------------------------------
 # _map_severity_to_notification
@@ -280,7 +278,11 @@ class TestDriftMonitorPollDriftEvents:
 
     def test_skips_unmanaged_nodes(self):
         """Reports for certnames not in the server database are skipped."""
-        reports = [{"certname": "unmanaged.example.com", "hash": "h1", "receive_time": "2024-01-01T00:00:00Z"}]
+        reports = [{
+            "certname": "unmanaged.example.com",
+            "hash": "h1",
+            "receive_time": "2024-01-01T00:00:00Z",
+        }]
         puppet = self._make_puppet(reports=reports)
         monitor = DriftMonitor(puppet_service=puppet)
 
@@ -599,16 +601,16 @@ class TestDriftMonitorSendDriftNotifications:
              "title": "Drift on web01", "message": "critical drift"},
         ]
 
-        with patch("app.services.notifications.NotificationService") as MockNotif:
-            with patch("app.services.slack.get_slack_notifier") as MockSlack:
+        with patch("app.services.notifications.NotificationService") as mock_notif_cls:
+            with patch("app.services.slack.get_slack_notifier") as mock_slack_cls:
                 mock_slack = MagicMock()
-                MockSlack.return_value = mock_slack
+                mock_slack_cls.return_value = mock_slack
 
                 monitor = DriftMonitor()
                 monitor.send_drift_notifications(events=[], alerts=alerts)
 
-            MockNotif.create_sync.assert_called_once()
-            call_kwargs = MockNotif.create_sync.call_args[1]
+            mock_notif_cls.create_sync.assert_called_once()
+            call_kwargs = mock_notif_cls.create_sync.call_args[1]
             assert call_kwargs["severity"] == "error"  # critical -> error
             assert call_kwargs["category"] == "compliance"
 
@@ -623,9 +625,9 @@ class TestDriftMonitorSendDriftNotifications:
         ]
 
         with patch("app.services.notifications.NotificationService"):
-            with patch("app.services.slack.get_slack_notifier") as MockSlack:
+            with patch("app.services.slack.get_slack_notifier") as mock_slack_cls:
                 mock_slack = MagicMock()
-                MockSlack.return_value = mock_slack
+                mock_slack_cls.return_value = mock_slack
 
                 monitor = DriftMonitor()
                 monitor.send_drift_notifications(events=[], alerts=alerts)
@@ -640,25 +642,25 @@ class TestDriftMonitorSendDriftNotifications:
              "title": "Crit", "message": "crit"},
         ]
 
-        with patch("app.services.notifications.NotificationService") as MockNotif:
-            MockNotif.create_sync.side_effect = RuntimeError("notification service down")
+        with patch("app.services.notifications.NotificationService") as mock_notif_cls:
+            mock_notif_cls.create_sync.side_effect = RuntimeError("notification service down")
 
-            with patch("app.services.slack.get_slack_notifier") as MockSlack:
+            with patch("app.services.slack.get_slack_notifier") as mock_slack_cls:
                 mock_slack = MagicMock()
                 mock_slack.send_message.side_effect = RuntimeError("slack down")
-                MockSlack.return_value = mock_slack
+                mock_slack_cls.return_value = mock_slack
 
                 monitor = DriftMonitor()
                 # Should not raise
                 monitor.send_drift_notifications(events=[], alerts=alerts)
 
     def test_empty_alerts_no_notifications_sent(self):
-        with patch("app.services.notifications.NotificationService") as MockNotif:
-            with patch("app.services.slack.get_slack_notifier") as MockSlack:
+        with patch("app.services.notifications.NotificationService") as mock_notif_cls:
+            with patch("app.services.slack.get_slack_notifier"):
                 monitor = DriftMonitor()
                 monitor.send_drift_notifications(events=[], alerts=[])
 
-                MockNotif.create_sync.assert_not_called()
+                mock_notif_cls.create_sync.assert_not_called()
 
 
 # ---------------------------------------------------------------------------

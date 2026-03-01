@@ -146,7 +146,10 @@ class TestCleanupRecordsMultipleFields:
             public_ip="8.8.8.8",
         )
         # Each action is a bullet line starting with "  - "
-        bullet_lines = [line for line in result["output"].splitlines() if line.strip().startswith("-")]
+        bullet_lines = [
+            line for line in result["output"].splitlines()
+            if line.strip().startswith("-")
+        ]
         assert len(bullet_lines) == 3
 
 

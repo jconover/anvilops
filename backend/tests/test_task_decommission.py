@@ -5,20 +5,17 @@ _run_dns_cleanup, _clear_server_metadata, DECOM_STEPS, and
 DECOMMISSIONABLE_STATUSES. All DB and service calls are mocked.
 """
 
-from unittest.mock import MagicMock, call, patch
-
-import pytest
+from unittest.mock import MagicMock, patch
 
 from app.tasks.decommission import (
-    DECOMMISSIONABLE_STATUSES,
     DECOM_STEPS,
+    DECOMMISSIONABLE_STATUSES,
     _clear_server_metadata,
     _run_awx_decommission,
     _run_dns_cleanup,
     _run_puppet_purge,
     _run_terraform_destroy,
 )
-
 
 # ---------------------------------------------------------------------------
 # Constants
