@@ -1,5 +1,5 @@
 # =============================================================================
-# AnvilOps Platform — Dev / Demo Environment (~$350/month)
+# AnvilOps Platform — Dev / Demo Environment (~$305/month)
 # =============================================================================
 # Smallest reasonable instance sizes for development, demos, and testing.
 # NOT suitable for production workloads.
@@ -53,10 +53,10 @@ eks_node_desired_size   = 2
 
 # -----------------------------------------------------------------------------
 # RDS PostgreSQL — Smallest instance, no Multi-AZ, minimal storage
-# Production: db.t3.large Multi-AZ (~$280/mo) → Dev: db.t3.small (~$30/mo)
+# Production: db.t3.large Multi-AZ (~$280/mo) → Dev: db.t3.micro (~$15/mo)
 # -----------------------------------------------------------------------------
 
-db_instance_class    = "db.t3.small"
+db_instance_class    = "db.t3.micro"
 db_allocated_storage = 20
 db_name              = "anvilops"
 
@@ -99,8 +99,8 @@ alert_email = "platform-team@example.com"
 
 # -----------------------------------------------------------------------------
 # Puppet Enterprise — Smaller instance for demo (10-node trial)
-# Production: r5.xlarge (~$200/mo) → Dev: t3.large (~$60/mo)
+# Production: r5.xlarge (~$200/mo) → Dev: t3.medium (~$30/mo)
 # -----------------------------------------------------------------------------
 
-puppet_instance_type = "t3.large"
+puppet_instance_type = "t3.medium"
 # puppet_ami_id      = ""  # Leave unset to auto-discover latest Amazon Linux 2023
