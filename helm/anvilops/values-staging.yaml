@@ -1,0 +1,26 @@
+api:
+  replicaCount: 2
+
+frontend:
+  replicaCount: 2
+
+worker:
+  replicaCount: 2
+
+config:
+  ENVIRONMENT: "staging"
+  DEBUG: "false"
+  NEXT_PUBLIC_API_URL: "https://staging-api.anvilops.internal/api/v1"
+  SLACK_ENABLED: "true"
+
+ingress:
+  host: staging.anvilops.example.com
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/certificate-arn: ""
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443}]'
+    alb.ingress.kubernetes.io/ssl-redirect: "443"
+    alb.ingress.kubernetes.io/healthcheck-path: /api/v1/health
+    alb.ingress.kubernetes.io/group.name: anvilops
+    alb.ingress.kubernetes.io/tags: "Environment=staging,Application=anvilops"

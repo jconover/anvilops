@@ -1,0 +1,35 @@
+AnvilOps has been deployed successfully!
+
+Chart:   {{ .Chart.Name }}-{{ .Chart.Version }}
+Release: {{ .Release.Name }}
+Namespace: {{ .Values.global.namespace }}
+
+Components enabled:
+{{- if .Values.api.enabled }}
+  - API            (replicas: {{ .Values.api.replicaCount }})
+{{- end }}
+{{- if .Values.frontend.enabled }}
+  - Frontend       (replicas: {{ .Values.frontend.replicaCount }})
+{{- end }}
+{{- if .Values.worker.enabled }}
+  - Worker         (replicas: {{ .Values.worker.replicaCount }})
+{{- end }}
+{{- if .Values.beat.enabled }}
+  - Beat Scheduler (replicas: {{ .Values.beat.replicaCount }})
+{{- end }}
+
+{{- if .Values.ingress.enabled }}
+
+Application URL:
+  https://{{ .Values.ingress.host }}
+
+{{- end }}
+
+Check pod status:
+  kubectl get pods -n {{ .Values.global.namespace }}
+
+Check pod logs:
+  kubectl logs -n {{ .Values.global.namespace }} -l app.kubernetes.io/name={{ include "anvilops.name" . }} --tail=100
+
+Check ingress:
+  kubectl get ingress -n {{ .Values.global.namespace }}

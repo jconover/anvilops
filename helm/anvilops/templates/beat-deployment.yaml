@@ -1,0 +1,59 @@
+{{- if .Values.beat.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "anvilops.fullname" . }}-beat
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "anvilops.componentLabels" (list . "beat") | nindent 4 }}
+spec:
+  replicas: {{ .Values.beat.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "anvilops.componentSelectorLabels" (list . "beat") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "anvilops.componentLabels" (list . "beat") | nindent 8 }}
+    spec:
+      serviceAccountName: {{ .Values.worker.serviceAccount.name }}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: {{ .Values.beat.podSecurityContext.runAsUser }}
+        runAsGroup: {{ .Values.beat.podSecurityContext.runAsGroup }}
+        fsGroup: {{ .Values.beat.podSecurityContext.fsGroup }}
+        seccompProfile:
+          type: RuntimeDefault
+      terminationGracePeriodSeconds: {{ .Values.beat.terminationGracePeriodSeconds }}
+      containers:
+        - name: beat
+          image: "{{ .Values.beat.image.repository }}:{{ .Values.beat.image.tag }}"
+          imagePullPolicy: {{ .Values.beat.image.pullPolicy }}
+          command:
+            {{- toYaml .Values.beat.command | nindent 12 }}
+          envFrom:
+            - configMapRef:
+                name: {{ include "anvilops.fullname" . }}-config
+            {{- if .Values.externalSecrets.enabled }}
+            - secretRef:
+                name: {{ include "anvilops.fullname" . }}-secrets
+            {{- end }}
+          resources:
+            {{- toYaml .Values.beat.resources | nindent 12 }}
+          securityContext:
+            {{- include "anvilops.containerSecurityContext" . | nindent 12 }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+          startupProbe:
+            {{- toYaml .Values.beat.probes.startup | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.beat.probes.readiness | nindent 12 }}
+          livenessProbe:
+            {{- toYaml .Values.beat.probes.liveness | nindent 12 }}
+      volumes:
+        - name: tmp
+          emptyDir:
+            sizeLimit: 1Gi
+      restartPolicy: Always
+{{- end }}
