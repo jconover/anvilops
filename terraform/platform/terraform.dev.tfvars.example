@@ -46,10 +46,14 @@ single_nat_gateway = true
 # Production: 3x t3.xlarge (~$450/mo) → Dev: 2x t3.medium (~$100/mo)
 # -----------------------------------------------------------------------------
 
-eks_node_instance_types = ["t3.medium"]
-eks_node_min_size       = 1
-eks_node_max_size       = 3
-eks_node_desired_size   = 2
+eks_node_instance_types    = ["t3.medium"]
+eks_node_min_size          = 1
+eks_node_max_size          = 3
+eks_node_desired_size      = 2
+# Public API endpoint — set to true for local kubectl access.
+# Restrict to your IP for security (run: curl -s ifconfig.me)
+eks_enable_public_endpoint = true
+eks_public_access_cidrs    = ["0.0.0.0/0"]  # e.g., ["203.0.113.42/32"]
 
 # -----------------------------------------------------------------------------
 # RDS PostgreSQL — Smallest instance, no Multi-AZ, minimal storage
