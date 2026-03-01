@@ -1,0 +1,373 @@
+global:
+  namespace: anvilops
+  labels: {}
+
+api:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: anvilops-api
+    tag: "MUST_BE_OVERRIDDEN"
+    pullPolicy: IfNotPresent
+  serviceAccount:
+    create: true
+    name: anvilops-api
+    annotations:
+      eks.amazonaws.com/role-arn: ""
+  podSecurityContext:
+    runAsUser: 1000
+    runAsGroup: 1000
+    fsGroup: 1000
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 8000
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+    behavior:
+      scaleDown:
+        stabilizationWindowSeconds: 300
+        policies:
+          - type: Pods
+            value: 1
+            periodSeconds: 60
+      scaleUp:
+        stabilizationWindowSeconds: 60
+        policies:
+          - type: Pods
+            value: 2
+            periodSeconds: 60
+  pdb:
+    enabled: true
+    minAvailable: 1
+  probes:
+    startup:
+      httpGet:
+        path: /health
+        port: 8000
+      initialDelaySeconds: 5
+      periodSeconds: 5
+      timeoutSeconds: 3
+      failureThreshold: 12
+    readiness:
+      httpGet:
+        path: /health
+        port: 8000
+      initialDelaySeconds: 10
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 3
+    liveness:
+      httpGet:
+        path: /health
+        port: 8000
+      initialDelaySeconds: 30
+      periodSeconds: 30
+      timeoutSeconds: 5
+      failureThreshold: 3
+  topologySpreadConstraints:
+    enabled: true
+
+frontend:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: anvilops-frontend
+    tag: "MUST_BE_OVERRIDDEN"
+    pullPolicy: IfNotPresent
+  podSecurityContext:
+    runAsUser: 1000
+    runAsGroup: 1000
+    fsGroup: 1000
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 3000
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  pdb:
+    enabled: true
+    minAvailable: 1
+  probes:
+    startup:
+      httpGet:
+        path: /
+        port: 3000
+      initialDelaySeconds: 5
+      periodSeconds: 5
+      timeoutSeconds: 3
+      failureThreshold: 12
+    readiness:
+      httpGet:
+        path: /
+        port: 3000
+      initialDelaySeconds: 10
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 3
+    liveness:
+      httpGet:
+        path: /
+        port: 3000
+      initialDelaySeconds: 15
+      periodSeconds: 30
+      timeoutSeconds: 5
+      failureThreshold: 3
+  topologySpreadConstraints:
+    enabled: true
+
+worker:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: anvilops-api  # Same image as API
+    tag: "MUST_BE_OVERRIDDEN"
+    pullPolicy: IfNotPresent
+  serviceAccount:
+    create: true
+    name: anvilops-worker
+    annotations:
+      eks.amazonaws.com/role-arn: ""
+  podSecurityContext:
+    runAsUser: 1000
+    runAsGroup: 1000
+    fsGroup: 1000
+  command:
+    - celery
+    - -A
+    - app.worker.celery_app
+    - worker
+    - --loglevel=info
+    - --concurrency=4
+    - -Q
+    - default,terraform,notifications
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      cpu: 2000m
+      memory: 2Gi
+  terminationGracePeriodSeconds: 300
+  pdb:
+    enabled: true
+    minAvailable: 1
+  probes:
+    startup:
+      exec:
+        command:
+          - celery
+          - -A
+          - app.worker.celery_app
+          - inspect
+          - ping
+          - --timeout
+          - "5"
+      initialDelaySeconds: 10
+      periodSeconds: 10
+      timeoutSeconds: 10
+      failureThreshold: 30
+    readiness:
+      exec:
+        command:
+          - celery
+          - -A
+          - app.worker.celery_app
+          - inspect
+          - ping
+      initialDelaySeconds: 30
+      periodSeconds: 30
+      timeoutSeconds: 10
+      failureThreshold: 3
+    liveness:
+      exec:
+        command:
+          - celery
+          - -A
+          - app.worker.celery_app
+          - inspect
+          - ping
+      initialDelaySeconds: 30
+      periodSeconds: 60
+      timeoutSeconds: 10
+      failureThreshold: 3
+  topologySpreadConstraints:
+    enabled: true
+
+beat:
+  enabled: true
+  replicaCount: 1  # Must be singleton
+  image:
+    repository: anvilops-api  # Same image as API
+    tag: "MUST_BE_OVERRIDDEN"
+    pullPolicy: IfNotPresent
+  podSecurityContext:
+    runAsUser: 1000
+    runAsGroup: 1000
+    fsGroup: 1000
+  command:
+    - celery
+    - -A
+    - app.worker.celery_app
+    - beat
+    - --loglevel=info
+    - --pidfile=/tmp/celerybeat.pid
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  terminationGracePeriodSeconds: 60
+  probes:
+    startup:
+      exec:
+        command:
+          - sh
+          - -c
+          - "test -f /tmp/celerybeat.pid && kill -0 $(cat /tmp/celerybeat.pid)"
+      initialDelaySeconds: 10
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 18
+    readiness:
+      exec:
+        command:
+          - celery
+          - -A
+          - app.worker.celery_app
+          - inspect
+          - ping
+          - --timeout
+          - "5"
+      initialDelaySeconds: 15
+      periodSeconds: 30
+      timeoutSeconds: 10
+    liveness:
+      exec:
+        command:
+          - celery
+          - -A
+          - app.worker.celery_app
+          - inspect
+          - ping
+          - --timeout
+          - "5"
+      initialDelaySeconds: 30
+      periodSeconds: 60
+      timeoutSeconds: 10
+      failureThreshold: 3
+
+ingress:
+  enabled: true
+  className: alb
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/certificate-arn: ""
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443}]'
+    alb.ingress.kubernetes.io/ssl-redirect: "443"
+    alb.ingress.kubernetes.io/healthcheck-path: /api/v1/health
+    alb.ingress.kubernetes.io/group.name: anvilops
+    alb.ingress.kubernetes.io/tags: "Environment=dev,Application=anvilops"
+  host: anvilops.example.com
+  paths:
+    - path: /api/*
+      pathType: ImplementationSpecific
+      service: api
+    - path: /*
+      pathType: ImplementationSpecific
+      service: frontend
+
+config:
+  ENVIRONMENT: "dev"
+  AWS_DEFAULT_REGION: "us-east-1"
+  ALLOWED_REGIONS: '["us-east-1","us-west-2"]'
+  REDIS_URL: "redis://redis.anvilops.svc.cluster.local:6379/0"
+  NEXT_PUBLIC_API_URL: "https://api.anvilops.internal/api/v1"
+  API_V1_PREFIX: "/api/v1"
+  PROJECT_NAME: "AnvilOps"
+  DEBUG: "false"
+  TERRAFORM_WORK_DIR: "/tmp/terraform"
+  AWX_BASE_URL: "http://awx-service.awx.svc.cluster.local"
+  PUPPET_BASE_URL: "https://puppet.anvilops.internal"
+  PUPPET_DEFAULT_ENVIRONMENT: "production"
+  PUPPET_CERTNAME_DOMAIN: "anvilops.internal"
+  SLACK_ENABLED: "false"
+  SLACK_CHANNEL: "#anvilops-builds"
+  SERVICENOW_ENABLED: "false"
+
+externalSecrets:
+  enabled: true
+  refreshInterval: 1h
+  secretStore:
+    name: aws-secrets-manager
+    provider:
+      region: us-east-1
+  secrets:
+    - secretKey: db_url
+      remoteRef:
+        key: anvilops/database
+        property: url
+      targetKey: DATABASE_URL
+    - secretKey: redis_url
+      remoteRef:
+        key: anvilops/redis
+        property: url
+      targetKey: REDIS_URL
+    - secretKey: cognito_secret
+      remoteRef:
+        key: anvilops/cognito
+        property: client_secret
+      targetKey: COGNITO_CLIENT_SECRET
+    - secretKey: awx_password
+      remoteRef:
+        key: anvilops/awx
+        property: password
+      targetKey: AWX_PASSWORD
+    - secretKey: puppet_token
+      remoteRef:
+        key: anvilops/puppet
+        property: api_token
+      targetKey: PUPPET_API_TOKEN
+    - secretKey: slack_webhook
+      remoteRef:
+        key: anvilops/slack
+        property: webhook_url
+      targetKey: SLACK_WEBHOOK_URL
+    - secretKey: slack_signing
+      remoteRef:
+        key: anvilops/slack
+        property: signing_secret
+      targetKey: SLACK_SIGNING_SECRET
+    - secretKey: servicenow_password
+      remoteRef:
+        key: anvilops/servicenow
+        property: password
+      targetKey: SERVICENOW_PASSWORD
+
+networkPolicies:
+  enabled: true
+
+namespace:
+  create: true
+  podSecurity:
+    enforce: restricted
+    warn: restricted

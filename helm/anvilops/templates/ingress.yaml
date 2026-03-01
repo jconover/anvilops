@@ -1,0 +1,32 @@
+{{- if .Values.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "anvilops.fullname" . }}
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "anvilops.labels" . | nindent 4 }}
+  {{- with .Values.ingress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  ingressClassName: {{ .Values.ingress.className }}
+  rules:
+    - host: {{ .Values.ingress.host }}
+      http:
+        paths:
+          {{- range .Values.ingress.paths }}
+          - path: {{ .path }}
+            pathType: {{ .pathType }}
+            backend:
+              service:
+                {{- if eq .service "api" }}
+                name: {{ include "anvilops.fullname" $ }}-api
+                {{- else }}
+                name: {{ include "anvilops.fullname" $ }}-frontend
+                {{- end }}
+                port:
+                  number: 80
+          {{- end }}
+{{- end }}

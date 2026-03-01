@@ -1,0 +1,57 @@
+api:
+  replicaCount: 1
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  autoscaling:
+    minReplicas: 1
+    maxReplicas: 3
+  topologySpreadConstraints:
+    enabled: false
+
+frontend:
+  replicaCount: 1
+  topologySpreadConstraints:
+    enabled: false
+
+worker:
+  replicaCount: 1
+  command:
+    - celery
+    - -A
+    - app.worker.celery_app
+    - worker
+    - --loglevel=info
+    - --concurrency=1
+    - -Q
+    - default,terraform,notifications
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+  topologySpreadConstraints:
+    enabled: false
+
+config:
+  ENVIRONMENT: "dev"
+  DEBUG: "true"
+  NEXT_PUBLIC_API_URL: "https://dev-api.anvilops.internal/api/v1"
+
+ingress:
+  host: dev.anvilops.example.com
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/certificate-arn: ""
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443}]'
+    alb.ingress.kubernetes.io/ssl-redirect: "443"
+    alb.ingress.kubernetes.io/healthcheck-path: /api/v1/health
+    alb.ingress.kubernetes.io/group.name: anvilops
+    alb.ingress.kubernetes.io/tags: "Environment=dev,Application=anvilops"

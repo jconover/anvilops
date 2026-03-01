@@ -1,0 +1,12 @@
+apiVersion: v2
+name: anvilops
+description: AnvilOps - Self-service server provisioning platform
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+maintainers:
+  - name: AnvilOps Team
+keywords:
+  - anvilops
+  - provisioning
+  - infrastructure
