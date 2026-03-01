@@ -173,6 +173,6 @@ output "state_bucket_name" {
 }
 
 output "state_dynamodb_table" {
-  description = "DynamoDB table for server provisioning Terraform state locking."
+  description = "DEPRECATED: DynamoDB table for state locking. Use use_lockfile=true instead."
   value       = local.lock_table_name
 }

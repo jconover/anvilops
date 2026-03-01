@@ -146,7 +146,6 @@ module "ecs_runner" {
   ecs_terraform_runner_role_arn = module.iam.ecs_terraform_runner_role_arn
   terraform_runner_image        = "${module.ecr.terraform_runner_repository_url}:latest"
   state_bucket_name             = local.state_bucket_name
-  dynamodb_table_name           = local.lock_table_name
   db_secret_arn                 = module.rds.db_secret_arn
   tags                          = local.common_tags
 }

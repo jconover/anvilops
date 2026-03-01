@@ -46,9 +46,9 @@ output "kms_key_alias" {
 output "backend_config" {
   description = "Map with all values needed to configure an S3 backend block."
   value = {
-    bucket         = aws_s3_bucket.state.id
-    region         = local.region
-    dynamodb_table = aws_dynamodb_table.locks.name
-    encrypt        = true
+    bucket       = aws_s3_bucket.state.id
+    region       = local.region
+    use_lockfile = true
+    encrypt      = true
   }
 }

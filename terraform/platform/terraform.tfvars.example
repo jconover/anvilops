@@ -9,7 +9,7 @@
 #   terraform init -backend-config="bucket=anvilops-terraform-state-dev-ACCOUNT_ID" \
 #                  -backend-config="key=platform/terraform.tfstate" \
 #                  -backend-config="region=us-east-1" \
-#                  -backend-config="dynamodb_table=anvilops-terraform-locks-dev" \
+#                  -backend-config="use_lockfile=true" \
 #                  -backend-config="encrypt=true"
 #   terraform plan
 #   terraform apply

@@ -41,7 +41,7 @@ This guide deploys the entire AnvilOps server provisioning platform to AWS using
 | Terraform Runner | ECS Fargate cluster + task definition | Ephemeral containers for terraform plan/apply |
 | Compliance | Puppet Enterprise EC2 (r5.xlarge) | Day-2+ drift detection and enforcement |
 | Security | IAM roles, IRSA, Secrets Manager, KMS | Least-privilege access, encrypted secrets |
-| State Backend | S3 + DynamoDB | Terraform state storage and locking |
+| State Backend | S3 (native locking) | Terraform state storage and locking |
 
 ### Key Numbers
 
@@ -102,7 +102,7 @@ terraform/platform/
 │   ├── dns/                 # Route 53, health checks
 │   ├── monitoring/          # CloudWatch alarms, dashboard, SNS
 │   ├── puppet/              # Puppet Enterprise EC2
-│   └── state-backend/       # S3 + DynamoDB for TF state
+│   └── state-backend/       # S3 for TF state (native locking)
 ├── k8s/
 │   ├── base/                # Kustomize base manifests
 │   └── overlays/
@@ -125,13 +125,13 @@ terraform/platform/
 
 ### Bootstrap the State Backend (one-time)
 
-This creates the S3 bucket and DynamoDB table that store Terraform state. Run once per AWS account:
+This creates the S3 bucket that stores Terraform state. Run once per AWS account:
 
 ```bash
 cd terraform/platform/modules/state-backend
 terraform init
 terraform apply -var="project_name=anvilops" -var="environment=dev"
-# Note the outputs: state_bucket_name, dynamodb_table_name
+# Note the output: state_bucket_name
 ```
 
 ### Initialize and Deploy
@@ -140,9 +140,9 @@ terraform apply -var="project_name=anvilops" -var="environment=dev"
 
 ```bash
 cd terraform/platform
-terraform init -backend-config="bucket=<state_bucket_name>" -backend-config="key=platform/terraform.tfstate" -backend-config="region=us-east-1" -backend-config="dynamodb_table=<dynamodb_table_name>"
+terraform init -backend-config="bucket=<state_bucket_name>" -backend-config="key=platform/terraform.tfstate" -backend-config="region=us-east-1" -backend-config="use_lockfile=true"
 
-# ── Option A: Dev / Demo (~$350/month) ──────────────────────────────
+# ── Option A: Dev / Demo (~$305/month) ──────────────────────────────
 cp terraform.dev.tfvars.example terraform.dev.tfvars
 # Edit terraform.dev.tfvars with your domain and zone ID
 terraform plan -var-file terraform.dev.tfvars -out tfplan
@@ -185,9 +185,9 @@ terraform apply tfplan
 
 ```powershell
 cd terraform\platform
-terraform init -backend-config="bucket=<state_bucket_name>" -backend-config="key=platform/terraform.tfstate" -backend-config="region=us-east-1" -backend-config="dynamodb_table=<dynamodb_table_name>"
+terraform init -backend-config="bucket=<state_bucket_name>" -backend-config="key=platform/terraform.tfstate" -backend-config="region=us-east-1" -backend-config="use_lockfile=true"
 
-# ── Option A: Dev / Demo (~$350/month) ──────────────────────────────
+# ── Option A: Dev / Demo (~$305/month) ──────────────────────────────
 Copy-Item terraform.dev.tfvars.example terraform.dev.tfvars
 # Edit terraform.dev.tfvars with your domain and zone ID
 terraform plan -var-file terraform.dev.tfvars -out tfplan
@@ -276,13 +276,13 @@ terraform init
 terraform apply -var="project_name=anvilops" -var="environment=production"
 ```
 
-Note the output values (`state_bucket_name`, `dynamodb_table_name`).
+Note the output value (`state_bucket_name`).
 
 ### Step 3: Initialize Main Platform
 
 ```bash
 cd terraform/platform
-terraform init -backend-config="bucket=<state_bucket_name>" -backend-config="key=platform/terraform.tfstate" -backend-config="region=us-east-1" -backend-config="dynamodb_table=<dynamodb_table_name>"
+terraform init -backend-config="bucket=<state_bucket_name>" -backend-config="key=platform/terraform.tfstate" -backend-config="region=us-east-1" -backend-config="use_lockfile=true"
 ```
 
 ### Step 4: Plan and Apply

@@ -18,7 +18,6 @@ logger = logging.getLogger(__name__)
 # These are the buckets/tables that must be pre-created by the bootstrap
 # Terraform configuration (see terraform/bootstrap/).
 _STATE_BUCKET_TEMPLATE = "anvilops-tfstate-{region}"
-_LOCK_TABLE_TEMPLATE = "anvilops-tflock-{region}"
 
 
 class MultiRegionManager:
@@ -101,7 +100,7 @@ class MultiRegionManager:
                     "bucket": "anvilops-tfstate-us-east-1",
                     "key": "servers/<workspace>/terraform.tfstate",
                     "region": "us-east-1",
-                    "dynamodb_table": "anvilops-tflock-us-east-1",
+                    "use_lockfile": True,
                     "encrypt": True,
                     "workspace_key_prefix": "servers",
                 }
@@ -116,13 +115,12 @@ class MultiRegionManager:
             )
 
         bucket = _STATE_BUCKET_TEMPLATE.format(region=region)
-        lock_table = _LOCK_TABLE_TEMPLATE.format(region=region)
 
         return {
             "bucket": bucket,
             "key": f"servers/{workspace}/terraform.tfstate",
             "region": region,
-            "dynamodb_table": lock_table,
+            "use_lockfile": True,
             "encrypt": True,
             "workspace_key_prefix": "servers",
         }

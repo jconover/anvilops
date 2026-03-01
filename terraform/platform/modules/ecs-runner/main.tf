@@ -83,8 +83,8 @@ resource "aws_ecs_task_definition" "terraform_runner" {
           value = var.state_bucket_name
         },
         {
-          name  = "TF_LOCK_TABLE"
-          value = var.dynamodb_table_name
+          name  = "TF_USE_LOCKFILE"
+          value = "true"
         }
       ]
 

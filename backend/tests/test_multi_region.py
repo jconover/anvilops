@@ -9,7 +9,6 @@ from unittest.mock import MagicMock
 import pytest
 
 from app.services.multi_region import (
-    _LOCK_TABLE_TEMPLATE,
     _STATE_BUCKET_TEMPLATE,
     MultiRegionManager,
 )
@@ -86,9 +85,9 @@ class TestGetBackendConfig:
         cfg = manager.get_backend_config("us-east-1", "my-workspace")
         assert cfg["bucket"] == "anvilops-tfstate-us-east-1"
 
-    def test_returns_correct_dynamodb_table(self, manager: MultiRegionManager):
+    def test_returns_use_lockfile(self, manager: MultiRegionManager):
         cfg = manager.get_backend_config("us-east-1", "my-workspace")
-        assert cfg["dynamodb_table"] == "anvilops-tflock-us-east-1"
+        assert cfg["use_lockfile"] is True
 
     def test_state_key_includes_workspace(self, manager: MultiRegionManager):
         cfg = manager.get_backend_config("us-east-1", "srv-request-abc123")
@@ -272,6 +271,3 @@ class TestNamingTemplates:
         result = _STATE_BUCKET_TEMPLATE.format(region="us-east-1")
         assert result == "anvilops-tfstate-us-east-1"
 
-    def test_lock_table_template_format(self):
-        result = _LOCK_TABLE_TEMPLATE.format(region="us-west-2")
-        assert result == "anvilops-tflock-us-west-2"

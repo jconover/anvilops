@@ -3,7 +3,7 @@ terraform {
     bucket         = "anvilops-terraform-state"
     key            = "servers/terraform.tfstate"
     region         = "us-east-1"
-    dynamodb_table = "anvilops-terraform-locks"
+    use_lockfile   = true
     encrypt        = true
 
     # Each server gets its own workspace, so the actual key becomes:

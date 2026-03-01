@@ -43,9 +43,10 @@ variable "state_bucket_name" {
   type        = string
 }
 
-variable "dynamodb_table_name" {
-  description = "DynamoDB table name used for Terraform state locking"
-  type        = string
+variable "use_lockfile" {
+  description = "Enable S3-native state locking (use_lockfile). Replaces deprecated DynamoDB locking."
+  type        = bool
+  default     = true
 }
 
 variable "db_secret_arn" {

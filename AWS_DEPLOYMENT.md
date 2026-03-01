@@ -76,7 +76,7 @@ Complete guide for deploying the AnvilOps server provisioning platform to AWS. T
 | Database | RDS PostgreSQL 16 | Persistent state, server requests |
 | Cache/Broker | ElastiCache Redis 7 | Celery broker + result backend |
 | Terraform Runner | ECS Fargate | Ephemeral terraform plan/apply tasks |
-| TF State | S3 + DynamoDB | Terraform state locking per server |
+| TF State | S3 (native locking) | Terraform state storage and locking per server |
 | Configuration | AWX on EKS | Day-1 Ansible playbook execution |
 | Compliance | Puppet Enterprise (EC2) | Day-2+ drift detection, enforcement |
 | Auth | AWS Cognito | User authentication (OIDC) |
@@ -647,7 +647,9 @@ The Kubernetes deployment for workers is in [Section 10](#10-kubernetes-deployme
 
 ## 7. Terraform State & ECS Fargate Runner
 
-### 7.1 Terraform State Backend (S3 + DynamoDB)
+### 7.1 Terraform State Backend (S3 with Native Locking)
+
+State locking uses S3 conditional writes (`use_lockfile = true`) instead of DynamoDB (deprecated in Terraform 1.10+).
 
 ```bash
 # S3 bucket for state files (one per workspace = one per server)
@@ -669,14 +671,6 @@ aws s3api put-public-access-block \
   --bucket anvilops-terraform-state \
   --public-access-block-configuration \
     BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true
-
-# DynamoDB table for state locking
-aws dynamodb create-table \
-  --table-name anvilops-terraform-locks \
-  --attribute-definitions AttributeName=LockID,AttributeType=S \
-  --key-schema AttributeName=LockID,KeyType=HASH \
-  --billing-mode PAY_PER_REQUEST \
-  --tags Key=Environment,Value=production Key=ManagedBy,Value=AnvilOps
 ```
 
 ### 7.2 ECS Fargate Setup for Terraform Runner
@@ -813,11 +807,11 @@ Each Terraform environment (`terraform/environments/dev|staging|production`) sho
 # terraform/environments/dev/backend.tf
 terraform {
   backend "s3" {
-    bucket         = "anvilops-terraform-state"
-    key            = "servers/terraform.tfstate"
-    region         = "us-east-1"
-    dynamodb_table = "anvilops-terraform-locks"
-    encrypt        = true
+    bucket       = "anvilops-terraform-state"
+    key          = "servers/terraform.tfstate"
+    region       = "us-east-1"
+    use_lockfile = true
+    encrypt      = true
   }
 }
 ```
@@ -2462,7 +2456,7 @@ Approximate monthly costs for the production deployment:
 | NAT Gateways | 2x (data transfer varies) | $65+ |
 | ALB | 1x + data transfer | $25+ |
 | S3 (TF state) | Minimal storage | $1 |
-| DynamoDB (TF locks) | On-demand | $1 |
+| S3 (TF lock files) | Minimal | $0 |
 | ECR | Image storage | $5 |
 | Route 53 | Hosted zones + queries | $2 |
 | CloudWatch | Logs + metrics + alarms | $30 |
