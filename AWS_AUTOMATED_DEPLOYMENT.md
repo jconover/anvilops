@@ -512,6 +512,14 @@ docker push "$AccountId.dkr.ecr.us-east-1.amazonaws.com/anvilops-api:v1.0.0"
 
 ```bash
 cd terraform/platform/k8s
+
+# Wait for External Secrets Operator CRDs to be fully registered before applying.
+# The kustomize base includes ExternalSecret and SecretStore resources; if the CRDs
+# haven't propagated to the API server yet the apply will fail with "no matches for kind".
+kubectl wait --for condition=established --timeout=120s \
+  crd/externalsecrets.external-secrets.io \
+  crd/secretstores.external-secrets.io
+
 kubectl kustomize overlays/production | kubectl apply -f -
 kubectl -n anvilops rollout status deployment/anvilops-api --timeout=300s
 ```
