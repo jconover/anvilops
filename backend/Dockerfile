@@ -15,12 +15,12 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends curl unzip ca-certificates && \
     ARCH=${TARGETARCH:-amd64} && \
     curl -fsSL "https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_${ARCH}.zip" \
-      -o /tmp/terraform.zip && \
+      -o /tmp/terraform_${TERRAFORM_VERSION}_linux_${ARCH}.zip && \
     curl -fsSL "https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_SHA256SUMS" \
       -o /tmp/SHA256SUMS && \
     cd /tmp && grep "terraform_${TERRAFORM_VERSION}_linux_${ARCH}.zip" SHA256SUMS | sha256sum -c - && \
-    unzip /tmp/terraform.zip -d /usr/local/bin/ && \
-    rm -rf /tmp/terraform.zip /tmp/SHA256SUMS /var/lib/apt/lists/*
+    unzip /tmp/terraform_${TERRAFORM_VERSION}_linux_${ARCH}.zip -d /usr/local/bin/ && \
+    rm -rf /tmp/terraform_${TERRAFORM_VERSION}_linux_${ARCH}.zip /tmp/SHA256SUMS /var/lib/apt/lists/*
 
 # ---- Runtime stage ----
 FROM python:3.12.8-slim-bookworm
