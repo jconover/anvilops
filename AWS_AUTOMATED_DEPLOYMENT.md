@@ -313,7 +313,21 @@ kubectl get nodes
 
 ### Step 6: Install Helm Charts
 
-EKS add-ons must be installed before deploying the application. You can use the Terraform config in `helm/` or install manually with the Helm CLI.
+EKS add-ons must be installed before deploying the application. Choose **one** of the two options below:
+
+- **[Option A: Helm CLI](#option-a-helm-cli-quick-setup)** — Quick one-off setup, good for learning or ad-hoc installs.
+- **[Option B: Terraform](#option-b-terraform-repeatable-all-environments)** — Repeatable and idempotent. Recommended for all environments (dev, staging, production). Jump to [Option B](#option-b-terraform-repeatable-all-environments) if you prefer infrastructure-as-code.
+
+> **Do not mix Option A and Option B.** Helm releases can only be managed by one tool at a time. If you already ran Option A and want to switch to Terraform, uninstall the manual releases first:
+> ```bash
+> helm uninstall aws-load-balancer-controller -n kube-system
+> helm uninstall external-secrets -n external-secrets
+> helm uninstall external-dns -n external-dns
+> helm uninstall metrics-server -n kube-system
+> helm uninstall cluster-autoscaler -n kube-system
+> helm uninstall keda -n keda
+> ```
+> Then run Option B with a clean slate.
 
 **Option A: Helm CLI (quick setup)**
 
@@ -397,14 +411,37 @@ helm install cluster-autoscaler autoscaler/cluster-autoscaler -n kube-system --s
 helm install keda keda/keda -n keda --create-namespace --wait
 ```
 
-**Option B: Terraform (repeatable, recommended for production)**
+**Option B: Terraform (repeatable, all environments)**
+
+The Terraform module auto-discovers cluster endpoint, CA certificate, and auth token
+from the cluster name — no manual token passing required.
 
 **Bash / macOS / Linux:**
 
 ```bash
 cd terraform/platform/helm
 terraform init
-terraform apply -var="cluster_name=$CLUSTER_NAME" -var="cluster_endpoint=$(terraform -chdir=.. output -raw eks_cluster_endpoint)" -var="cluster_ca_certificate=$(terraform -chdir=.. output -raw eks_cluster_ca_certificate)" -var="cluster_token=$(aws eks get-token --cluster-name $CLUSTER_NAME --query token --output text)" -var="vpc_id=$VPC_ID" -var="region=$REGION" -var="environment=dev" -var="domain=$DOMAIN" -var="alb_controller_role_arn=$ALB_ROLE_ARN" -var="external_dns_role_arn=$EXTDNS_ROLE_ARN" -var="cluster_autoscaler_role_arn=$AUTOSCALER_ROLE_ARN" -var="redis_endpoint=placeholder"
+
+# Set variables from platform outputs (if not already set from Option A above)
+CLUSTER_NAME=$(terraform -chdir=.. output -raw eks_cluster_name)
+VPC_ID=$(terraform -chdir=.. output -raw vpc_id)
+REGION=us-east-1
+ALB_ROLE_ARN=$(terraform -chdir=.. output -raw alb_controller_role_arn)
+EXTDNS_ROLE_ARN=$(terraform -chdir=.. output -raw external_dns_role_arn)
+AUTOSCALER_ROLE_ARN=$(terraform -chdir=.. output -raw cluster_autoscaler_role_arn)
+DOMAIN=anvilops.devopsnexus.io
+
+## Change "dev" to "staging" or "production" as needed
+terraform apply \
+  -var="cluster_name=$CLUSTER_NAME" \
+  -var="vpc_id=$VPC_ID" \
+  -var="region=$REGION" \
+  -var="environment=dev" \
+  -var="domain=$DOMAIN" \
+  -var="alb_controller_role_arn=$ALB_ROLE_ARN" \
+  -var="external_dns_role_arn=$EXTDNS_ROLE_ARN" \
+  -var="cluster_autoscaler_role_arn=$AUTOSCALER_ROLE_ARN" \
+  -var="redis_endpoint=placeholder"
 ```
 
 **PowerShell (Windows):**
@@ -412,10 +449,27 @@ terraform apply -var="cluster_name=$CLUSTER_NAME" -var="cluster_endpoint=$(terra
 ```powershell
 cd terraform\platform\helm
 terraform init
-$Endpoint = terraform "-chdir=.." output -raw eks_cluster_endpoint
-$CaCert   = terraform "-chdir=.." output -raw eks_cluster_ca_certificate
-$Token    = aws eks get-token --cluster-name $ClusterName --query token --output text
-terraform apply -var="cluster_name=$ClusterName" -var="cluster_endpoint=$Endpoint" -var="cluster_ca_certificate=$CaCert" -var="cluster_token=$Token" -var="vpc_id=$VpcId" -var="region=$Region" -var="environment=dev" -var="domain=$Domain" -var="alb_controller_role_arn=$AlbRoleArn" -var="external_dns_role_arn=$ExtDnsRoleArn" -var="cluster_autoscaler_role_arn=$AutoscalerArn" -var="redis_endpoint=placeholder"
+
+# Set variables from platform outputs (if not already set from Option A above)
+$ClusterName   = terraform "-chdir=.." output -raw eks_cluster_name
+$VpcId         = terraform "-chdir=.." output -raw vpc_id
+$Region        = "us-east-1"
+$AlbRoleArn    = terraform "-chdir=.." output -raw alb_controller_role_arn
+$ExtDnsRoleArn = terraform "-chdir=.." output -raw external_dns_role_arn
+$AutoscalerArn = terraform "-chdir=.." output -raw cluster_autoscaler_role_arn
+$Domain        = "anvilops.devopsnexus.io"
+
+## Change "dev" to "staging" or "production" as needed
+terraform apply `
+  -var="cluster_name=$ClusterName" `
+  -var="vpc_id=$VpcId" `
+  -var="region=$Region" `
+  -var="environment=dev" `
+  -var="domain=$Domain" `
+  -var="alb_controller_role_arn=$AlbRoleArn" `
+  -var="external_dns_role_arn=$ExtDnsRoleArn" `
+  -var="cluster_autoscaler_role_arn=$AutoscalerArn" `
+  -var="redis_endpoint=placeholder"
 ```
 
 **Verify all charts are running:**
@@ -595,6 +649,44 @@ Update `terraform.tfvars` (instance types, classes) and `terraform apply`.
 | Workers idle | `kubectl logs deploy/anvilops-worker -n anvilops` |
 | ExternalSecret CRD missing / v1beta1 error | Install or upgrade External Secrets Operator (>= 0.10 for v1 API): `helm install external-secrets external-secrets/external-secrets -n external-secrets --create-namespace --set installCRDs=true --wait` |
 | General debugging | `kubectl -n anvilops get events --sort-by='.lastTimestamp'` |
+
+### ALB Controller Webhook Race Condition
+
+**Symptom**
+
+```
+Error: failed calling webhook 'mservice.elbv2.k8s.aws': no endpoints available for service 'aws-load-balancer-webhook-service'
+```
+
+**Cause**
+
+`external_secrets`, `external_dns`, and/or `keda` were installed in parallel with `aws_load_balancer_controller`. The ALB webhook pod was not yet ready when those charts tried to create Services, causing the webhook admission call to fail.
+
+**Fix (already applied)**
+
+`depends_on = [helm_release.aws_load_balancer_controller]` is now set for all dependent charts in `terraform/platform/helm/install-charts.tf`. Re-running `terraform apply` on a fresh cluster will no longer hit this race condition.
+
+**Manual cleanup if you already hit this error**
+
+Remove the orphaned Helm releases and their Terraform state entries, then re-apply:
+
+```bash
+# List all helm releases across namespaces
+helm list -A
+
+# Remove the failed external-secrets release
+helm uninstall external-secrets -n external-secrets
+
+# Remove the failed keda release
+helm uninstall keda -n keda
+
+# Remove failed releases from Terraform state so it re-creates them
+terraform state rm helm_release.external_secrets
+terraform state rm helm_release.keda
+
+# Then re-run
+terraform apply
+```
 
 ---
 

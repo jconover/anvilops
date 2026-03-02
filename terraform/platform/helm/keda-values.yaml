@@ -6,7 +6,7 @@ resources:
     limits:
       cpu: 200m
       memory: 256Mi
-  metricServer:
+  metricsServer:
     requests:
       cpu: 50m
       memory: 64Mi

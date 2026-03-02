@@ -6,6 +6,10 @@ terraform {
   required_version = ">= 1.11.0"
 
   required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
+    }
     helm = {
       source  = "hashicorp/helm"
       version = "~> 2.12"
@@ -18,26 +22,35 @@ terraform {
 }
 
 # -----------------------------------------------------------------------------
-# Providers — use explicit config when variables are provided, otherwise
-# fall back to the local kubeconfig (set by `aws eks update-kubeconfig`).
+# Providers
 # -----------------------------------------------------------------------------
+
+provider "aws" {
+  region = var.region
+}
+
+# Fetch cluster connection details automatically — no manual token passing.
+data "aws_eks_cluster" "this" {
+  name = var.cluster_name
+}
+
+data "aws_eks_cluster_auth" "this" {
+  name = var.cluster_name
+}
 
 provider "helm" {
   kubernetes {
-    host                   = var.cluster_endpoint != "" ? var.cluster_endpoint : null
-    cluster_ca_certificate = var.cluster_ca_certificate != "" ? base64decode(var.cluster_ca_certificate) : null
-    token                  = var.cluster_token != "" ? var.cluster_token : null
-
-    # Falls back to ~/.kube/config when the above are null
-    config_path = var.cluster_endpoint == "" ? "~/.kube/config" : null
+    host                   = data.aws_eks_cluster.this.endpoint
+    cluster_ca_certificate = base64decode(data.aws_eks_cluster.this.certificate_authority[0].data)
+    token                  = data.aws_eks_cluster_auth.this.token
   }
 }
 
 provider "kubectl" {
-  host                   = var.cluster_endpoint != "" ? var.cluster_endpoint : null
-  cluster_ca_certificate = var.cluster_ca_certificate != "" ? base64decode(var.cluster_ca_certificate) : null
-  token                  = var.cluster_token != "" ? var.cluster_token : null
-  load_config_file       = var.cluster_endpoint == "" ? true : false
+  host                   = data.aws_eks_cluster.this.endpoint
+  cluster_ca_certificate = base64decode(data.aws_eks_cluster.this.certificate_authority[0].data)
+  token                  = data.aws_eks_cluster_auth.this.token
+  load_config_file       = false
 }
 
 # -----------------------------------------------------------------------------
@@ -47,25 +60,6 @@ provider "kubectl" {
 variable "cluster_name" {
   description = "Name of the EKS cluster."
   type        = string
-}
-
-variable "cluster_endpoint" {
-  description = "EKS cluster API endpoint URL. Leave empty to use local kubeconfig."
-  type        = string
-  default     = ""
-}
-
-variable "cluster_ca_certificate" {
-  description = "Base64-encoded CA certificate for the EKS cluster. Leave empty to use local kubeconfig."
-  type        = string
-  default     = ""
-}
-
-variable "cluster_token" {
-  description = "Authentication token for the EKS cluster. Leave empty to use local kubeconfig."
-  type        = string
-  sensitive   = true
-  default     = ""
 }
 
 variable "region" {
@@ -147,8 +141,10 @@ resource "helm_release" "external_secrets" {
 
   values = [file("${path.module}/external-secrets-values.yaml")]
 
-  timeout = 600
-  wait    = true
+  timeout    = 600
+  wait       = true
+  atomic     = true
+  depends_on = [helm_release.aws_load_balancer_controller]
 }
 
 # -----------------------------------------------------------------------------
@@ -172,8 +168,9 @@ resource "helm_release" "external_dns" {
     })
   ]
 
-  timeout = 600
-  wait    = true
+  timeout    = 600
+  wait       = true
+  depends_on = [helm_release.aws_load_balancer_controller]
 }
 
 # -----------------------------------------------------------------------------
@@ -231,8 +228,25 @@ resource "helm_release" "keda" {
 
   values = [file("${path.module}/keda-values.yaml")]
 
-  timeout = 600
-  wait    = true
+  timeout    = 600
+  wait       = true
+  atomic     = true
+  depends_on = [helm_release.aws_load_balancer_controller]
+}
+
+# -----------------------------------------------------------------------------
+# Application Namespace
+# -----------------------------------------------------------------------------
+
+resource "kubectl_manifest" "anvilops_namespace" {
+  yaml_body = <<-YAML
+    apiVersion: v1
+    kind: Namespace
+    metadata:
+      name: anvilops
+      labels:
+        app.kubernetes.io/part-of: anvilops
+  YAML
 }
 
 # -----------------------------------------------------------------------------
@@ -244,7 +258,7 @@ resource "kubectl_manifest" "keda_celery_scaledobject" {
     redis_endpoint = var.redis_endpoint
   })
 
-  depends_on = [helm_release.keda]
+  depends_on = [helm_release.keda, kubectl_manifest.anvilops_namespace]
 }
 
 # -----------------------------------------------------------------------------
