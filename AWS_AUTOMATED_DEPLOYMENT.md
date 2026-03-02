@@ -2,6 +2,8 @@
 
 Deploy the entire AnvilOps platform to AWS using Terraform. This guide is the automated counterpart to [AWS_DEPLOYMENT.md](./AWS_DEPLOYMENT.md), which provides the manual step-by-step reference for each component. If you want to understand what each resource does and why, read that document first. If you want to deploy everything with minimal effort, follow this one.
 
+> **How these two guides relate:** This automated guide covers infrastructure provisioning (Steps 1–11). After validation, you will use specific sections of [AWS_DEPLOYMENT.md](./AWS_DEPLOYMENT.md) for Day-1 application configuration (AWX and Puppet Enterprise setup). You do **not** need to repeat the infrastructure steps from AWS_DEPLOYMENT.md.
+
 ---
 
 ## Table of Contents
@@ -568,6 +570,8 @@ aws cognito-idp admin-add-user-to-group --user-pool-id $UserPoolId --username ad
 .\scripts\smoke-test.ps1
 ```
 
+> **Next:** If smoke tests pass, proceed to [Post-Deployment Configuration](#6-post-deployment-configuration) below.
+
 ---
 
 ## 6. Post-Deployment Configuration
@@ -579,10 +583,16 @@ kubectl -n anvilops rollout restart deployment/anvilops-worker
 ```
 
 ### AWX (Ansible)
-Install AWX operator on EKS. See [AWS_DEPLOYMENT.md](./AWS_DEPLOYMENT.md) for full setup.
+Install the AWX operator and deploy the AWX instance on your EKS cluster. Follow the steps in **[AWS_DEPLOYMENT.md — §11: AWX Deployment](./AWS_DEPLOYMENT.md#11-awx-deployment)**, which covers:
+- Installing the AWX Operator via Helm
+- Deploying the AWX instance
+- Configuring AWX organizations, job templates, and inventory for AnvilOps
+- Updating the AnvilOps Kubernetes secrets with AWX credentials
+
+> **Note:** Skip sections §1–10 and §13+ of AWS_DEPLOYMENT.md — your automated deployment already handled those. You only need **§11 (AWX Deployment)** and **§12 (Puppet Enterprise)**.
 
 ### Puppet Enterprise
-SSH via SSM, complete PE installation, store API token in Secrets Manager.
+Complete the Puppet Enterprise setup by following **[AWS_DEPLOYMENT.md — §12: Puppet Enterprise](./AWS_DEPLOYMENT.md#12-puppet-enterprise)**, which covers connecting via SSM, completing the PE installation, and storing the API token in Secrets Manager.
 
 ### Confirm SNS Subscription
 Check inbox for AWS SNS confirmation email and click the link.
