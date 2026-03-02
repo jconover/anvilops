@@ -487,7 +487,7 @@ kubectl get pods -A | Select-String "external-secrets|external-dns|aws-load-bala
 **Bash / macOS / Linux:**
 
 ```bash
-cd ../../
+cd ../../../   # back to project root from terraform/platform/helm
 ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
 aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${ACCOUNT_ID}.dkr.ecr.us-east-1.amazonaws.com
 
@@ -499,7 +499,7 @@ docker push ${ACCOUNT_ID}.dkr.ecr.us-east-1.amazonaws.com/anvilops-api:v1.0.0
 **PowerShell (Windows):**
 
 ```powershell
-cd ../../
+cd ../../../   # back to project root from terraform/platform/helm
 $AccountId = aws sts get-caller-identity --query Account --output text
 aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin "$AccountId.dkr.ecr.us-east-1.amazonaws.com"
 
@@ -603,6 +603,8 @@ Tag images with release candidates, deploy to staging, validate, then promote to
 **Bash / macOS / Linux:**
 
 ```bash
+# Run from project root
+cd /path/to/anvilops   # adjust to your checkout location
 GIT_SHA=$(git rev-parse --short HEAD)
 docker build -t anvilops-api:${GIT_SHA} ./backend
 docker push ${ACCOUNT_ID}.dkr.ecr.us-east-1.amazonaws.com/anvilops-api:${GIT_SHA}
@@ -612,6 +614,8 @@ kubectl set image deployment/anvilops-api api=${ACCOUNT_ID}.dkr.ecr.us-east-1.am
 **PowerShell (Windows):**
 
 ```powershell
+# Run from project root
+Set-Location C:\path\to\anvilops   # adjust to your checkout location
 $GitSha = git rev-parse --short HEAD
 docker build -t "anvilops-api:$GitSha" ./backend
 docker push "$AccountId.dkr.ecr.us-east-1.amazonaws.com/anvilops-api:$GitSha"

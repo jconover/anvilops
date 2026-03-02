@@ -1003,6 +1003,9 @@ done
 ### 9.2 Build and Push Backend Image
 
 ```bash
+# Run from project root
+cd /path/to/anvilops   # adjust to your checkout location
+
 # Login to ECR
 ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
 aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${ACCOUNT_ID}.dkr.ecr.us-east-1.amazonaws.com
