@@ -52,8 +52,10 @@ test_api_health() {
     if [[ -z "$api_pod" ]]; then record_fail "API health - no pod found"; return; fi
 
     local response
+    # Use python3 (available in the API image); curl is not installed.
     response=$(kubectl exec -n "$NAMESPACE" "$api_pod" -- \
-        curl -sf -m 10 http://localhost:8000/health 2>/dev/null || echo "TIMEOUT")
+        python3 -c "import urllib.request; r=urllib.request.urlopen('http://127.0.0.1:8000/health',timeout=10); print(r.read().decode())" \
+        2>/dev/null || echo "TIMEOUT")
 
     if echo "$response" | grep -qi '"status"'; then
         record_pass "API health: ${response}"
@@ -70,11 +72,14 @@ test_frontend() {
 
     if [[ -z "$pod" ]]; then record_fail "Frontend - no pod found"; return; fi
 
+    # Use node (available in the frontend image); curl is not installed.
+    # Accept 2xx and 3xx — a redirect (e.g. / -> /login) is a healthy response.
     local code
     code=$(kubectl exec -n "$NAMESPACE" "$pod" -- \
-        curl -sf -m 10 -o /dev/null -w '%{http_code}' http://localhost:3000/ 2>/dev/null || echo "000")
+        node -e "require('http').get('http://127.0.0.1:3000/',(r)=>{process.stdout.write(String(r.statusCode))}).on('error',()=>process.stdout.write('000'))" \
+        2>/dev/null || echo "000")
 
-    if [[ "$code" == "200" ]]; then
+    if [[ "$code" =~ ^[23] ]]; then
         record_pass "Frontend reachable: HTTP ${code}"
     else
         record_fail "Frontend unreachable: HTTP ${code}"
@@ -163,6 +168,7 @@ main() {
 
     print_report
     [[ $FAILED -gt 0 ]] && exit 1
+    exit 0
 }
 
 main
