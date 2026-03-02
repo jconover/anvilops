@@ -163,9 +163,9 @@ set_kustomize_image() {
         if grep -q "^images:" "$kfile" 2>/dev/null && grep -q "name: ${img_name}$" "$kfile" 2>/dev/null; then
             # Replace existing entry using awk
             awk -v name="$img_name" -v newName="$new_name" -v newTag="$new_tag" '
-                /^  - name: / { if ($NF == name) { found=1; print "  - name: " name; next } else { found=0 } }
-                found && /newName:/ { print "    newName: " newName; next }
-                found && /newTag:/ { print "    newTag: \"" newTag "\""; found=0; next }
+                /^- name: / { if ($NF == name) { found=1; print "- name: " name; next } else { found=0 } }
+                found && /newName:/ { print "  newName: " newName; next }
+                found && /newTag:/ { print "  newTag: \"" newTag "\""; found=0; next }
                 { print }
             ' "$kfile" > "$tmp" && mv "$tmp" "$kfile"
         else
@@ -205,6 +205,19 @@ apply_manifests() {
 
     kubectl kustomize "$overlay_dir" | kubectl apply -f -
     log_success "Manifests applied."
+}
+
+patch_service_accounts() {
+    log_step "Patching IRSA annotations on service accounts..."
+    kubectl annotate serviceaccount anvilops-api -n anvilops \
+        "eks.amazonaws.com/role-arn=arn:aws:iam::${ACCOUNT_ID}:role/anvilops-api-${ENV}" \
+        --overwrite
+    log_success "Annotated anvilops-api with IRSA role: anvilops-api-${ENV}"
+
+    kubectl annotate serviceaccount anvilops-worker -n anvilops \
+        "eks.amazonaws.com/role-arn=arn:aws:iam::${ACCOUNT_ID}:role/anvilops-worker-${ENV}" \
+        --overwrite
+    log_success "Annotated anvilops-worker with IRSA role: anvilops-worker-${ENV}"
 }
 
 wait_for_rollout() {
@@ -260,6 +273,8 @@ main() {
     update_kustomize_images
     echo ""
     apply_manifests
+    echo ""
+    patch_service_accounts
     echo ""
     wait_for_rollout
 

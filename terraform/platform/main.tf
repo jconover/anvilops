@@ -241,6 +241,36 @@ module "puppet" {
 }
 
 # -----------------------------------------------------------------------------
+# EKS Cluster SG → RDS / Redis ingress rules
+# -----------------------------------------------------------------------------
+# EKS auto-creates a "cluster security group" that is attached to every node
+# and the control plane ENIs. This is distinct from the Terraform-managed
+# eks_security_group (node SG) defined in the networking module.
+# These rules must live here — not inside module.networking — because
+# module.eks depends on module.networking, so passing module.eks outputs
+# back into module.networking would create a circular dependency.
+
+resource "aws_vpc_security_group_ingress_rule" "rds_from_eks_cluster" {
+  security_group_id            = module.networking.rds_security_group_id
+  from_port                    = 5432
+  to_port                      = 5432
+  ip_protocol                  = "tcp"
+  referenced_security_group_id = module.eks.cluster_security_group_id
+  description                  = "PostgreSQL from EKS cluster SG (auto-created by EKS)"
+  tags                         = local.common_tags
+}
+
+resource "aws_vpc_security_group_ingress_rule" "redis_from_eks_cluster" {
+  security_group_id            = module.networking.redis_security_group_id
+  from_port                    = 6379
+  to_port                      = 6379
+  ip_protocol                  = "tcp"
+  referenced_security_group_id = module.eks.cluster_security_group_id
+  description                  = "Redis from EKS cluster SG (auto-created by EKS)"
+  tags                         = local.common_tags
+}
+
+# -----------------------------------------------------------------------------
 # State Backend - S3 + DynamoDB for server provisioning TF state
 # -----------------------------------------------------------------------------
 # Bootstrapped separately via: terraform/platform/modules/state-backend

@@ -111,8 +111,8 @@ patches:
 # these with the actual ECR URI and image tag at deploy time.
 images:
 - name: anvilops-api
-  newName: PLACEHOLDER
-  newTag: "latest"
+  newName: 457780993905.dkr.ecr.us-east-1.amazonaws.com/anvilops-api
+  newTag: "737074c"
 - name: anvilops-frontend
-  newName: PLACEHOLDER
-  newTag: "latest"
+  newName: 457780993905.dkr.ecr.us-east-1.amazonaws.com/anvilops-frontend
+  newTag: "737074c"
