@@ -38,6 +38,7 @@ spec:
             - beat
             - --loglevel=info
             - --pidfile=/tmp/celerybeat.pid
+            - --schedule=/tmp/celerybeat-schedule
           envFrom:
             - configMapRef:
                 name: anvilops-config
