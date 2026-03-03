@@ -55,3 +55,8 @@ output "puppet_role_arn" {
   description = "ARN of the Puppet EC2 instance role."
   value       = aws_iam_role.puppet.arn
 }
+
+output "github_actions_deploy_role_arn" {
+  description = "ARN of the GitHub Actions deploy role. Empty if OIDC is not enabled."
+  value       = var.enable_github_actions_oidc ? aws_iam_role.github_actions_deploy[0].arn : ""
+}

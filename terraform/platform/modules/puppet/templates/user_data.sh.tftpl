@@ -140,8 +140,40 @@ if [ -n "${puppet_code_repo_url}" ]; then
   /opt/puppetlabs/bin/puppet-code deploy --all --wait || true
 fi
 
-# [7/8] Install CloudWatch agent
-echo "[7/8] Installing CloudWatch agent..."
+# [7/9] Generate and store PE API token
+echo "[7/9] Generating PE RBAC API token..."
+PE_CONSOLE="https://${hostname}"
+
+# Wait for PE RBAC API to be ready
+for i in {1..30}; do
+  HTTP_CODE=$(curl -sk -o /dev/null -w "%%{http_code}" "$PE_CONSOLE:4433/rbac-api/v1/auth/token")
+  if [ "$HTTP_CODE" = "401" ] || [ "$HTTP_CODE" = "200" ]; then
+    echo "PE RBAC API is ready (HTTP $HTTP_CODE)"
+    break
+  fi
+  echo "Waiting for PE RBAC API... ($i/30, HTTP $HTTP_CODE)"
+  sleep 10
+done
+
+# Generate a 1-year API token
+PE_TOKEN=$(curl -sk "$PE_CONSOLE:4433/rbac-api/v1/auth/token" \
+  -H "Content-Type: application/json" \
+  -d "{\"login\": \"admin\", \"password\": \"$CONSOLE_PASSWORD\", \"lifetime\": \"1y\"}" \
+  | jq -r '.token // empty')
+
+if [ -n "$PE_TOKEN" ]; then
+  echo "Storing PE API token in Secrets Manager..."
+  aws secretsmanager put-secret-value \
+    --region ${aws_region} \
+    --secret-id "${puppet_api_token_secret_arn}" \
+    --secret-string "{\"api_token\": \"$PE_TOKEN\"}"
+  echo "PE API token stored successfully."
+else
+  echo "WARNING: Failed to generate PE API token. Manual token generation required."
+fi
+
+# [8/9] Install CloudWatch agent
+echo "[8/9] Installing CloudWatch agent..."
 if [ "$OS_FAMILY" = "rhel" ]; then
   yum install -y amazon-cloudwatch-agent
 elif [ "$OS_FAMILY" = "debian" ]; then
@@ -159,8 +191,8 @@ aws ssm get-parameter \
   -a fetch-config -m ec2 -s \
   -c file:/opt/aws/amazon-cloudwatch-agent/etc/config.json
 
-# [8/8] Finalize
-echo "[8/8] Finalizing..."
+# [9/9] Finalize
+echo "[9/9] Finalizing..."
 /opt/puppetlabs/bin/puppet resource service puppet ensure=running enable=true
 systemctl enable pe-puppetserver pe-puppetdb pe-console-services || true
 

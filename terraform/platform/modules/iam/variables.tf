@@ -53,3 +53,15 @@ variable "tags" {
   type        = map(string)
   default     = {}
 }
+
+variable "enable_github_actions_oidc" {
+  description = "Whether to create the GitHub Actions OIDC provider and deploy role."
+  type        = bool
+  default     = false
+}
+
+variable "github_actions_repos" {
+  description = "List of GitHub repositories allowed to assume the deploy role (format: owner/repo)."
+  type        = list(string)
+  default     = []
+}

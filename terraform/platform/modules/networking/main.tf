@@ -584,6 +584,33 @@ resource "aws_vpc_security_group_ingress_rule" "puppet_console" {
   description       = "Puppet console HTTPS from VPC"
 }
 
+resource "aws_vpc_security_group_ingress_rule" "puppet_classifier" {
+  security_group_id = aws_security_group.puppet.id
+  from_port         = 4433
+  to_port           = 4433
+  ip_protocol       = "tcp"
+  cidr_ipv4         = var.vpc_cidr
+  description       = "Puppet Classifier API from VPC"
+}
+
+resource "aws_vpc_security_group_ingress_rule" "puppet_puppetdb_api" {
+  security_group_id = aws_security_group.puppet.id
+  from_port         = 8081
+  to_port           = 8081
+  ip_protocol       = "tcp"
+  cidr_ipv4         = var.vpc_cidr
+  description       = "PuppetDB API from VPC"
+}
+
+resource "aws_vpc_security_group_ingress_rule" "puppet_orchestrator_api" {
+  security_group_id = aws_security_group.puppet.id
+  from_port         = 8143
+  to_port           = 8143
+  ip_protocol       = "tcp"
+  cidr_ipv4         = var.vpc_cidr
+  description       = "Puppet Orchestrator API from VPC"
+}
+
 resource "aws_vpc_security_group_egress_rule" "puppet_all" {
   security_group_id = aws_security_group.puppet.id
   ip_protocol       = "-1"

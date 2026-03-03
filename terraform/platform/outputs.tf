@@ -176,3 +176,12 @@ output "state_dynamodb_table" {
   description = "DEPRECATED: DynamoDB table for state locking. Use use_lockfile=true instead."
   value       = local.lock_table_name
 }
+
+# -----------------------------------------------------------------------------
+# CI/CD
+# -----------------------------------------------------------------------------
+
+output "github_actions_deploy_role_arn" {
+  description = "ARN of the GitHub Actions deploy role for CI/CD pipelines."
+  value       = module.iam.github_actions_deploy_role_arn
+}

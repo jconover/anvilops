@@ -2,7 +2,7 @@
 
 Deploy the entire AnvilOps platform to AWS using Terraform. This guide is the automated counterpart to [AWS_DEPLOYMENT.md](./AWS_DEPLOYMENT.md), which provides the manual step-by-step reference for each component. If you want to understand what each resource does and why, read that document first. If you want to deploy everything with minimal effort, follow this one.
 
-> **How these two guides relate:** This automated guide covers infrastructure provisioning (Steps 1–11). After validation, you will use specific sections of [AWS_DEPLOYMENT.md](./AWS_DEPLOYMENT.md) for Day-1 application configuration (AWX and Puppet Enterprise setup). You do **not** need to repeat the infrastructure steps from AWS_DEPLOYMENT.md.
+> **How these two guides relate:** This automated guide covers the complete infrastructure provisioning and Day-1 configuration (Steps 1–11), including AWX, Puppet Enterprise, CI/CD, and monitoring. The companion [AWS_DEPLOYMENT.md](./AWS_DEPLOYMENT.md) provides manual step-by-step reference if you need to understand what each resource does. You do **not** need to follow any sections of AWS_DEPLOYMENT.md when using this automated guide.
 
 ---
 
@@ -14,6 +14,10 @@ Deploy the entire AnvilOps platform to AWS using Terraform. This guide is the au
 4. [Quick Start (TL;DR)](#4-quick-start-tldr)
 5. [Step-by-Step Deployment](#5-step-by-step-deployment)
 6. [Post-Deployment Configuration](#6-post-deployment-configuration)
+   - [6a. AWX Configuration Details](#6a-awx-configuration-details)
+   - [6b. Puppet Enterprise Details](#6b-puppet-enterprise-details)
+   - [6c. CI/CD Pipeline Setup](#6c-cicd-pipeline-setup)
+   - [6d. Monitoring & Observability](#6d-monitoring--observability)
 7. [Environment Promotion](#7-environment-promotion)
 8. [Updating the Application](#8-updating-the-application)
 9. [Scaling Guide](#9-scaling-guide)
@@ -42,6 +46,8 @@ This guide deploys the entire AnvilOps server provisioning platform to AWS using
 | Monitoring | CloudWatch (logs, metrics, alarms, dashboards) | Observability across all components |
 | Terraform Runner | ECS Fargate cluster + task definition | Ephemeral containers for terraform plan/apply |
 | Compliance | Puppet Enterprise EC2 (r5.xlarge) | Day-2+ drift detection and enforcement |
+| AWX (Ansible) | AWX Operator + AWX CR (EKS) | Ansible automation for server provisioning playbooks |
+| Monitoring Stack | kube-prometheus-stack (EKS) | Prometheus metrics, Grafana dashboards, Alertmanager |
 | Security | IAM roles, IRSA, Secrets Manager, KMS | Least-privilege access, encrypted secrets |
 | State Backend | S3 (native locking) | Terraform state storage and locking |
 
@@ -583,19 +589,190 @@ kubectl -n anvilops rollout restart deployment/anvilops-worker
 ```
 
 ### AWX (Ansible)
-Install the AWX operator and deploy the AWX instance on your EKS cluster. Follow the steps in **[AWS_DEPLOYMENT.md — §11: AWX Deployment](./AWS_DEPLOYMENT.md#11-awx-deployment)**, which covers:
-- Installing the AWX Operator via Helm
-- Deploying the AWX instance
-- Configuring AWX organizations, job templates, and inventory for AnvilOps
-- Updating the AnvilOps Kubernetes secrets with AWX credentials
 
-> **Note:** Skip sections §1–10 and §13+ of AWS_DEPLOYMENT.md — your automated deployment already handled those. You only need **§11 (AWX Deployment)** and **§12 (Puppet Enterprise)**.
+AWX is now fully automated by Terraform. The Helm chart step (`terraform/platform/helm`) installs the AWX Operator, deploys the AWX instance, creates K8s secrets for the admin password and PostgreSQL connection, stores credentials in AWS Secrets Manager (for the ExternalSecret in the anvilops namespace), and runs a configuration Job that creates the AnvilOps organization, project, inventories, and job templates.
+
+**One manual prerequisite:** Before running the Helm chart step, create the `awx` database in your RDS instance:
+
+```bash
+# Connect to RDS via a pod in the cluster
+kubectl run psql-client --rm -it --restart=Never --image=postgres:16 -- \
+  psql "host=<RDS_ENDPOINT> user=anvilops dbname=anvilops sslmode=require" \
+  -c "CREATE DATABASE awx;"
+```
+
+See [Section 6a](#6a-awx-configuration-details) for full details on what Terraform creates and how secrets flow.
 
 ### Puppet Enterprise
-Complete the Puppet Enterprise setup by following **[AWS_DEPLOYMENT.md — §12: Puppet Enterprise](./AWS_DEPLOYMENT.md#12-puppet-enterprise)**, which covers connecting via SSM, completing the PE installation, and storing the API token in Secrets Manager.
+
+Puppet Enterprise is deployed as an EC2 instance by the platform Terraform module. The `user_data` script automatically:
+- Installs PE from the official tarball
+- Configures autosigning, Code Manager, and CloudWatch logging
+- Generates a 1-year RBAC API token and stores it in Secrets Manager
+
+No manual steps are required for basic operation. See [Section 6b](#6b-puppet-enterprise-details) for verification steps and token details.
 
 ### Confirm SNS Subscription
 Check inbox for AWS SNS confirmation email and click the link.
+
+---
+
+### 6a. AWX Configuration Details
+
+The Helm chart Terraform module (`terraform/platform/helm/install-charts.tf`) creates these AWX resources:
+
+| Resource | Purpose |
+|----------|---------|
+| `helm_release.awx_operator` | Installs the AWX Operator (v2.19.1) in the `awx` namespace |
+| `kubectl_manifest.awx_admin_password_secret` | K8s Secret with auto-generated admin password |
+| `kubectl_manifest.awx_postgres_config_secret` | K8s Secret with RDS connection details for the `awx` database |
+| `kubectl_manifest.awx_instance` | AWX custom resource that the operator reconciles into a running AWX deployment |
+| `aws_secretsmanager_secret.awx` | Stores AWX URL + credentials in Secrets Manager |
+| `kubectl_manifest.awx_config_job` | K8s Job that configures organization, project, inventories, and job templates |
+
+**Secrets flow:**
+1. Terraform generates `random_password.awx_admin` and `random_password.awx_db`
+2. Passwords are stored in K8s Secrets in the `awx` namespace (used by AWX directly)
+3. AWX URL + admin credentials are stored in Secrets Manager (`anvilops/awx-*`)
+4. The existing `ExternalSecret` in the `anvilops` namespace syncs from Secrets Manager into the app's K8s Secret
+
+**Variables for the Helm step:**
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `rds_endpoint` | RDS endpoint for AWX PostgreSQL | `""` |
+| `awx_git_repo_url` | Git repo URL for AWX project sync | `""` |
+| `project_name` | Project name for resource naming | `"anvilops"` |
+| `grafana_admin_password` | Grafana admin password | `"admin"` |
+
+**Verify AWX is running:**
+
+```bash
+kubectl -n awx get pods
+kubectl -n awx get awx
+```
+
+---
+
+### 6b. Puppet Enterprise Details
+
+The platform Terraform module (`terraform/platform/modules/puppet/`) provisions:
+
+| Resource | Purpose |
+|----------|---------|
+| EC2 instance (r5.xlarge) | Runs Puppet Enterprise server |
+| EBS volume (gp3) | Persistent `/opt/puppetlabs` storage |
+| Secrets Manager secret (console password) | Auto-generated PE console admin password |
+| Secrets Manager secret (API token) | RBAC API token (auto-generated by user_data) |
+| Route 53 A record | `puppet.<domain>` private DNS |
+| CloudWatch log groups | Server, console, PuppetDB, and system logs |
+| Security group rules | Ports 443, 4433, 8081, 8140, 8142, 8143 within VPC |
+
+**API token automation:** The `user_data` script waits for PE to be fully running, then:
+1. Authenticates to the RBAC API at `https://puppet.<domain>:4433/rbac-api/v1/auth/token`
+2. Generates a 1-year token
+3. Stores the token in Secrets Manager
+
+**Verify the API token was stored:**
+
+```bash
+aws secretsmanager get-secret-value \
+  --secret-id $(terraform output -raw puppet_api_token_secret_arn) \
+  --query SecretString --output text | jq .
+```
+
+If the token shows `placeholder-will-be-replaced-by-user-data`, the user_data script has not yet completed. Check the bootstrap log:
+
+```bash
+# Connect via SSM Session Manager
+aws ssm start-session --target $(terraform output -raw puppet_instance_id)
+sudo tail -f /var/log/puppet-bootstrap.log
+```
+
+---
+
+### 6c. CI/CD Pipeline Setup
+
+GitHub Actions OIDC integration is available but disabled by default. To enable:
+
+**1. Set Terraform variables:**
+
+```hcl
+# In your terraform.tfvars
+enable_github_actions_oidc = true
+github_actions_repos       = ["your-org/anvilops"]
+```
+
+**2. Apply:**
+
+```bash
+terraform plan -var-file terraform.dev.tfvars -out tfplan
+terraform apply tfplan
+```
+
+**3. Configure GitHub repository secrets:**
+
+```bash
+ROLE_ARN=$(terraform output -raw github_actions_deploy_role_arn)
+echo "Add this as a GitHub Actions secret named AWS_DEPLOY_ROLE_ARN: $ROLE_ARN"
+```
+
+In your GitHub repository settings, add these secrets:
+- `AWS_DEPLOY_ROLE_ARN` — the role ARN from the output above
+- `AWS_REGION` — `us-east-1` (or your primary region)
+- `EKS_CLUSTER_NAME` — from `terraform output -raw eks_cluster_name`
+
+**4. EKS auth mapping:**
+
+The GitHub Actions role needs to be mapped in the EKS `aws-auth` ConfigMap or EKS access entries to allow `kubectl` access:
+
+```bash
+eksctl create iamidentitymapping \
+  --cluster $(terraform output -raw eks_cluster_name) \
+  --arn $ROLE_ARN \
+  --group system:masters \
+  --username github-actions
+```
+
+**What Terraform creates:**
+- `aws_iam_openid_connect_provider.github_actions` — GitHub OIDC provider (gated by `enable_github_actions_oidc`)
+- `aws_iam_role.github_actions_deploy` — Deploy role with trust policy scoped to your repos
+- Scoped permissions: ECR push + EKS describe (not the overly broad managed policies)
+
+---
+
+### 6d. Monitoring & Observability
+
+Terraform creates a comprehensive monitoring stack:
+
+**CloudWatch (platform module):**
+- SNS topic with email subscription for all alarms
+- CloudWatch dashboard with ALB, RDS, Redis, EKS, and ECS panels
+- Log groups for API, worker, frontend, and celery-beat services
+- Metric filters for error tracking
+- Alarms: RDS (CPU, memory, storage, connections, latency), Redis (CPU, memory, connections), ALB (5xx, 4xx, response time, unhealthy hosts), ECS task failures, pod restarts
+
+**kube-prometheus-stack (Helm chart module):**
+- Prometheus with 30-day retention and 50Gi persistent storage
+- Grafana with persistent storage and configurable admin password
+- Alertmanager with 120-hour retention
+- ServiceMonitor and PodMonitor selectors enabled for custom metrics
+
+**Verify monitoring is running:**
+
+```bash
+# CloudWatch dashboard
+aws cloudwatch get-dashboard --dashboard-name anvilops-dev
+
+# Prometheus stack
+kubectl -n monitoring get pods
+
+# Access Grafana (port-forward)
+kubectl -n monitoring port-forward svc/kube-prometheus-stack-grafana 3000:80
+# Open http://localhost:3000 (admin / <grafana_admin_password>)
+```
+
+**Confirm SNS subscription:** Check your email for the AWS SNS confirmation and click the link. Until confirmed, alarm notifications will not be delivered.
 
 ---
 

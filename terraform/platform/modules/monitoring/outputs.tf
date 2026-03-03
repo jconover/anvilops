@@ -36,3 +36,8 @@ output "frontend_log_group_name" {
   description = "Name of the CloudWatch log group for the Next.js frontend service."
   value       = aws_cloudwatch_log_group.frontend.name
 }
+
+output "celery_beat_log_group_name" {
+  description = "Name of the CloudWatch log group for the Celery beat scheduler service."
+  value       = aws_cloudwatch_log_group.celery_beat.name
+}

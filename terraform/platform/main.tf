@@ -119,15 +119,17 @@ module "ecr" {
 module "iam" {
   source = "./modules/iam"
 
-  project_name          = var.project_name
-  environment           = var.environment
-  eks_oidc_provider_arn = module.eks.oidc_provider_arn
-  eks_oidc_provider_url = module.eks.oidc_provider_url
-  state_bucket_arn      = local.state_bucket_arn
-  db_secret_arn         = module.rds.db_secret_arn
-  redis_secret_arn      = module.elasticache.auth_token_secret_arn
-  route53_zone_id       = module.dns.hosted_zone_id
-  tags                  = local.common_tags
+  project_name               = var.project_name
+  environment                = var.environment
+  eks_oidc_provider_arn      = module.eks.oidc_provider_arn
+  eks_oidc_provider_url      = module.eks.oidc_provider_url
+  state_bucket_arn           = local.state_bucket_arn
+  db_secret_arn              = module.rds.db_secret_arn
+  redis_secret_arn           = module.elasticache.auth_token_secret_arn
+  route53_zone_id            = module.dns.hosted_zone_id
+  enable_github_actions_oidc = var.enable_github_actions_oidc
+  github_actions_repos       = var.github_actions_repos
+  tags                       = local.common_tags
 }
 
 # -----------------------------------------------------------------------------

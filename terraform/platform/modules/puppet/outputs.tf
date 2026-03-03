@@ -37,3 +37,8 @@ output "cloudwatch_log_groups" {
     system         = aws_cloudwatch_log_group.puppet_system.name
   }
 }
+
+output "puppet_api_token_secret_arn" {
+  description = "ARN of the Secrets Manager secret for the PE RBAC API token."
+  value       = aws_secretsmanager_secret.puppet_api_token.arn
+}

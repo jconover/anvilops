@@ -118,6 +118,12 @@ resource "aws_cloudwatch_log_group" "frontend" {
   tags              = local.common_tags
 }
 
+resource "aws_cloudwatch_log_group" "celery_beat" {
+  name              = "/anvilops/${var.environment}/celery-beat"
+  retention_in_days = local.retention_days
+  tags              = local.common_tags
+}
+
 # Note: The terraform_runner log group is created by the ecs-runner module.
 # This module references it by name in the dashboard query below.
 
@@ -492,6 +498,32 @@ resource "aws_cloudwatch_metric_alarm" "ecs_task_failures" {
 }
 
 # =============================================================================
+# EKS Pod Restart Alarms
+# =============================================================================
+
+resource "aws_cloudwatch_metric_alarm" "pod_restarts" {
+  alarm_name          = "${local.name_prefix}-pod-restarts-high"
+  alarm_description   = "Pod restarts in the anvilops namespace exceeded 3 in 15 minutes."
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = 1
+  metric_name         = "pod_number_of_container_restarts"
+  namespace           = "ContainerInsights"
+  period              = 900
+  statistic           = "Maximum"
+  threshold           = 3
+  datapoints_to_alarm = 1
+  treat_missing_data  = "notBreaching"
+  dimensions = {
+    ClusterName = var.eks_cluster_name
+    Namespace   = "anvilops"
+  }
+  actions_enabled = var.alarm_actions_enabled
+  alarm_actions   = [aws_sns_topic.alerts.arn]
+  ok_actions      = [aws_sns_topic.alerts.arn]
+  tags            = local.common_tags
+}
+
+# =============================================================================
 # CloudWatch Dashboard
 # =============================================================================
 
@@ -515,7 +547,7 @@ resource "aws_cloudwatch_dashboard" "main" {
           metrics = [
             ["AWS/ApplicationELB", "RequestCount", "LoadBalancer", var.alb_arn_suffix, { label = "Requests/min" }],
           ]
-          view = "timeSeries"
+          view  = "timeSeries"
           yAxis = { left = { min = 0, label = "Count" } }
         }
       },
@@ -534,8 +566,8 @@ resource "aws_cloudwatch_dashboard" "main" {
             ["...", { stat = "p95", label = "p95" }],
             ["...", { stat = "p99", label = "p99" }],
           ]
-          view = "timeSeries"
-          yAxis = { left = { min = 0, label = "Seconds" } }
+          view        = "timeSeries"
+          yAxis       = { left = { min = 0, label = "Seconds" } }
           annotations = { horizontal = [{ value = 2.0, label = "p99 Alarm (2s)", color = "#d62728" }] }
         }
       },
@@ -555,7 +587,7 @@ resource "aws_cloudwatch_dashboard" "main" {
             ["AWS/ApplicationELB", "HTTPCode_Target_5XX_Count", "LoadBalancer", var.alb_arn_suffix, { label = "Target 5XX", color = "#ff7f0e" }],
             ["AWS/ApplicationELB", "HTTPCode_Target_4XX_Count", "LoadBalancer", var.alb_arn_suffix, { label = "Target 4XX", color = "#ffbb78" }],
           ]
-          view = "timeSeries"
+          view  = "timeSeries"
           yAxis = { left = { min = 0, label = "Count" } }
         }
       },
@@ -574,8 +606,8 @@ resource "aws_cloudwatch_dashboard" "main" {
           metrics = [
             ["AWS/RDS", "CPUUtilization", "DBInstanceIdentifier", var.rds_instance_id, { label = "CPU %" }],
           ]
-          view = "timeSeries"
-          yAxis = { left = { min = 0, max = 100, label = "Percent" } }
+          view        = "timeSeries"
+          yAxis       = { left = { min = 0, max = 100, label = "Percent" } }
           annotations = { horizontal = [{ value = 80, label = "Alarm Threshold", color = "#d62728" }] }
         }
       },
@@ -593,8 +625,8 @@ resource "aws_cloudwatch_dashboard" "main" {
           metrics = [
             ["AWS/RDS", "FreeableMemory", "DBInstanceIdentifier", var.rds_instance_id, { label = "Freeable Memory" }],
           ]
-          view = "timeSeries"
-          yAxis = { left = { min = 0, label = "Bytes" } }
+          view        = "timeSeries"
+          yAxis       = { left = { min = 0, label = "Bytes" } }
           annotations = { horizontal = [{ value = 536870912, label = "512 MB Threshold", color = "#d62728" }] }
         }
       },
@@ -612,8 +644,8 @@ resource "aws_cloudwatch_dashboard" "main" {
           metrics = [
             ["AWS/RDS", "DatabaseConnections", "DBInstanceIdentifier", var.rds_instance_id, { label = "Connections" }],
           ]
-          view = "timeSeries"
-          yAxis = { left = { min = 0, label = "Count" } }
+          view        = "timeSeries"
+          yAxis       = { left = { min = 0, label = "Count" } }
           annotations = { horizontal = [{ value = 150, label = "Alarm Threshold", color = "#d62728" }] }
         }
       },
@@ -632,8 +664,8 @@ resource "aws_cloudwatch_dashboard" "main" {
             ["AWS/RDS", "ReadLatency", "DBInstanceIdentifier", var.rds_instance_id, { label = "Read Latency" }],
             ["AWS/RDS", "WriteLatency", "DBInstanceIdentifier", var.rds_instance_id, { label = "Write Latency" }],
           ]
-          view = "timeSeries"
-          yAxis = { left = { min = 0, label = "Seconds" } }
+          view        = "timeSeries"
+          yAxis       = { left = { min = 0, label = "Seconds" } }
           annotations = { horizontal = [{ value = 0.020, label = "20 ms Threshold", color = "#d62728" }] }
         }
       },
@@ -653,7 +685,7 @@ resource "aws_cloudwatch_dashboard" "main" {
             ["AWS/ElastiCache", "CPUUtilization", "ReplicationGroupId", var.elasticache_replication_group_id, { label = "Host CPU %" }],
             ["AWS/ElastiCache", "EngineCPUUtilization", "ReplicationGroupId", var.elasticache_replication_group_id, { label = "Engine CPU %" }],
           ]
-          view = "timeSeries"
+          view  = "timeSeries"
           yAxis = { left = { min = 0, max = 100, label = "Percent" } }
         }
       },
@@ -671,8 +703,8 @@ resource "aws_cloudwatch_dashboard" "main" {
           metrics = [
             ["AWS/ElastiCache", "DatabaseMemoryUsagePercentage", "ReplicationGroupId", var.elasticache_replication_group_id, { label = "Memory %" }],
           ]
-          view = "timeSeries"
-          yAxis = { left = { min = 0, max = 100, label = "Percent" } }
+          view        = "timeSeries"
+          yAxis       = { left = { min = 0, max = 100, label = "Percent" } }
           annotations = { horizontal = [{ value = 80, label = "Alarm Threshold", color = "#d62728" }] }
         }
       },
@@ -690,7 +722,7 @@ resource "aws_cloudwatch_dashboard" "main" {
             ["AWS/ElastiCache", "CacheHits", "ReplicationGroupId", var.elasticache_replication_group_id, { stat = "Sum", label = "Hits" }],
             ["AWS/ElastiCache", "CacheMisses", "ReplicationGroupId", var.elasticache_replication_group_id, { stat = "Sum", label = "Misses" }],
           ]
-          view = "timeSeries"
+          view  = "timeSeries"
           yAxis = { left = { min = 0, label = "Count" } }
         }
       },
@@ -708,8 +740,8 @@ resource "aws_cloudwatch_dashboard" "main" {
           metrics = [
             ["AWS/ElastiCache", "CurrConnections", "ReplicationGroupId", var.elasticache_replication_group_id, { label = "Connections" }],
           ]
-          view = "timeSeries"
-          yAxis = { left = { min = 0, label = "Count" } }
+          view        = "timeSeries"
+          yAxis       = { left = { min = 0, label = "Count" } }
           annotations = { horizontal = [{ value = 500, label = "Alarm Threshold", color = "#d62728" }] }
         }
       },
@@ -728,7 +760,7 @@ resource "aws_cloudwatch_dashboard" "main" {
           metrics = [
             ["ContainerInsights", "node_cpu_utilization", "ClusterName", var.eks_cluster_name, { label = "Node CPU %" }],
           ]
-          view = "timeSeries"
+          view  = "timeSeries"
           yAxis = { left = { min = 0, max = 100, label = "Percent" } }
         }
       },
@@ -746,7 +778,7 @@ resource "aws_cloudwatch_dashboard" "main" {
           metrics = [
             ["ContainerInsights", "node_memory_utilization", "ClusterName", var.eks_cluster_name, { label = "Node Memory %" }],
           ]
-          view = "timeSeries"
+          view  = "timeSeries"
           yAxis = { left = { min = 0, max = 100, label = "Percent" } }
         }
       },
@@ -764,7 +796,7 @@ resource "aws_cloudwatch_dashboard" "main" {
           metrics = [
             ["ContainerInsights", "number_of_running_pods", "ClusterName", var.eks_cluster_name, { label = "Running Pods" }],
           ]
-          view = "timeSeries"
+          view  = "timeSeries"
           yAxis = { left = { min = 0, label = "Count" } }
         }
       },
@@ -784,7 +816,7 @@ resource "aws_cloudwatch_dashboard" "main" {
             ["ECS/ContainerInsights", "RunningTaskCount", "ClusterName", var.ecs_cluster_name, { label = "Running Tasks" }],
             ["ECS/ContainerInsights", "PendingTaskCount", "ClusterName", var.ecs_cluster_name, { label = "Pending Tasks" }],
           ]
-          view = "timeSeries"
+          view  = "timeSeries"
           yAxis = { left = { min = 0, label = "Count" } }
         }
       },
@@ -803,7 +835,7 @@ resource "aws_cloudwatch_dashboard" "main" {
             ["ECS/ContainerInsights", "CpuUtilized", "ClusterName", var.ecs_cluster_name, { label = "CPU Utilized" }],
             ["ECS/ContainerInsights", "MemoryUtilized", "ClusterName", var.ecs_cluster_name, { label = "Memory Utilized" }],
           ]
-          view = "timeSeries"
+          view  = "timeSeries"
           yAxis = { left = { min = 0, label = "Units" } }
         }
       },
@@ -835,7 +867,7 @@ resource "aws_cloudwatch_dashboard" "main" {
           metrics = [
             ["AnvilOps/${var.environment}", "CeleryQueueDepth", { label = "Queue Depth" }],
           ]
-          view = "timeSeries"
+          view  = "timeSeries"
           yAxis = { left = { min = 0, label = "Tasks" } }
         }
       },
@@ -853,7 +885,7 @@ resource "aws_cloudwatch_dashboard" "main" {
             ["AnvilOps/${var.environment}", "CeleryTaskDuration", { stat = "Average", label = "Avg Duration" }],
             ["AnvilOps/${var.environment}", "CeleryTaskDuration", { stat = "p95", label = "p95 Duration" }],
           ]
-          view = "timeSeries"
+          view  = "timeSeries"
           yAxis = { left = { min = 0, label = "Seconds" } }
         }
       },
@@ -872,7 +904,7 @@ resource "aws_cloudwatch_dashboard" "main" {
             ["AnvilOps/${var.environment}", "APIErrors", { label = "API Errors", color = "#d62728" }],
             ["AnvilOps/${var.environment}", "WorkerErrors", { label = "Worker Errors", color = "#ff7f0e" }],
           ]
-          view = "timeSeries"
+          view  = "timeSeries"
           yAxis = { left = { min = 0, label = "Count" } }
         }
       },

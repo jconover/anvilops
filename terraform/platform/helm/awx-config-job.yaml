@@ -1,0 +1,141 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: awx-configure
+  namespace: awx
+spec:
+  ttlSecondsAfterFinished: 600
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: awx-configure
+          image: python:3.11-slim
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -e
+              pip install --quiet awxkit
+
+              AWX_URL="http://awx-service.awx.svc.cluster.local"
+              AWX_USER="admin"
+              AWX_PASS="${awx_admin_password}"
+
+              echo "Waiting for AWX API to become ready..."
+              for i in $(seq 1 30); do
+                STATUS=$(python3 -c "
+              import urllib.request, sys
+              try:
+                  req = urllib.request.urlopen('$AWX_URL/api/v2/ping/', timeout=5)
+                  print(req.getcode())
+              except Exception as e:
+                  print('err')
+              " 2>/dev/null)
+                if [ "$STATUS" = "200" ]; then
+                  echo "AWX is ready."
+                  break
+                fi
+                echo "Attempt $i/30: not ready yet, sleeping 10s..."
+                sleep 10
+              done
+
+              python3 <<'PYEOF'
+              import os
+              from awxkit import api, config
+
+              awx_url  = "http://awx-service.awx.svc.cluster.local"
+              username = "admin"
+              password = "${awx_admin_password}"
+              git_repo = "${awx_git_repo_url}"
+              proj_name = "${project_name}"
+
+              config.base_url = awx_url
+              config.credentials = {"default": {"username": username, "password": password}}
+
+              root = api.Api().load_all()
+              v2   = root.available_versions.v2.get()
+
+              # ---- Organisation -----------------------------------------------
+              orgs = v2.organizations.get(name="AnvilOps")
+              if orgs.count == 0:
+                  org = v2.organizations.post({"name": "AnvilOps", "description": "AnvilOps automation organisation"})
+                  print(f"Created organisation: {org.name}")
+              else:
+                  org = orgs.results[0]
+                  print(f"Organisation already exists: {org.name}")
+
+              # ---- Project ----------------------------------------------------
+              projects = v2.projects.get(name=proj_name)
+              if projects.count == 0:
+                  project = v2.projects.post({
+                      "name": proj_name,
+                      "description": "AnvilOps Ansible playbooks",
+                      "organization": org.id,
+                      "scm_type": "git",
+                      "scm_url": git_repo,
+                      "scm_update_on_launch": True,
+                  })
+                  print(f"Created project: {project.name}")
+              else:
+                  project = projects.results[0]
+                  print(f"Project already exists: {project.name}")
+
+              # ---- Inventories ------------------------------------------------
+              for env in ("dev", "staging", "production"):
+                  inv_name = f"{proj_name}-{env}"
+                  invs = v2.inventories.get(name=inv_name)
+                  if invs.count == 0:
+                      inv = v2.inventories.post({
+                          "name": inv_name,
+                          "description": f"Inventory for {env} environment",
+                          "organization": org.id,
+                          "variables": f"environment: {env}",
+                      })
+                      print(f"Created inventory: {inv.name}")
+                  else:
+                      print(f"Inventory already exists: {inv_name}")
+
+              # ---- Job Templates ----------------------------------------------
+              templates = [
+                  {
+                      "name": f"{proj_name}-server-provisioning",
+                      "description": "Provision a new server",
+                      "playbook": "playbooks/provision_server.yml",
+                  },
+                  {
+                      "name": f"{proj_name}-compliance-check",
+                      "description": "Run compliance checks against servers",
+                      "playbook": "playbooks/compliance_check.yml",
+                  },
+                  {
+                      "name": f"{proj_name}-decommission",
+                      "description": "Decommission an existing server",
+                      "playbook": "playbooks/decommission_server.yml",
+                  },
+              ]
+
+              dev_inv = v2.inventories.get(name=f"{proj_name}-dev").results[0]
+
+              for tmpl in templates:
+                  jts = v2.job_templates.get(name=tmpl["name"])
+                  if jts.count == 0:
+                      jt = v2.job_templates.post({
+                          "name": tmpl["name"],
+                          "description": tmpl["description"],
+                          "job_type": "run",
+                          "inventory": dev_inv.id,
+                          "project": project.id,
+                          "playbook": tmpl["playbook"],
+                          "ask_inventory_on_launch": True,
+                          "ask_variables_on_launch": True,
+                      })
+                      print(f"Created job template: {jt.name}")
+                  else:
+                      print(f"Job template already exists: {tmpl['name']}")
+
+              print("AWX configuration complete.")
+              PYEOF
+          env:
+            - name: GRAFANA_ADMIN_PASSWORD
+              value: "${grafana_admin_password}"

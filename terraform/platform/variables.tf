@@ -226,3 +226,19 @@ variable "puppet_ami_id" {
   type        = string
   default     = ""
 }
+
+# -----------------------------------------------------------------------------
+# CI/CD - GitHub Actions
+# -----------------------------------------------------------------------------
+
+variable "enable_github_actions_oidc" {
+  description = "Whether to create the GitHub Actions OIDC provider and deploy role for CI/CD."
+  type        = bool
+  default     = false
+}
+
+variable "github_actions_repos" {
+  description = "List of GitHub repositories allowed to assume the deploy role (format: owner/repo)."
+  type        = list(string)
+  default     = []
+}
