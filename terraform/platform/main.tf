@@ -249,19 +249,19 @@ module "puppet" {
 module "helm_charts" {
   source = "./helm"
 
-  cluster_name               = module.eks.cluster_name
-  region                     = var.aws_region
-  environment                = var.environment
-  vpc_id                     = module.networking.vpc_id
-  domain                     = var.domain_name
-  alb_controller_role_arn    = module.iam.alb_controller_role_arn
-  external_dns_role_arn      = module.iam.external_dns_role_arn
+  cluster_name                = module.eks.cluster_name
+  region                      = var.aws_region
+  environment                 = var.environment
+  vpc_id                      = module.networking.vpc_id
+  domain                      = var.domain_name
+  alb_controller_role_arn     = module.iam.alb_controller_role_arn
+  external_dns_role_arn       = module.iam.external_dns_role_arn
   cluster_autoscaler_role_arn = module.iam.cluster_autoscaler_role_arn
-  redis_endpoint             = module.elasticache.primary_endpoint_address
-  rds_endpoint               = module.rds.db_endpoint
-  project_name               = var.project_name
-  awx_git_repo_url           = var.awx_git_repo_url
-  grafana_admin_password     = var.grafana_admin_password
+  redis_endpoint              = module.elasticache.primary_endpoint_address
+  rds_endpoint                = module.rds.db_endpoint
+  project_name                = var.project_name
+  awx_git_repo_url            = var.awx_git_repo_url
+  grafana_admin_password      = var.grafana_admin_password
 }
 
 # -----------------------------------------------------------------------------
