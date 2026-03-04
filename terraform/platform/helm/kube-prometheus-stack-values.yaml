@@ -2,6 +2,7 @@ grafana:
   enabled: true
   persistence:
     enabled: true
+    storageClassName: gp2
     size: 10Gi
   adminPassword: ${grafana_admin_password}
   service:
@@ -15,6 +16,7 @@ prometheus:
     storageSpec:
       volumeClaimTemplate:
         spec:
+          storageClassName: gp2
           accessModes: ["ReadWriteOnce"]
           resources:
             requests:
