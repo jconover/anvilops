@@ -117,7 +117,7 @@ terraform/platform/
 │       ├── dev/
 │       ├── staging/
 │       └── production/
-├── helm/                    # Helm chart values files
+├── helm/                    # Helm charts child module (deployed by platform root)
 └── scripts/
     ├── bootstrap.sh         # Full deployment (bash)
     ├── deploy-app.sh        # App build + deploy (bash)
@@ -321,10 +321,12 @@ kubectl get nodes
 
 ### Step 6: Install Helm Charts
 
-EKS add-ons must be installed before deploying the application. Choose **one** of the two options below:
+EKS add-ons are installed automatically by the `module "helm_charts"` child module during `terraform apply` (Step 4). No separate step is required for **Option B** below.
+
+If you prefer a quick manual install for learning purposes, use **Option A** instead — but do not mix both approaches.
 
 - **[Option A: Helm CLI](#option-a-helm-cli-quick-setup)** — Quick one-off setup, good for learning or ad-hoc installs.
-- **[Option B: Terraform](#option-b-terraform-repeatable-all-environments)** — Repeatable and idempotent. Recommended for all environments (dev, staging, production). Jump to [Option B](#option-b-terraform-repeatable-all-environments) if you prefer infrastructure-as-code.
+- **[Option B: Terraform](#option-b-terraform-repeatable-all-environments) (Recommended)** — Automatic. Charts deploy as part of the main `terraform apply` with all values wired from module outputs.
 
 > **Do not mix Option A and Option B.** Helm releases can only be managed by one tool at a time. If you already ran Option A and want to switch to Terraform, uninstall the manual releases first:
 > ```bash
@@ -335,7 +337,7 @@ EKS add-ons must be installed before deploying the application. Choose **one** o
 > helm uninstall cluster-autoscaler -n kube-system
 > helm uninstall keda -n keda
 > ```
-> Then run Option B with a clean slate.
+> Then run `terraform apply` from the platform root to let Terraform take over.
 
 **Option A: Helm CLI (quick setup)**
 
@@ -419,66 +421,11 @@ helm install cluster-autoscaler autoscaler/cluster-autoscaler -n kube-system --s
 helm install keda keda/keda -n keda --create-namespace --wait
 ```
 
-**Option B: Terraform (repeatable, all environments)**
+**Option B: Terraform (repeatable, all environments) — Recommended**
 
-The Terraform module auto-discovers cluster endpoint, CA certificate, and auth token
-from the cluster name — no manual token passing required.
+The Helm charts are wired as a child module of the platform root (`terraform/platform/helm/`). All values (Redis endpoint, RDS endpoint, IAM role ARNs, etc.) are passed automatically from other module outputs — no manual variable passing required. The charts deploy as part of the main `terraform apply` in Step 4.
 
-**Bash / macOS / Linux:**
-
-```bash
-cd terraform/platform/helm
-terraform init
-
-# Set variables from platform outputs (if not already set from Option A above)
-CLUSTER_NAME=$(terraform -chdir=.. output -raw eks_cluster_name)
-VPC_ID=$(terraform -chdir=.. output -raw vpc_id)
-REGION=us-east-1
-ALB_ROLE_ARN=$(terraform -chdir=.. output -raw alb_controller_role_arn)
-EXTDNS_ROLE_ARN=$(terraform -chdir=.. output -raw external_dns_role_arn)
-AUTOSCALER_ROLE_ARN=$(terraform -chdir=.. output -raw cluster_autoscaler_role_arn)
-DOMAIN=anvilops.devopsnexus.io
-
-## Change "dev" to "staging" or "production" as needed
-terraform apply \
-  -var="cluster_name=$CLUSTER_NAME" \
-  -var="vpc_id=$VPC_ID" \
-  -var="region=$REGION" \
-  -var="environment=dev" \
-  -var="domain=$DOMAIN" \
-  -var="alb_controller_role_arn=$ALB_ROLE_ARN" \
-  -var="external_dns_role_arn=$EXTDNS_ROLE_ARN" \
-  -var="cluster_autoscaler_role_arn=$AUTOSCALER_ROLE_ARN" \
-  -var="redis_endpoint=placeholder"
-```
-
-**PowerShell (Windows):**
-
-```powershell
-cd terraform\platform\helm
-terraform init
-
-# Set variables from platform outputs (if not already set from Option A above)
-$ClusterName   = terraform "-chdir=.." output -raw eks_cluster_name
-$VpcId         = terraform "-chdir=.." output -raw vpc_id
-$Region        = "us-east-1"
-$AlbRoleArn    = terraform "-chdir=.." output -raw alb_controller_role_arn
-$ExtDnsRoleArn = terraform "-chdir=.." output -raw external_dns_role_arn
-$AutoscalerArn = terraform "-chdir=.." output -raw cluster_autoscaler_role_arn
-$Domain        = "anvilops.devopsnexus.io"
-
-## Change "dev" to "staging" or "production" as needed
-terraform apply `
-  -var="cluster_name=$ClusterName" `
-  -var="vpc_id=$VpcId" `
-  -var="region=$Region" `
-  -var="environment=dev" `
-  -var="domain=$Domain" `
-  -var="alb_controller_role_arn=$AlbRoleArn" `
-  -var="external_dns_role_arn=$ExtDnsRoleArn" `
-  -var="cluster_autoscaler_role_arn=$AutoscalerArn" `
-  -var="redis_endpoint=placeholder"
-```
+No separate `cd terraform/platform/helm && terraform apply` step is needed.
 
 **Verify all charts are running:**
 
@@ -495,7 +442,7 @@ kubectl get pods -A | Select-String "external-secrets|external-dns|aws-load-bala
 **Bash / macOS / Linux:**
 
 ```bash
-cd ../../../   # back to project root from terraform/platform/helm
+cd ../../   # back to project root from terraform/platform
 ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
 aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${ACCOUNT_ID}.dkr.ecr.us-east-1.amazonaws.com
 
@@ -507,7 +454,7 @@ docker push ${ACCOUNT_ID}.dkr.ecr.us-east-1.amazonaws.com/anvilops-api:v1.0.0
 **PowerShell (Windows):**
 
 ```powershell
-cd ../../../   # back to project root from terraform/platform/helm
+cd ../../../   # back to project root from terraform/platform
 $AccountId = aws sts get-caller-identity --query Account --output text
 aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin "$AccountId.dkr.ecr.us-east-1.amazonaws.com"
 
@@ -590,9 +537,9 @@ kubectl -n anvilops rollout restart deployment/anvilops-worker
 
 ### AWX (Ansible)
 
-AWX is now fully automated by Terraform. The Helm chart step (`terraform/platform/helm`) installs the AWX Operator, deploys the AWX instance, creates K8s secrets for the admin password and PostgreSQL connection, stores credentials in AWS Secrets Manager (for the ExternalSecret in the anvilops namespace), and runs a configuration Job that creates the AnvilOps organization, project, inventories, and job templates.
+AWX is fully automated by Terraform. The `module "helm_charts"` child module (in `terraform/platform/helm/`) installs the AWX Operator, deploys the AWX instance, creates K8s secrets for the admin password and PostgreSQL connection, stores credentials in AWS Secrets Manager (for the ExternalSecret in the anvilops namespace), and runs a configuration Job that creates the AnvilOps organization, project, inventories, and job templates. All of this happens during the main `terraform apply`.
 
-**One manual prerequisite:** Before running the Helm chart step, create the `awx` database in your RDS instance:
+**One manual prerequisite:** Before running `terraform apply`, create the `awx` database in your RDS instance:
 
 ```bash
 # Connect to RDS via a pod in the cluster

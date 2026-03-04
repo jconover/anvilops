@@ -242,3 +242,20 @@ variable "github_actions_repos" {
   type        = list(string)
   default     = []
 }
+
+# -----------------------------------------------------------------------------
+# Helm Charts
+# -----------------------------------------------------------------------------
+
+variable "awx_git_repo_url" {
+  description = "Git repository URL for AWX project sync."
+  type        = string
+  default     = ""
+}
+
+variable "grafana_admin_password" {
+  description = "Grafana admin password for kube-prometheus-stack."
+  type        = string
+  default     = "admin"
+  sensitive   = true
+}

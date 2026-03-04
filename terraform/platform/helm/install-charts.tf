@@ -2,59 +2,14 @@
 # AnvilOps EKS Add-Ons — Helm Chart Installation
 # =============================================================================
 
+# Map non-HashiCorp providers so Terraform resolves the correct source.
+# Version constraints and provider configuration are inherited from the parent.
 terraform {
-  required_version = ">= 1.11.0"
-
   required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = "~> 5.0"
-    }
-    helm = {
-      source  = "hashicorp/helm"
-      version = "~> 2.12"
-    }
     kubectl = {
-      source  = "gavinbunney/kubectl"
-      version = "~> 1.14"
-    }
-    random = {
-      source  = "hashicorp/random"
-      version = "~> 3.6"
+      source = "gavinbunney/kubectl"
     }
   }
-}
-
-# -----------------------------------------------------------------------------
-# Providers
-# -----------------------------------------------------------------------------
-
-provider "aws" {
-  region = var.region
-}
-
-# Fetch cluster connection details automatically — no manual token passing.
-data "aws_eks_cluster" "this" {
-  name = var.cluster_name
-}
-
-data "aws_eks_cluster_auth" "this" {
-  name = var.cluster_name
-}
-
-provider "helm" {
-  kubernetes {
-    host                   = data.aws_eks_cluster.this.endpoint
-    cluster_ca_certificate = base64decode(data.aws_eks_cluster.this.certificate_authority[0].data)
-    token                  = data.aws_eks_cluster_auth.this.token
-  }
-}
-
-provider "kubectl" {
-  host                   = data.aws_eks_cluster.this.endpoint
-  cluster_ca_certificate = base64decode(data.aws_eks_cluster.this.certificate_authority[0].data)
-  token                  = data.aws_eks_cluster_auth.this.token
-  load_config_file       = false
 }
 
 # -----------------------------------------------------------------------------

@@ -135,6 +135,8 @@ data "aws_iam_policy_document" "api_permissions" {
     resources = [
       var.db_secret_arn,
       var.redis_secret_arn,
+      "arn:aws:secretsmanager:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:secret:${var.project_name}/*",
+      "arn:aws:secretsmanager:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:secret:${var.project_name}-${var.environment}/*",
     ]
   }
 
@@ -206,6 +208,22 @@ data "aws_iam_policy_document" "api_permissions" {
     effect    = "Allow"
     actions   = ["sts:AssumeRole"]
     resources = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/${var.project_name}-*"]
+  }
+
+  statement {
+    sid    = "KMSDecryptSecrets"
+    effect = "Allow"
+    actions = [
+      "kms:Decrypt",
+      "kms:DescribeKey",
+    ]
+    resources = ["*"]
+
+    condition {
+      test     = "StringLike"
+      variable = "kms:ViaService"
+      values   = ["secretsmanager.*.amazonaws.com"]
+    }
   }
 }
 
