@@ -525,6 +525,31 @@ aws cognito-idp admin-add-user-to-group --user-pool-id $UserPoolId --username ad
 
 > **Next:** If smoke tests pass, proceed to [Post-Deployment Configuration](#6-post-deployment-configuration) below.
 
+### Service URLs
+
+After deployment, these are the URLs for each service. Replace `<domain>` with your configured `domain_name` (e.g., `anvilops.devopsnexus.io`).
+
+| Service | URL | Access Method |
+|---------|-----|---------------|
+| **Self-Service Portal** | `https://<domain>` | Public (ALB Ingress) |
+| **API** | `https://api.<domain>/api/v1` | Public (ALB Ingress) |
+| **API Health Check** | `https://api.<domain>/api/v1/health` | Public |
+| **AWX (Ansible)** | `http://localhost:8052` | `kubectl port-forward svc/awx-service 8052:80 -n awx` |
+| **Puppet Console** | `https://puppet.<domain>` | Private DNS (VPC-only; use VPN, bastion, or SSM) |
+| **Grafana** | `http://localhost:3000` | `kubectl port-forward svc/kube-prometheus-stack-grafana 3000:80 -n monitoring` |
+| **Prometheus** | `http://localhost:9090` | `kubectl port-forward svc/kube-prometheus-stack-prometheus 9090:9090 -n monitoring` |
+| **Alertmanager** | `http://localhost:9093` | `kubectl port-forward svc/kube-prometheus-stack-alertmanager 9093:9093 -n monitoring` |
+| **Cognito Auth** | `https://<project>-<env>.auth.<region>.amazoncognito.com` | AWS Hosted UI |
+| **CloudWatch Dashboard** | AWS Console → CloudWatch → Dashboards → `anvilops-<env>` | AWS Console |
+
+**Default credentials:**
+
+| Service | Username | Password |
+|---------|----------|----------|
+| AWX | `admin` | Auto-generated; retrieve with: `kubectl get secret awx-admin-password -n awx -o jsonpath='{.data.password}' \| base64 -d` |
+| Puppet Console | `admin` | Auto-generated; retrieve with: `aws secretsmanager get-secret-value --secret-id anvilops-<env>/puppet/console-password --query SecretString --output text` |
+| Grafana | `admin` | Value of `grafana_admin_password` variable (default: `admin`) |
+
 ---
 
 ## 6. Post-Deployment Configuration

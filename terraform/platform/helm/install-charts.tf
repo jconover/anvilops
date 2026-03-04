@@ -237,12 +237,18 @@ resource "kubectl_manifest" "anvilops_namespace" {
 # KEDA ScaledObject for Celery Workers
 # -----------------------------------------------------------------------------
 
+resource "kubectl_manifest" "keda_redis_trigger_auth" {
+  yaml_body = file("${path.module}/keda-redis-trigger-auth.yaml")
+
+  depends_on = [helm_release.keda, kubectl_manifest.anvilops_namespace]
+}
+
 resource "kubectl_manifest" "keda_celery_scaledobject" {
   yaml_body = templatefile("${path.module}/keda-celery-scaledobject.yaml", {
     redis_endpoint = var.redis_endpoint
   })
 
-  depends_on = [helm_release.keda, kubectl_manifest.anvilops_namespace]
+  depends_on = [helm_release.keda, kubectl_manifest.keda_redis_trigger_auth]
 }
 
 # -----------------------------------------------------------------------------

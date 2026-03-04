@@ -93,7 +93,7 @@ patches:
       value: "true"
     - op: replace
       path: /data/NEXT_PUBLIC_API_URL
-      value: "https://dev-api.anvilops.internal/api/v1"
+      value: "https://api.anvilops.devopsnexus.io/api/v1"
     - op: replace
       path: /data/REDIS_URL
       value: "rediss://master.anvilops-dev.1jnokz.use1.cache.amazonaws.com:6379/0?ssl_cert_reqs=CERT_REQUIRED&ssl_ca_certs=/etc/ssl/certs/ca-certificates.crt"
@@ -102,11 +102,28 @@ patches:
     name: anvilops-config
 - patch: |
     - op: replace
+      path: /metadata/annotations/eks.amazonaws.com~1role-arn
+      value: "arn:aws:iam::457780993905:role/anvilops-api-dev"
+  target:
+    kind: ServiceAccount
+    name: anvilops-api
+- patch: |
+    - op: replace
+      path: /metadata/annotations/eks.amazonaws.com~1role-arn
+      value: "arn:aws:iam::457780993905:role/anvilops-worker-dev"
+  target:
+    kind: ServiceAccount
+    name: anvilops-worker
+- patch: |
+    - op: replace
       path: /spec/rules/0/host
-      value: dev.anvilops.example.com
+      value: anvilops.devopsnexus.io
     - op: replace
       path: /metadata/annotations/alb.ingress.kubernetes.io~1tags
       value: "Environment=dev,Application=anvilops"
+    - op: replace
+      path: /metadata/annotations/alb.ingress.kubernetes.io~1certificate-arn
+      value: "arn:aws:acm:us-east-1:457780993905:certificate/fad7ea93-3e9e-4149-96c2-262beccdf048"
   target:
     kind: Ingress
     name: anvilops-ingress
@@ -116,7 +133,7 @@ patches:
 images:
 - name: anvilops-api
   newName: 457780993905.dkr.ecr.us-east-1.amazonaws.com/anvilops-api
-  newTag: "ab30871"
+  newTag: "cd37cee"
 - name: anvilops-frontend
   newName: 457780993905.dkr.ecr.us-east-1.amazonaws.com/anvilops-frontend
-  newTag: "ab30871"
+  newTag: "cd37cee"
