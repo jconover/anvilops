@@ -93,7 +93,7 @@ patches:
       value: "true"
     - op: replace
       path: /data/NEXT_PUBLIC_API_URL
-      value: "https://api.anvilops.devopsnexus.io/api/v1"
+      value: "/api/v1"
     - op: replace
       path: /data/REDIS_URL
       value: "rediss://master.anvilops-dev.1jnokz.use1.cache.amazonaws.com:6379/0?ssl_cert_reqs=CERT_REQUIRED&ssl_ca_certs=/etc/ssl/certs/ca-certificates.crt"
@@ -133,7 +133,7 @@ patches:
 images:
 - name: anvilops-api
   newName: 457780993905.dkr.ecr.us-east-1.amazonaws.com/anvilops-api
-  newTag: "cd37cee"
+  newTag: "8e46432"
 - name: anvilops-frontend
   newName: 457780993905.dkr.ecr.us-east-1.amazonaws.com/anvilops-frontend
-  newTag: "cd37cee"
+  newTag: "8e46432"

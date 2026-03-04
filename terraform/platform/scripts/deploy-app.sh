@@ -138,6 +138,7 @@ build_and_push() {
         if [[ -d "$frontend_dir" ]] && [[ -f "${frontend_dir}/Dockerfile" ]]; then
             log_info "Building frontend image..."
             docker build -t "${FRONTEND_IMAGE}:${IMAGE_TAG}" \
+                --build-arg NEXT_PUBLIC_API_URL="/api/v1" \
                 -f "${frontend_dir}/Dockerfile" "$frontend_dir"
             docker push "${FRONTEND_IMAGE}:${IMAGE_TAG}"
             log_success "Frontend image pushed: ${FRONTEND_IMAGE}:${IMAGE_TAG}"

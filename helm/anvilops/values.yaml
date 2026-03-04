@@ -284,7 +284,7 @@ ingress:
     alb.ingress.kubernetes.io/certificate-arn: ""
     alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443}]'
     alb.ingress.kubernetes.io/ssl-redirect: "443"
-    alb.ingress.kubernetes.io/healthcheck-path: /api/v1/health
+    alb.ingress.kubernetes.io/healthcheck-path: /health
     alb.ingress.kubernetes.io/group.name: anvilops
     alb.ingress.kubernetes.io/tags: "Environment=dev,Application=anvilops"
   host: anvilops.example.com
@@ -301,7 +301,7 @@ config:
   AWS_DEFAULT_REGION: "us-east-1"
   ALLOWED_REGIONS: '["us-east-1","us-west-2"]'
   REDIS_URL: "redis://redis.anvilops.svc.cluster.local:6379/0"
-  NEXT_PUBLIC_API_URL: "https://api.anvilops.internal/api/v1"
+  NEXT_PUBLIC_API_URL: "/api/v1"
   API_V1_PREFIX: "/api/v1"
   PROJECT_NAME: "AnvilOps"
   DEBUG: "false"

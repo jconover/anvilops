@@ -122,7 +122,7 @@ jobs:
           cache-from: type=gha,scope=frontend
           cache-to: type=gha,mode=max,scope=frontend
           build-args: |
-            NEXT_PUBLIC_API_URL=${{ secrets.API_URL }}
+            NEXT_PUBLIC_API_URL=/api/v1
 
       # -- Deploy to EKS via Kustomize ----------------------------------------
       - name: Configure kubectl

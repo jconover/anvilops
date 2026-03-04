@@ -45,7 +45,7 @@ patches:
         value: "false"
       - op: replace
         path: /data/NEXT_PUBLIC_API_URL
-        value: "https://staging-api.anvilops.internal/api/v1"
+        value: "/api/v1"
       - op: replace
         path: /data/SLACK_ENABLED
         value: "true"
