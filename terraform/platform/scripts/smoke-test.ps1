@@ -57,7 +57,7 @@ function Test-ApiHealth {
 
     try {
         $response = kubectl exec -n $Namespace $pod -- `
-            curl -sf -m 10 http://localhost:8000/api/v1/health 2>$null
+            curl -sf -m 10 http://localhost:8000/health 2>$null
     } catch { $response = "TIMEOUT" }
 
     if ($response -match '"status"') {
@@ -131,7 +131,7 @@ function Test-External {
     Write-Step "External endpoint: $Endpoint..."
 
     try {
-        $health = Invoke-RestMethod -Uri "$Endpoint/api/v1/health" -TimeoutSec 15 -ErrorAction Stop
+        $health = Invoke-RestMethod -Uri "$Endpoint/health" -TimeoutSec 15 -ErrorAction Stop
         Record-Pass "External API health: $($health | ConvertTo-Json -Compress)"
     } catch {
         Record-Fail "External API health: $($_.Exception.Message)"

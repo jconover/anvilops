@@ -93,7 +93,7 @@ resource "aws_route53_record" "auth" {
 resource "aws_route53_health_check" "api" {
   type              = "HTTPS"
   fqdn              = "api.${var.domain_name}"
-  resource_path     = "/api/v1/health"
+  resource_path     = "/health"
   port              = 443
   failure_threshold = 3
   request_interval  = 30

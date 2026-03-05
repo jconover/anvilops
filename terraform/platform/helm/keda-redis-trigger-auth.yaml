@@ -1,0 +1,10 @@
+apiVersion: keda.sh/v1alpha1
+kind: TriggerAuthentication
+metadata:
+  name: redis-auth
+  namespace: anvilops
+spec:
+  secretTargetRef:
+    - parameter: password
+      name: anvilops-secrets
+      key: REDIS_AUTH_TOKEN

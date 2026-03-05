@@ -284,7 +284,7 @@ resource "aws_lb_target_group" "api" {
 
   health_check {
     enabled             = true
-    path                = "/api/v1/health"
+    path                = "/health"
     port                = "traffic-port"
     protocol            = "HTTP"
     matcher             = "200"

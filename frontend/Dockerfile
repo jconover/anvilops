@@ -30,6 +30,12 @@ COPY . .
 ARG NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
 
+# Server-side backend URL for Next.js API proxy rewrites.
+# Must be an absolute URL (e.g. http://anvilops-api:80).
+# Defaults to http://localhost:8000 for local development.
+ARG BACKEND_URL=http://localhost:8000
+ENV BACKEND_URL=${BACKEND_URL}
+
 # Opt out of Next.js anonymous telemetry
 ENV NEXT_TELEMETRY_DISABLED=1
 

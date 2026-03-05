@@ -99,7 +99,7 @@ patches:
         value: "false"
       - op: replace
         path: /data/NEXT_PUBLIC_API_URL
-        value: "https://api.anvilops.example.com/api/v1"
+        value: "/api/v1"
       - op: replace
         path: /data/SLACK_ENABLED
         value: "true"

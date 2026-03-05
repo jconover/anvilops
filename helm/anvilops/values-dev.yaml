@@ -42,7 +42,8 @@ worker:
 config:
   ENVIRONMENT: "dev"
   DEBUG: "true"
-  NEXT_PUBLIC_API_URL: "https://dev-api.anvilops.internal/api/v1"
+  NEXT_PUBLIC_API_URL: "/api/v1"
+  BACKEND_URL: "http://anvilops-api:80"
 
 ingress:
   host: dev.anvilops.example.com
@@ -52,6 +53,6 @@ ingress:
     alb.ingress.kubernetes.io/certificate-arn: ""
     alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443}]'
     alb.ingress.kubernetes.io/ssl-redirect: "443"
-    alb.ingress.kubernetes.io/healthcheck-path: /api/v1/health
+    alb.ingress.kubernetes.io/healthcheck-path: /health
     alb.ingress.kubernetes.io/group.name: anvilops
     alb.ingress.kubernetes.io/tags: "Environment=dev,Application=anvilops"

@@ -384,21 +384,23 @@ data "aws_iam_policy_document" "alb_controller_permissions" {
   }
 
   statement {
+    sid    = "EC2CreateSecurityGroup"
+    effect = "Allow"
+    actions = [
+      "ec2:CreateSecurityGroup",
+    ]
+    resources = ["*"]
+  }
+
+  statement {
     sid    = "EC2SecurityGroupManagement"
     effect = "Allow"
     actions = [
       "ec2:AuthorizeSecurityGroupIngress",
       "ec2:RevokeSecurityGroupIngress",
-      "ec2:CreateSecurityGroup",
       "ec2:DeleteSecurityGroup",
     ]
     resources = ["*"]
-
-    condition {
-      test     = "Null"
-      variable = "aws:RequestTag/elbv2.k8s.aws/cluster"
-      values   = ["false"]
-    }
   }
 
   statement {
@@ -461,6 +463,7 @@ data "aws_iam_policy_document" "alb_controller_permissions" {
       "elasticloadbalancing:DescribeTargetGroupAttributes",
       "elasticloadbalancing:DescribeTargetHealth",
       "elasticloadbalancing:DescribeTags",
+      "elasticloadbalancing:DescribeListenerAttributes",
     ]
     resources = ["*"]
   }
