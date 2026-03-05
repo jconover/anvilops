@@ -158,7 +158,7 @@ export default function RequestDetailPage() {
       <Button
         variant="ghost"
         size="sm"
-        onClick={() => router.push("/requests")}
+        onClick={() => router.push("/dashboard/requests")}
         className="gap-1.5 text-muted-foreground hover:text-foreground -ml-2"
       >
         <ArrowLeft className="h-4 w-4" />
