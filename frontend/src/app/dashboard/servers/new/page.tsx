@@ -28,7 +28,7 @@ export default function NewServerPage() {
         });
         resetForm();
         // Navigate to the request tracker (build pipeline) page
-        router.push(`/requests/${data.id}`);
+        router.push(`/dashboard/requests/${data.id}`);
       },
       onError: (error: Error) => {
         toast.error('Failed to submit build request', {

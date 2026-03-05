@@ -253,7 +253,7 @@ export function RequestListTable({
           {sorted.map((server) => (
             <TableRow
               key={server.id}
-              onClick={() => router.push(`/requests/${server.id}`)}
+              onClick={() => router.push(`/dashboard/requests/${server.id}`)}
               className="cursor-pointer"
             >
               <TableCell className="font-medium">
