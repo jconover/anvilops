@@ -43,7 +43,6 @@ app = FastAPI(
     description="Self-service server provisioning platform",
     version="0.1.0",
     lifespan=lifespan,
-    redirect_slashes=False,
 )
 
 # ProxyHeadersMiddleware must be outermost so downstream middleware sees
