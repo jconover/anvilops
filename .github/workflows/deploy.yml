@@ -123,6 +123,7 @@ jobs:
           cache-to: type=gha,mode=max,scope=frontend
           build-args: |
             NEXT_PUBLIC_API_URL=/api/v1
+            BACKEND_URL=http://anvilops-api:80
 
       # -- Deploy to EKS via Kustomize ----------------------------------------
       - name: Configure kubectl

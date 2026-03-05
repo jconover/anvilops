@@ -43,6 +43,7 @@ config:
   ENVIRONMENT: "dev"
   DEBUG: "true"
   NEXT_PUBLIC_API_URL: "/api/v1"
+  BACKEND_URL: "http://anvilops-api:80"
 
 ingress:
   host: dev.anvilops.example.com

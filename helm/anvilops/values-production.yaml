@@ -34,6 +34,7 @@ config:
   ENVIRONMENT: "production"
   DEBUG: "false"
   NEXT_PUBLIC_API_URL: "/api/v1"
+  BACKEND_URL: "http://anvilops-api:80"
   SLACK_ENABLED: "true"
   SERVICENOW_ENABLED: "true"
 

@@ -11,6 +11,7 @@ data:
   ALLOWED_REGIONS: '["us-east-1","us-west-2"]'
   REDIS_URL: "redis://redis.anvilops.svc.cluster.local:6379/0"
   NEXT_PUBLIC_API_URL: "/api/v1"
+  BACKEND_URL: "http://anvilops-api:80"
   API_V1_PREFIX: "/api/v1"
   PROJECT_NAME: "AnvilOps"
   DEBUG: "false"

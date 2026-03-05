@@ -139,6 +139,7 @@ build_and_push() {
             log_info "Building frontend image..."
             docker build -t "${FRONTEND_IMAGE}:${IMAGE_TAG}" \
                 --build-arg NEXT_PUBLIC_API_URL="/api/v1" \
+                --build-arg BACKEND_URL="http://anvilops-api:80" \
                 -f "${frontend_dir}/Dockerfile" "$frontend_dir"
             docker push "${FRONTEND_IMAGE}:${IMAGE_TAG}"
             log_success "Frontend image pushed: ${FRONTEND_IMAGE}:${IMAGE_TAG}"
