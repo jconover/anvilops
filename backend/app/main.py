@@ -11,6 +11,12 @@ from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
+# Trust X-Forwarded-Proto from ALB so redirects use the correct scheme.
+try:
+    from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
+except ImportError:  # pragma: no cover
+    ProxyHeadersMiddleware = None
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -37,7 +43,13 @@ app = FastAPI(
     description="Self-service server provisioning platform",
     version="0.1.0",
     lifespan=lifespan,
+    redirect_slashes=False,
 )
+
+# ProxyHeadersMiddleware must be outermost so downstream middleware sees
+# the real client scheme/IP forwarded by the ALB.
+if ProxyHeadersMiddleware is not None:
+    app.add_middleware(ProxyHeadersMiddleware, trusted_hosts=["*"])
 
 app.add_middleware(
     CORSMiddleware,
