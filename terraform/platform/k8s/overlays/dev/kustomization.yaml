@@ -133,7 +133,7 @@ patches:
 images:
 - name: anvilops-api
   newName: 457780993905.dkr.ecr.us-east-1.amazonaws.com/anvilops-api
-  newTag: "f62f9e2"
+  newTag: "80c1977"
 - name: anvilops-frontend
   newName: 457780993905.dkr.ecr.us-east-1.amazonaws.com/anvilops-frontend
-  newTag: "f62f9e2"
+  newTag: "80c1977"
