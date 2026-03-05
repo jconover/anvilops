@@ -43,7 +43,7 @@ CLAUDE.md
 !terraform/platform/terraform.tfvars.example
 !terraform/platform/terraform.dev.tfvars.example
 !terraform/platform/terraform.production.tfvars.example
-tfplan
+tfplan*
 *.tfplan
 crash.log
 
