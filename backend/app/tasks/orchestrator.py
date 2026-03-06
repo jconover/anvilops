@@ -16,6 +16,7 @@ Coordinates the full server provisioning workflow:
 import logging
 from datetime import datetime, timezone
 
+from app.models.server import ServerRequest
 from app.services.db import create_build_steps, get_sync_db, update_server_status
 from app.tasks.awx import awx_configure
 from app.tasks.terraform import terraform_apply, terraform_destroy, terraform_plan
@@ -71,6 +72,19 @@ def run_server_build(self, server_request_id: str) -> dict:
     The validation step is advisory and never blocks the build.
     """
     logger.info("Starting server build for request %s", server_request_id)
+
+    # Check if the request was cancelled before the task started
+    with get_sync_db() as session:
+        sr = session.get(ServerRequest, server_request_id)
+        if sr is not None and sr.status == "cancelled":
+            logger.info(
+                "Server request %s was cancelled before build started, skipping",
+                server_request_id,
+            )
+            return {
+                "status": "cancelled",
+                "server_request_id": server_request_id,
+            }
 
     # Mark as provisioning and create build step records
     with get_sync_db() as session:

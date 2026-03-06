@@ -141,6 +141,57 @@ async def get_server_build_steps(
     return steps
 
 
+@router.post("/{server_id}/cancel", response_model=ServerResponse)
+async def cancel_server(
+    server_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+) -> ServerResponse:
+    """Cancel a pending server request.
+
+    Only requests in ``pending`` status can be cancelled -- no
+    infrastructure has been provisioned yet so this is a safe,
+    lightweight operation that simply marks the request as cancelled
+    and attempts to revoke the queued Celery build task.
+    """
+    result = await db.execute(
+        select(ServerRequest).where(ServerRequest.id == server_id)
+    )
+    server = result.scalar_one_or_none()
+
+    if server is None:
+        raise HTTPException(status_code=404, detail="Server request not found")
+
+    if server.status == "cancelled":
+        raise HTTPException(
+            status_code=400,
+            detail="Server request is already cancelled",
+        )
+
+    if server.status != "pending":
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Server request cannot be cancelled from status '{server.status}'. "
+                "Only requests in 'pending' status can be cancelled."
+            ),
+        )
+
+    server.status = "cancelled"
+    server.status_message = "Cancelled by user"
+    await db.flush()
+    await db.refresh(server)
+
+    # Attempt to revoke the Celery build task (best-effort)
+    try:
+        from app.worker.celery_app import celery_app as _celery
+        _celery.control.revoke(f"build-{server_id}", terminate=False)
+    except Exception:
+        logger.debug("Could not revoke Celery task for %s (may not be queued yet)", server_id)
+
+    logger.info("Cancelled server request %s (%s)", server.server_name, server.id)
+    return server
+
+
 @router.post("/{server_id}/decommission", response_model=ServerResponse)
 async def decommission_server(
     server_id: uuid.UUID,

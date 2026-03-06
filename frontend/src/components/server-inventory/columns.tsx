@@ -56,6 +56,7 @@ const STATUS_VARIANT: Record<string, 'default' | 'secondary' | 'destructive' | '
   validating: 'info',
   ready: 'success',
   failed: 'destructive',
+  cancelled: 'secondary',
   decommissioning: 'warning',
   decommissioned: 'secondary',
 };
@@ -68,6 +69,7 @@ const STATUS_LABELS: Record<string, string> = {
   validating: 'Validating',
   ready: 'Ready',
   failed: 'Failed',
+  cancelled: 'Cancelled',
   decommissioning: 'Decommissioning',
   decommissioned: 'Decommissioned',
 };

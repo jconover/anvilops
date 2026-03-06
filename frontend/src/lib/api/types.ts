@@ -19,6 +19,7 @@ export type ServerStatus =
   | 'validating'
   | 'ready'
   | 'failed'
+  | 'cancelled'
   | 'decommissioning'
   | 'decommissioned';
 
