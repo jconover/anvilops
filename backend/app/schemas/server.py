@@ -62,6 +62,22 @@ class ServerResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class BuildStepResponse(BaseModel):
+    id: uuid.UUID
+    server_request_id: uuid.UUID
+    step_name: str
+    step_order: int
+    status: str
+    output_log: str | None = None
+    error_message: str | None = None
+    started_at: datetime | None = None
+    completed_at: datetime | None = None
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
 class ServerListResponse(BaseModel):
     servers: list[ServerResponse]
     total: int

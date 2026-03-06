@@ -10,7 +10,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
 from app.models.server import ServerRequest
+from app.models.server import BuildStep
 from app.schemas.server import (
+    BuildStepResponse,
     ServerCreateRequest,
     ServerListResponse,
     ServerResponse,
@@ -122,6 +124,21 @@ async def get_server(
         raise HTTPException(status_code=404, detail="Server request not found")
 
     return server
+
+
+@router.get("/{server_id}/steps", response_model=list[BuildStepResponse])
+async def get_server_build_steps(
+    server_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+) -> list[BuildStepResponse]:
+    """Get the build pipeline steps for a server request."""
+    result = await db.execute(
+        select(BuildStep)
+        .where(BuildStep.server_request_id == server_id)
+        .order_by(BuildStep.step_order)
+    )
+    steps = result.scalars().all()
+    return steps
 
 
 @router.post("/{server_id}/decommission", response_model=ServerResponse)
