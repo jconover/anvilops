@@ -40,6 +40,7 @@ const STATUS_BADGE_CONFIG: Record<
   validating: { label: "Validating", variant: "warning" },
   ready: { label: "Ready", variant: "success" },
   failed: { label: "Failed", variant: "destructive" },
+  cancelled: { label: "Cancelled", variant: "secondary" },
   decommissioning: { label: "Decommissioning", variant: "warning" },
   decommissioned: { label: "Decommissioned", variant: "secondary" },
 };

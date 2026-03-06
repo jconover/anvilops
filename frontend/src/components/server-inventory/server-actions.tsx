@@ -10,6 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { CancelDialog } from '@/components/server-inventory/cancel-dialog';
 import { DecommissionDialog } from '@/components/server-inventory/decommission-dialog';
 import { useAuth } from '@/lib/auth/context';
 import type { ServerResponse } from '@/lib/api/types';
@@ -18,6 +19,7 @@ import {
   Eye,
   GitBranch,
   Trash2,
+  Ban,
   Copy,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -29,8 +31,10 @@ interface ServerActionsProps {
 export function ServerActions({ server }: ServerActionsProps) {
   const router = useRouter();
   const { hasPermission } = useAuth();
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [showDecommissionDialog, setShowDecommissionDialog] = useState(false);
 
+  const canCancel = hasPermission('servers:delete') && server.status === 'pending';
   const canDecommission = hasPermission('servers:delete');
   const canShowDecommission =
     canDecommission &&
@@ -83,6 +87,21 @@ export function ServerActions({ server }: ServerActionsProps) {
             <Copy className="mr-2 h-4 w-4" />
             Copy Server Name
           </DropdownMenuItem>
+          {canCancel && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="text-destructive focus:text-destructive"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowCancelDialog(true);
+                }}
+              >
+                <Ban className="mr-2 h-4 w-4" />
+                Cancel Request
+              </DropdownMenuItem>
+            </>
+          )}
           {canShowDecommission && (
             <>
               <DropdownMenuSeparator />
@@ -100,6 +119,13 @@ export function ServerActions({ server }: ServerActionsProps) {
           )}
         </DropdownMenuContent>
       </DropdownMenu>
+
+      {/* Cancel confirmation dialog */}
+      <CancelDialog
+        server={server}
+        open={showCancelDialog}
+        onOpenChange={setShowCancelDialog}
+      />
 
       {/* Decommission confirmation dialog */}
       <DecommissionDialog

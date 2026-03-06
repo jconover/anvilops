@@ -55,6 +55,12 @@ export async function deleteServer(id: string): Promise<ServerResponse> {
   return response.data;
 }
 
+/** Cancel a pending server request. */
+export async function cancelServer(id: string): Promise<ServerResponse> {
+  const response = await apiClient.post<ServerResponse>(`/servers/${id}/cancel`);
+  return response.data;
+}
+
 /** Approve a pending server request. */
 export async function approveServer(id: string): Promise<ServerResponse> {
   const response = await apiClient.post<ServerResponse>(`/servers/${id}/approve`);
