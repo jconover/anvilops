@@ -127,7 +127,7 @@ build_and_push() {
 
     if [[ "$FRONTEND_ONLY" != "true" ]]; then
         log_info "Building API image..."
-        docker build -t "${API_IMAGE}:${IMAGE_TAG}" \
+        docker build --platform linux/amd64 -t "${API_IMAGE}:${IMAGE_TAG}" \
             -f "${PROJECT_ROOT}/backend/Dockerfile" "${PROJECT_ROOT}/backend"
         docker push "${API_IMAGE}:${IMAGE_TAG}"
         log_success "API image pushed: ${API_IMAGE}:${IMAGE_TAG}"
@@ -137,7 +137,7 @@ build_and_push() {
         local frontend_dir="${PROJECT_ROOT}/frontend"
         if [[ -d "$frontend_dir" ]] && [[ -f "${frontend_dir}/Dockerfile" ]]; then
             log_info "Building frontend image..."
-            docker build -t "${FRONTEND_IMAGE}:${IMAGE_TAG}" \
+            docker build --platform linux/amd64 -t "${FRONTEND_IMAGE}:${IMAGE_TAG}" \
                 --build-arg NEXT_PUBLIC_API_URL="/api/v1" \
                 --build-arg BACKEND_URL="http://anvilops-api:80" \
                 -f "${frontend_dir}/Dockerfile" "$frontend_dir"
@@ -269,6 +269,33 @@ main() {
     if [[ "$SKIP_BUILD" != "true" ]]; then
         ecr_login
         build_and_push
+    else
+        log_step "Verifying images exist in ECR (--skip-build)..."
+        local missing_images=0
+
+        if [[ "$FRONTEND_ONLY" != "true" ]]; then
+            if ! aws ecr describe-images --repository-name anvilops-api \
+                --image-ids imageTag="$IMAGE_TAG" --region "$REGION" &>/dev/null; then
+                log_error "Image not found: anvilops-api:${IMAGE_TAG}"
+                missing_images=$((missing_images + 1))
+            else
+                log_success "Found anvilops-api:${IMAGE_TAG}"
+            fi
+        fi
+
+        if ! aws ecr describe-images --repository-name anvilops-frontend \
+            --image-ids imageTag="$IMAGE_TAG" --region "$REGION" &>/dev/null; then
+            log_error "Image not found: anvilops-frontend:${IMAGE_TAG}"
+            missing_images=$((missing_images + 1))
+        else
+            log_success "Found anvilops-frontend:${IMAGE_TAG}"
+        fi
+
+        if [[ $missing_images -gt 0 ]]; then
+            log_error "$missing_images image(s) not found in ECR. Build and push first, or run without --skip-build."
+            exit 1
+        fi
+        log_success "All required images verified in ECR."
     fi
 
     echo ""

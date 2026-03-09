@@ -99,7 +99,7 @@ function Invoke-BuildAndPush {
 
     if (-not $FrontendOnly) {
         Write-Info "Building API image..."
-        docker build -t "${ApiImage}:${Tag}" -t "${ApiImage}:latest" `
+        docker build --platform linux/amd64 -t "${ApiImage}:${Tag}" -t "${ApiImage}:latest" `
             -f (Join-Path $ProjectRoot "backend/Dockerfile") (Join-Path $ProjectRoot "backend")
         if ($LASTEXITCODE -ne 0) { throw "API image build failed." }
         docker push "${ApiImage}:${Tag}"
@@ -112,7 +112,7 @@ function Invoke-BuildAndPush {
         $dockerfile  = Join-Path $frontendDir "Dockerfile"
         if ((Test-Path $frontendDir) -and (Test-Path $dockerfile)) {
             Write-Info "Building frontend image..."
-            docker build -t "${FrontendImage}:${Tag}" -t "${FrontendImage}:latest" `
+            docker build --platform linux/amd64 -t "${FrontendImage}:${Tag}" -t "${FrontendImage}:latest" `
                 -f $dockerfile $frontendDir
             if ($LASTEXITCODE -ne 0) { throw "Frontend image build failed." }
             docker push "${FrontendImage}:${Tag}"
