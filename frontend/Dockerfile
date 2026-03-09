@@ -15,7 +15,7 @@ WORKDIR /app
 RUN apk add --no-cache libc6-compat
 
 COPY package.json package-lock.json ./
-RUN npm ci --ignore-scripts
+RUN npm ci
 
 # ---- Stage 2: Build the Next.js application ------------------------------
 FROM node:20.19-alpine3.21 AS builder
