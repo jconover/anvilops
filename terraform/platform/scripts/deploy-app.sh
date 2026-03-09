@@ -96,7 +96,7 @@ check_helm_prerequisites() {
         log_error "  helm install external-secrets external-secrets/external-secrets \\"
         log_error "    -n external-secrets --create-namespace --set installCRDs=true --wait"
         missing=$((missing + 1))
-    elif ! kubectl api-resources --api-group=external-secrets.io 2>/dev/null | grep -q "v1"; then
+    elif ! (kubectl api-resources --api-group=external-secrets.io 2>/dev/null || true) | grep -q "v1"; then
         log_error "External Secrets Operator installed but v1 API not available."
         log_error "Upgrade to external-secrets >= 0.10:"
         log_error "  helm upgrade external-secrets external-secrets/external-secrets \\"
