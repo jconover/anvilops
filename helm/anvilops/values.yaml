@@ -107,7 +107,7 @@ frontend:
   probes:
     startup:
       httpGet:
-        path: /
+        path: /health
         port: 3000
       initialDelaySeconds: 5
       periodSeconds: 5
@@ -115,7 +115,7 @@ frontend:
       failureThreshold: 12
     readiness:
       httpGet:
-        path: /
+        path: /health
         port: 3000
       initialDelaySeconds: 10
       periodSeconds: 10
@@ -123,7 +123,7 @@ frontend:
       failureThreshold: 3
     liveness:
       httpGet:
-        path: /
+        path: /health
         port: 3000
       initialDelaySeconds: 15
       periodSeconds: 30
