@@ -136,4 +136,4 @@ images:
   newTag: "eabf082"
 - name: anvilops-frontend
   newName: 457780993905.dkr.ecr.us-east-1.amazonaws.com/anvilops-frontend
-  newTag: "eabf082"
+  newTag: "63ba294-amd64"

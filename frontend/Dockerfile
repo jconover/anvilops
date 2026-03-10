@@ -8,7 +8,9 @@
 # ---------------------------------------------------------------------------
 
 # ---- Stage 1: Install ALL dependencies (dev + prod) for the build step ----
-FROM node:20.19-alpine3.21 AS deps
+# Use BUILDPLATFORM so npm ci and next build run natively (no QEMU emulation).
+# The standalone output is pure JS, so cross-compilation is unnecessary.
+FROM --platform=$BUILDPLATFORM node:20.19-alpine3.21 AS deps
 WORKDIR /app
 
 # libc6-compat is needed for some native Node modules on Alpine
@@ -18,7 +20,7 @@ COPY package.json package-lock.json ./
 RUN npm ci
 
 # ---- Stage 2: Build the Next.js application ------------------------------
-FROM node:20.19-alpine3.21 AS builder
+FROM --platform=$BUILDPLATFORM node:20.19-alpine3.21 AS builder
 WORKDIR /app
 
 COPY --from=deps /app/node_modules ./node_modules
@@ -46,7 +48,9 @@ RUN mkdir -p public
 RUN npm run build
 
 # ---- Stage 3: Production runner ------------------------------------------
-FROM node:20.19-alpine3.21 AS runner
+# Explicitly target amd64 for EKS nodes. Build stages above run natively
+# via $BUILDPLATFORM; only the runner needs the target architecture.
+FROM --platform=linux/amd64 node:20.19-alpine3.21 AS runner
 WORKDIR /app
 
 ARG BUILD_DATE
