@@ -1,0 +1,79 @@
+{
+  "identifier": "anvilops_scaling_group",
+  "title": "AnvilOps Scaling Group",
+  "description": "A group of servers that scales automatically based on demand thresholds. Manages min/max instance counts, scaling policies, and tracks current capacity.",
+  "icon": "Cluster",
+  "schema": {
+    "properties": {
+      "group_name": {
+        "type": "string",
+        "title": "Group Name",
+        "description": "Scaling group name"
+      },
+      "environment": {
+        "type": "string",
+        "title": "Environment",
+        "description": "Deployment environment",
+        "enum": ["dev", "staging", "production"]
+      },
+      "min_count": {
+        "type": "number",
+        "title": "Min Instances",
+        "description": "Minimum instance count",
+        "minimum": 0
+      },
+      "max_count": {
+        "type": "number",
+        "title": "Max Instances",
+        "description": "Maximum instance count",
+        "minimum": 1
+      },
+      "current_count": {
+        "type": "number",
+        "title": "Current Count",
+        "description": "Current running instance count",
+        "minimum": 0
+      },
+      "template_id": {
+        "type": "string",
+        "title": "Template ID",
+        "description": "AnvilOps template ID used for new instances"
+      },
+      "status": {
+        "type": "string",
+        "title": "Status",
+        "description": "Scaling group lifecycle status",
+        "enum": [
+          "active",
+          "scaling_up",
+          "scaling_down",
+          "paused",
+          "disabled"
+        ]
+      },
+      "scaling_policy": {
+        "type": "string",
+        "title": "Scaling Policy",
+        "description": "Active scaling policy name or description"
+      },
+      "last_scaled_at": {
+        "type": "string",
+        "title": "Last Scaled At",
+        "description": "Timestamp of the last scale event",
+        "format": "date-time"
+      }
+    },
+    "required": [
+      "group_name",
+      "environment",
+      "min_count",
+      "max_count",
+      "current_count",
+      "status"
+    ]
+  },
+  "relations": {},
+  "mirrorProperties": {},
+  "calculationProperties": {},
+  "aggregationProperties": {}
+}

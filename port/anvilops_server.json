@@ -1,0 +1,132 @@
+{
+  "identifier": "anvilops_server",
+  "title": "AnvilOps Server",
+  "description": "A provisioned server managed by the AnvilOps platform. Tracks the full lifecycle from request through provisioning, configuration, validation, and decommissioning.",
+  "icon": "Server",
+  "schema": {
+    "properties": {
+      "server_name": {
+        "type": "string",
+        "title": "Server Name",
+        "description": "Unique server hostname"
+      },
+      "environment": {
+        "type": "string",
+        "title": "Environment",
+        "description": "Deployment environment (dev/staging/production)",
+        "enum": ["dev", "staging", "production"]
+      },
+      "os_type": {
+        "type": "string",
+        "title": "OS Type",
+        "description": "Operating system type",
+        "enum": [
+          "windows_2022",
+          "windows_2019",
+          "amazon_linux_2023",
+          "ubuntu_2204",
+          "rhel_9"
+        ]
+      },
+      "instance_size": {
+        "type": "string",
+        "title": "Instance Size",
+        "description": "EC2 instance size tier"
+      },
+      "region": {
+        "type": "string",
+        "title": "AWS Region",
+        "description": "AWS region where the server is deployed"
+      },
+      "status": {
+        "type": "string",
+        "title": "Status",
+        "description": "Current server lifecycle status",
+        "enum": [
+          "pending",
+          "approved",
+          "building",
+          "provisioning",
+          "configuring",
+          "validating",
+          "ready",
+          "failed",
+          "decommissioning",
+          "decommissioned"
+        ]
+      },
+      "private_ip": {
+        "type": "string",
+        "title": "Private IP",
+        "description": "Private IPv4 address"
+      },
+      "public_ip": {
+        "type": "string",
+        "title": "Public IP",
+        "description": "Public IPv4 address (if assigned)"
+      },
+      "dns_name": {
+        "type": "string",
+        "title": "DNS Name",
+        "description": "DNS hostname"
+      },
+      "aws_instance_id": {
+        "type": "string",
+        "title": "AWS Instance ID",
+        "description": "EC2 instance ID"
+      },
+      "puppet_certname": {
+        "type": "string",
+        "title": "Puppet Certname",
+        "description": "Puppet certificate name"
+      },
+      "puppet_environment": {
+        "type": "string",
+        "title": "Puppet Environment",
+        "description": "Puppet environment branch"
+      },
+      "requester": {
+        "type": "string",
+        "title": "Requester",
+        "description": "User who requested the server",
+        "format": "user"
+      },
+      "cost_estimate_monthly": {
+        "type": "number",
+        "title": "Monthly Cost Estimate",
+        "description": "Estimated monthly cost in USD"
+      },
+      "created_at": {
+        "type": "string",
+        "title": "Created At",
+        "description": "Server creation timestamp",
+        "format": "date-time"
+      },
+      "updated_at": {
+        "type": "string",
+        "title": "Updated At",
+        "description": "Last modification timestamp",
+        "format": "date-time"
+      }
+    },
+    "required": [
+      "server_name",
+      "environment",
+      "os_type",
+      "instance_size",
+      "region",
+      "status"
+    ]
+  },
+  "relations": {
+    "server_template": {
+      "title": "Server Template",
+      "target": "anvilops_server_template",
+      "required": false,
+      "many": false
+    }
+  },
+  "mirrorProperties": {},
+  "calculationProperties": {},
+  "aggregationProperties": {}
+}
