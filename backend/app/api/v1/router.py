@@ -3,6 +3,7 @@
 from fastapi import APIRouter
 
 from app.api.v1.audit import router as audit_router
+from app.api.v1.port import router as port_router
 from app.api.v1.cmdb import router as cmdb_router
 from app.api.v1.compliance import router as compliance_router
 from app.api.v1.costs import router as costs_router
@@ -30,3 +31,4 @@ api_v1_router.include_router(scaling_router, prefix="/scaling", tags=["scaling"]
 api_v1_router.include_router(cmdb_router, prefix="/cmdb", tags=["cmdb"])
 api_v1_router.include_router(schedules_router, prefix="/schedules", tags=["schedules"])
 api_v1_router.include_router(drift_router, prefix="/drift", tags=["drift"])
+api_v1_router.include_router(port_router, prefix="/port", tags=["port"])
