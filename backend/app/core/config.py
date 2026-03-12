@@ -50,6 +50,12 @@ class Settings(BaseSettings):
     SERVICENOW_ENABLED: bool = False
     SERVICENOW_TABLE: str = "cmdb_ci_server"
 
+    # Port IDP Integration
+    PORT_CLIENT_ID: str = ""
+    PORT_CLIENT_SECRET: str = ""
+    PORT_ENABLED: bool = False
+    PORT_WEBHOOK_SECRET: str = ""
+
     model_config = {"env_file": ".env", "extra": "ignore"}
 
 

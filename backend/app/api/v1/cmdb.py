@@ -114,9 +114,11 @@ async def trigger_cmdb_sync(
     # Dispatch the Celery task
     try:
         from app.tasks.cmdb import cmdb_sync_server
+        from app.tasks.port import port_sync_server
 
         task = cmdb_sync_server.delay(str(server.id), event_type)
         task_id = task.id
+        port_sync_server.delay(str(server.id), event_type)
     except Exception as exc:
         logger.error(
             "Failed to dispatch CMDB sync task for %s: %s",
