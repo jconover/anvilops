@@ -102,6 +102,11 @@ class ServerRequest(Base):
         String(64), nullable=True
     )
 
+    # Port IDP metadata (populated after Port catalog sync)
+    port_entity_id: Mapped[str | None] = mapped_column(
+        String(64), nullable=True
+    )
+
     build_steps: Mapped[list["BuildStep"]] = relationship(
         "BuildStep",
         back_populates="server_request",
