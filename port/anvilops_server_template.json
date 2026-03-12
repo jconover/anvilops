@@ -1,0 +1,75 @@
+{
+  "identifier": "anvilops_server_template",
+  "title": "AnvilOps Server Template",
+  "description": "A reusable server provisioning template that defines the default configuration for new servers including OS, instance size, region, Puppet role, and pre-installed software.",
+  "icon": "Blueprint",
+  "schema": {
+    "properties": {
+      "template_name": {
+        "type": "string",
+        "title": "Template Name",
+        "description": "Unique template name"
+      },
+      "os_type": {
+        "type": "string",
+        "title": "OS Type",
+        "description": "Operating system type",
+        "enum": [
+          "windows_2022",
+          "windows_2019",
+          "amazon_linux_2023",
+          "ubuntu_2204",
+          "rhel_9"
+        ]
+      },
+      "instance_size": {
+        "type": "string",
+        "title": "Instance Size",
+        "description": "EC2 instance size tier"
+      },
+      "description": {
+        "type": "string",
+        "title": "Description",
+        "description": "Human-readable template description"
+      },
+      "default_region": {
+        "type": "string",
+        "title": "Default Region",
+        "description": "Default AWS region for servers built from this template"
+      },
+      "base_ami_id": {
+        "type": "string",
+        "title": "Base AMI ID",
+        "description": "Base AMI used by this template"
+      },
+      "puppet_role": {
+        "type": "string",
+        "title": "Puppet Role",
+        "description": "Puppet role applied to servers built from this template"
+      },
+      "software_packages": {
+        "type": "array",
+        "title": "Software Packages",
+        "description": "Pre-installed software packages",
+        "items": {
+          "type": "string"
+        }
+      },
+      "is_active": {
+        "type": "boolean",
+        "title": "Active",
+        "description": "Whether this template is available for use",
+        "default": true
+      }
+    },
+    "required": [
+      "template_name",
+      "os_type",
+      "instance_size"
+    ]
+  },
+  "relations": {},
+  "mirrorProperties": {},
+  "calculationProperties": {},
+  "aggregationProperties": {}
+}
