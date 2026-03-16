@@ -29,13 +29,13 @@
 
 **Resolves findings:** #2, #15
 **Severity:** CRITICAL
-**Status:** [ ] Not Started
+**Status:** [x] Complete
 
 ### What to do
-- Validate JWT signature against Cognito JWKS endpoint (use `jose` or `aws-jwt-verify`)
-- Verify token expiry, issuer (`iss`), and audience (`aud`)
-- Reject invalid/expired tokens with redirect to login
-- Narrow `/api` public route exemption to specific endpoints (e.g., `/api/health`)
+- [x] Validate JWT signature against Cognito JWKS endpoint (use `jose` or `aws-jwt-verify`)
+- [x] Verify token expiry, issuer (`iss`), and audience (`aud`)
+- [x] Reject invalid/expired tokens with redirect to login
+- [x] Narrow `/api` public route exemption to specific endpoints (e.g., `/api/health`)
 
 ### Files to modify
 - `frontend/src/middleware.ts` — add JWT verification logic and tighten `PUBLIC_ROUTES`

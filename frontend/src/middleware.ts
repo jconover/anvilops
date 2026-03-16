@@ -1,10 +1,13 @@
+import { createRemoteJWKSet, jwtVerify } from 'jose';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 const PUBLIC_ROUTES = [
   '/login',
+  '/api/auth/session',
   '/api/v1/health',
-  '/_next',
+  '/_next/static',
+  '/_next/image',
   '/favicon.ico',
   '/health',
 ];
@@ -13,47 +16,51 @@ function isPublicRoute(pathname: string): boolean {
   return PUBLIC_ROUTES.some((route) => pathname.startsWith(route));
 }
 
-interface JwtPayload {
-  exp?: number;
-  iss?: string;
-  token_use?: string;
+// Cache the JWKS remote key set across requests
+let jwks: ReturnType<typeof createRemoteJWKSet> | null = null;
+let jwksIssuer: string | null = null;
+
+function getJwksKeySet(
+  userPoolId: string,
+  region: string,
+): ReturnType<typeof createRemoteJWKSet> {
+  const issuer = `https://cognito-idp.${region}.amazonaws.com/${userPoolId}`;
+  if (!jwks || jwksIssuer !== issuer) {
+    jwks = createRemoteJWKSet(
+      new URL(`${issuer}/.well-known/jwks.json`),
+    );
+    jwksIssuer = issuer;
+  }
+  return jwks;
 }
 
-function decodeJwtPayload(token: string): JwtPayload | null {
-  const parts = token.split('.');
-  if (parts.length !== 3) {
-    return null;
+async function verifyToken(token: string): Promise<boolean> {
+  const userPoolId = process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID;
+  const region = process.env.NEXT_PUBLIC_COGNITO_REGION ?? 'us-east-1';
+
+  if (!userPoolId) {
+    console.error('CRITICAL: NEXT_PUBLIC_COGNITO_USER_POOL_ID is not configured. Denying all requests.');
+    return false;
   }
+
+  const issuer = `https://cognito-idp.${region}.amazonaws.com/${userPoolId}`;
 
   try {
-    const base64Url = parts[1];
-    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-    const json = atob(base64);
-    return JSON.parse(json) as JwtPayload;
+    const keySet = getJwksKeySet(userPoolId, region);
+    const clientId = process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID;
+    const { payload } = await jwtVerify(token, keySet, {
+      issuer,
+      audience: clientId,
+    });
+
+    if (payload.token_use !== 'id') {
+      return false;
+    }
+
+    return true;
   } catch {
-    return null;
-  }
-}
-
-function isTokenValid(token: string): boolean {
-  const payload = decodeJwtPayload(token);
-  if (!payload) {
     return false;
   }
-
-  if (typeof payload.exp !== 'number' || payload.exp * 1000 < Date.now()) {
-    return false;
-  }
-
-  if (typeof payload.iss !== 'string' || !payload.iss.includes('cognito')) {
-    return false;
-  }
-
-  if (payload.token_use !== 'id') {
-    return false;
-  }
-
-  return true;
 }
 
 function getSafeCallbackUrl(pathname: string): string {
@@ -69,7 +76,7 @@ function redirectToLogin(request: NextRequest, pathname: string): NextResponse {
   return NextResponse.redirect(loginUrl);
 }
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   if (isPublicRoute(pathname)) {
@@ -77,16 +84,16 @@ export function middleware(request: NextRequest) {
   }
 
   const tokenFromCookie = request.cookies.get('anvilops_token')?.value;
-  const tokenFromHeader = request.headers
-    .get('Authorization')
-    ?.replace('Bearer ', '');
+  const authHeader = request.headers.get('Authorization');
+  const tokenFromHeader = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : undefined;
   const token = tokenFromCookie || tokenFromHeader;
 
   if (!token) {
     return redirectToLogin(request, pathname);
   }
 
-  if (!isTokenValid(token)) {
+  const valid = await verifyToken(token);
+  if (!valid) {
     return redirectToLogin(request, pathname);
   }
 
