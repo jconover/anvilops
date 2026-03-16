@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.auth import CurrentUser
 from app.db.session import get_db
 from app.models.scaling import ScalingGroup, ScalingGroupMember
 from app.schemas.scaling import (
@@ -29,6 +30,7 @@ router = APIRouter()
 
 @router.get("/", response_model=ScalingGroupListResponse)
 async def list_scaling_groups(
+    user: CurrentUser,
     status: str | None = Query(None, description="Filter by group status"),
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=200),
@@ -60,6 +62,7 @@ async def list_scaling_groups(
 
 @router.get("/{group_id}", response_model=ScalingGroupResponse)
 async def get_scaling_group(
+    user: CurrentUser,
     group_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
 ) -> ScalingGroupResponse:
@@ -82,6 +85,7 @@ async def get_scaling_group(
 
 @router.post("/", response_model=ScalingGroupResponse, status_code=202)
 async def create_scaling_group(
+    user: CurrentUser,
     request: ScalingGroupCreate,
     db: AsyncSession = Depends(get_db),
 ) -> ScalingGroupResponse:
@@ -154,6 +158,7 @@ async def create_scaling_group(
 
 @router.put("/{group_id}", response_model=ScalingGroupResponse)
 async def update_scaling_group(
+    user: CurrentUser,
     group_id: uuid.UUID,
     request: ScalingGroupUpdate,
     db: AsyncSession = Depends(get_db),
@@ -254,6 +259,7 @@ async def update_scaling_group(
 
 @router.delete("/{group_id}", response_model=ScalingGroupResponse)
 async def delete_scaling_group(
+    user: CurrentUser,
     group_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
 ) -> ScalingGroupResponse:
@@ -307,6 +313,7 @@ async def delete_scaling_group(
 
 @router.post("/{group_id}/scale", response_model=ScalingGroupResponse)
 async def manual_scale(
+    user: CurrentUser,
     group_id: uuid.UUID,
     action: ScaleAction,
     db: AsyncSession = Depends(get_db),
@@ -377,6 +384,7 @@ async def manual_scale(
 
 @router.post("/{group_id}/pause", response_model=ScalingGroupResponse)
 async def pause_scaling_group(
+    user: CurrentUser,
     group_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
 ) -> ScalingGroupResponse:
@@ -421,6 +429,7 @@ async def pause_scaling_group(
 
 @router.post("/{group_id}/resume", response_model=ScalingGroupResponse)
 async def resume_scaling_group(
+    user: CurrentUser,
     group_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
 ) -> ScalingGroupResponse:
@@ -454,6 +463,7 @@ async def resume_scaling_group(
 
 @router.get("/{group_id}/members", response_model=list[ScalingGroupMemberResponse])
 async def list_scaling_group_members(
+    user: CurrentUser,
     group_id: uuid.UUID,
     status: str | None = Query(None, description="Filter by member status"),
     db: AsyncSession = Depends(get_db),

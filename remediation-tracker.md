@@ -46,14 +46,14 @@
 
 **Resolves findings:** #7, #13, #33
 **Severity:** HIGH
-**Status:** [ ] Not Started
+**Status:** [x] Complete
 
 ### What to do
-- Create a FastAPI dependency that extracts and validates the JWT from the request
-- Check `cognito:groups` claim against required role for each endpoint
-- Return 401/403 for unauthenticated/unauthorized requests
-- Do not rely on Cognito OAuth scopes alone; validate group membership
-- Move data-fetching in approvals page behind the permission check
+- [x] Create a FastAPI dependency that extracts and validates the JWT from the request
+- [x] Check `cognito:groups` claim against required role for each endpoint
+- [x] Return 401/403 for unauthenticated/unauthorized requests
+- [x] Do not rely on Cognito OAuth scopes alone; validate group membership
+- [ ] Move data-fetching in approvals page behind the permission check (page does not exist yet)
 
 ### Files to modify
 - `backend/app/middleware/audit.py` — add auth extraction

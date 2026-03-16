@@ -13,7 +13,9 @@ notification).  This endpoint:
 import json
 import logging
 
-from fastapi import APIRouter, Form, Header, HTTPException, Request
+from fastapi import APIRouter, Depends, Form, Header, HTTPException, Request
+
+from app.core.auth import CurrentUser
 from fastapi.responses import JSONResponse
 
 from app.core.config import settings
@@ -26,6 +28,7 @@ router = APIRouter()
 
 @router.post("/interactions")
 async def slack_interactions(
+    user: CurrentUser,
     request: Request,
     payload: str = Form(...),
     x_slack_request_timestamp: str = Header("", alias="X-Slack-Request-Timestamp"),

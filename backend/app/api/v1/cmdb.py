@@ -15,6 +15,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.auth import CurrentUser
 from app.db.session import get_db
 from app.models.server import ServerRequest
 from app.schemas.cmdb import (
@@ -30,6 +31,7 @@ router = APIRouter()
 
 @router.get("/status/{server_id}", response_model=CMDBSyncStatusResponse)
 async def get_cmdb_status(
+    user: CurrentUser,
     server_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
 ) -> CMDBSyncStatusResponse:
@@ -80,6 +82,7 @@ async def get_cmdb_status(
 
 @router.post("/sync/{server_id}", response_model=CMDBSyncTriggerResponse)
 async def trigger_cmdb_sync(
+    user: CurrentUser,
     server_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
 ) -> CMDBSyncTriggerResponse:
@@ -147,7 +150,7 @@ async def trigger_cmdb_sync(
 
 
 @router.post("/sync", response_model=CMDBFullSyncResponse)
-async def trigger_full_cmdb_sync() -> CMDBFullSyncResponse:
+async def trigger_full_cmdb_sync(user: CurrentUser) -> CMDBFullSyncResponse:
     """Trigger full CMDB reconciliation.
 
     Dispatches a Celery task that loads all servers and reconciles
@@ -178,6 +181,7 @@ async def trigger_full_cmdb_sync() -> CMDBFullSyncResponse:
 
 @router.get("/stats", response_model=CMDBSyncStatsResponse)
 async def get_cmdb_stats(
+    user: CurrentUser,
     db: AsyncSession = Depends(get_db),
 ) -> CMDBSyncStatsResponse:
     """CMDB sync statistics.

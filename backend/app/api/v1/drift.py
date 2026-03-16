@@ -11,6 +11,7 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.auth import CurrentUser
 from app.db.session import get_db
 from app.schemas.drift import (
     AcknowledgeAlertRequest,
@@ -50,6 +51,7 @@ def _get_monitor(db: AsyncSession) -> AsyncDriftMonitor:
 
 @router.get("/summary", response_model=DriftSummaryResponse)
 async def get_drift_summary(
+    user: CurrentUser,
     db: AsyncSession = Depends(get_db),
 ) -> DriftSummaryResponse:
     """Fleet-wide drift summary.
@@ -88,6 +90,7 @@ async def get_drift_summary(
 
 @router.get("/events", response_model=DriftEventListResponse)
 async def list_drift_events(
+    user: CurrentUser,
     server_id: uuid.UUID | None = Query(None, description="Filter by server request ID"),
     severity: str | None = Query(
         None, description="Filter by severity: critical, high, medium, low"
@@ -143,6 +146,7 @@ async def list_drift_events(
 
 @router.get("/events/{event_id}", response_model=DriftEventResponse)
 async def get_drift_event(
+    user: CurrentUser,
     event_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
 ) -> DriftEventResponse:
@@ -171,6 +175,7 @@ async def get_drift_event(
 
 @router.get("/servers/{server_id}/timeline", response_model=DriftTimelineResponse)
 async def get_server_drift_timeline(
+    user: CurrentUser,
     server_id: uuid.UUID,
     hours: int = Query(168, ge=1, le=8760, description="Lookback period in hours (default 7 days)"),
     db: AsyncSession = Depends(get_db),
@@ -230,6 +235,7 @@ async def get_server_drift_timeline(
 
 @router.get("/alerts", response_model=DriftAlertListResponse)
 async def list_drift_alerts(
+    user: CurrentUser,
     is_acknowledged: bool | None = Query(None, description="Filter by acknowledgment status"),
     severity: str | None = Query(None, description="Filter by severity"),
     page: int = Query(1, ge=1, description="Page number"),
@@ -272,6 +278,7 @@ async def list_drift_alerts(
 
 @router.post("/alerts/{alert_id}/acknowledge", response_model=AcknowledgeAlertResponse)
 async def acknowledge_alert(
+    user: CurrentUser,
     alert_id: uuid.UUID,
     body: AcknowledgeAlertRequest,
     db: AsyncSession = Depends(get_db),
@@ -315,6 +322,7 @@ async def acknowledge_alert(
 
 @router.get("/trends", response_model=DriftTrendsResponse)
 async def get_drift_trends(
+    user: CurrentUser,
     days: int = Query(30, ge=1, le=365, description="Number of days to trend (default 30)"),
     db: AsyncSession = Depends(get_db),
 ) -> DriftTrendsResponse:

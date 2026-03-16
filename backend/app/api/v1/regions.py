@@ -7,8 +7,10 @@ network selection dropdowns when a user picks a target region.
 
 import logging
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
+
+from app.core.auth import CurrentUser
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -127,7 +129,7 @@ class AvailabilityZoneListResponse(BaseModel):
         "provisioning. Only enabled regions appear by default."
     ),
 )
-async def list_regions() -> RegionListResponse:
+async def list_regions(user: CurrentUser) -> RegionListResponse:
     """List all supported and enabled AWS regions.
 
     The response drives the region selector dropdown in the server
@@ -155,7 +157,7 @@ async def list_regions() -> RegionListResponse:
         "static development data."
     ),
 )
-async def list_vpcs(region: str) -> VpcListResponse:
+async def list_vpcs(user: CurrentUser, region: str) -> VpcListResponse:
     """List VPCs available in the given region.
 
     The server builder wizard calls this endpoint after the user selects
@@ -190,7 +192,7 @@ async def list_vpcs(region: str) -> VpcListResponse:
         "available IP count, and public/private classification."
     ),
 )
-async def list_subnets(region: str, vpc_id: str) -> SubnetListResponse:
+async def list_subnets(user: CurrentUser, region: str, vpc_id: str) -> SubnetListResponse:
     """List subnets in the given VPC and region.
 
     The server builder wizard calls this endpoint after the user selects
@@ -232,6 +234,7 @@ async def list_subnets(region: str, vpc_id: str) -> SubnetListResponse:
     ),
 )
 async def list_availability_zones(
+    user: CurrentUser,
     region: str,
 ) -> AvailabilityZoneListResponse:
     """List availability zones in the given region.

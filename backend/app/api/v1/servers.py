@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.auth import CurrentUser
 from app.db.session import get_db
 from app.models.server import ServerRequest
 from app.models.server import BuildStep
@@ -41,6 +42,7 @@ def generate_server_name(environment: str, puppet_role: str) -> str:
 
 @router.post("/", response_model=ServerResponse, status_code=202)
 async def create_server(
+    user: CurrentUser,
     request: ServerCreateRequest,
     db: AsyncSession = Depends(get_db),
 ) -> ServerResponse:
@@ -85,6 +87,7 @@ async def create_server(
 
 @router.get("/", response_model=ServerListResponse)
 async def list_servers(
+    user: CurrentUser,
     status: str | None = Query(None, description="Filter by status"),
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=200),
@@ -111,6 +114,7 @@ async def list_servers(
 
 @router.get("/{server_id}", response_model=ServerResponse)
 async def get_server(
+    user: CurrentUser,
     server_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
 ) -> ServerResponse:
@@ -128,6 +132,7 @@ async def get_server(
 
 @router.get("/{server_id}/steps", response_model=list[BuildStepResponse])
 async def get_server_build_steps(
+    user: CurrentUser,
     server_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
 ) -> list[BuildStepResponse]:
@@ -143,6 +148,7 @@ async def get_server_build_steps(
 
 @router.post("/{server_id}/cancel", response_model=ServerResponse)
 async def cancel_server(
+    user: CurrentUser,
     server_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
 ) -> ServerResponse:
@@ -194,6 +200,7 @@ async def cancel_server(
 
 @router.post("/{server_id}/decommission", response_model=ServerResponse)
 async def decommission_server(
+    user: CurrentUser,
     server_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
 ) -> ServerResponse:
@@ -247,6 +254,7 @@ async def decommission_server(
 
 @router.delete("/{server_id}", response_model=ServerResponse)
 async def delete_server(
+    user: CurrentUser,
     server_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
 ) -> ServerResponse:

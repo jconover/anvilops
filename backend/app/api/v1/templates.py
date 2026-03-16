@@ -11,6 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.auth import CurrentUser
 from app.db.session import get_db
 from app.models.template import ServerTemplate
 from app.schemas.template import (
@@ -26,6 +27,7 @@ router = APIRouter()
 
 @router.get("/", response_model=TemplateListResponse)
 async def list_templates(
+    user: CurrentUser,
     include_inactive: bool = Query(
         False, description="Include inactive templates (admin use)"
     ),
@@ -63,6 +65,7 @@ async def list_templates(
 
 @router.get("/{template_id}", response_model=TemplateResponse)
 async def get_template(
+    user: CurrentUser,
     template_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
 ) -> TemplateResponse:
@@ -80,6 +83,7 @@ async def get_template(
 
 @router.post("/", response_model=TemplateResponse, status_code=201)
 async def create_template(
+    user: CurrentUser,
     payload: TemplateCreate,
     db: AsyncSession = Depends(get_db),
 ) -> TemplateResponse:
@@ -112,6 +116,7 @@ async def create_template(
 
 @router.put("/{template_id}", response_model=TemplateResponse)
 async def update_template(
+    user: CurrentUser,
     template_id: uuid.UUID,
     payload: TemplateUpdate,
     db: AsyncSession = Depends(get_db),
@@ -157,6 +162,7 @@ async def update_template(
 
 @router.delete("/{template_id}", response_model=TemplateResponse)
 async def delete_template(
+    user: CurrentUser,
     template_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
 ) -> TemplateResponse:

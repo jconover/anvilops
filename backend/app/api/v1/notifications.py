@@ -14,6 +14,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import ColumnElement, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.auth import CurrentUser
 from app.db.session import get_db
 from app.models.notification import Notification
 from app.schemas.notification import (
@@ -44,6 +45,7 @@ def _user_filter(user_email: str) -> ColumnElement[bool]:
 
 @router.get("/", response_model=NotificationListResponse)
 async def list_notifications(
+    user: CurrentUser,
     user_email: str = Query(DEFAULT_USER, description="Recipient email"),
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(20, ge=1, le=100, description="Items per page"),
@@ -106,6 +108,7 @@ async def list_notifications(
 
 @router.get("/unread-count")
 async def get_unread_count(
+    user: CurrentUser,
     user_email: str = Query(DEFAULT_USER, description="Recipient email"),
     db: AsyncSession = Depends(get_db),
 ) -> dict[str, Any]:
@@ -126,6 +129,7 @@ async def get_unread_count(
 
 @router.post("/mark-read", response_model=list[NotificationResponse])
 async def mark_read(
+    user: CurrentUser,
     body: NotificationMarkReadRequest,
     user_email: str = Query(DEFAULT_USER, description="Recipient email"),
     db: AsyncSession = Depends(get_db),
@@ -160,6 +164,7 @@ async def mark_read(
 
 @router.post("/mark-all-read")
 async def mark_all_read(
+    user: CurrentUser,
     user_email: str = Query(DEFAULT_USER, description="Recipient email"),
     db: AsyncSession = Depends(get_db),
 ) -> dict[str, Any]:
@@ -189,6 +194,7 @@ async def mark_all_read(
     "/{notification_id}", response_model=NotificationDeleteResponse
 )
 async def delete_notification(
+    user: CurrentUser,
     notification_id: uuid.UUID,
     user_email: str = Query(DEFAULT_USER, description="Recipient email"),
     db: AsyncSession = Depends(get_db),

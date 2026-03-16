@@ -15,6 +15,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import Date, cast, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.auth import CurrentUser
 from app.db.session import get_db
 from app.models.audit import AuditLog
 from app.schemas.audit import (
@@ -32,6 +33,7 @@ router = APIRouter()
 
 @router.get("/actions", response_model=list[str])
 async def list_audit_actions(
+    user: CurrentUser,
     db: AsyncSession = Depends(get_db),
 ) -> list[str]:
     """Return all distinct action types recorded in the audit log.
@@ -49,6 +51,7 @@ async def list_audit_actions(
 
 @router.get("/summary", response_model=AuditSummaryResponse)
 async def audit_summary(
+    user: CurrentUser,
     days: int = Query(30, ge=1, le=365, description="Number of days to look back"),
     db: AsyncSession = Depends(get_db),
 ) -> AuditSummaryResponse:
@@ -132,6 +135,7 @@ async def audit_summary(
 
 @router.get("/", response_model=AuditLogListResponse)
 async def list_audit_logs(
+    user: CurrentUser,
     page: int = Query(1, ge=1, description="Page number (1-indexed)"),
     page_size: int = Query(50, ge=1, le=500, description="Results per page"),
     action: str | None = Query(None, description="Filter by action"),
@@ -198,6 +202,7 @@ async def list_audit_logs(
 
 @router.get("/{audit_id}", response_model=AuditLogResponse)
 async def get_audit_log(
+    user: CurrentUser,
     audit_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
 ) -> AuditLogResponse:
