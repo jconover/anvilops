@@ -1,7 +1,7 @@
 """FastAPI dependency for injecting audit context into route handlers.
 
-Extracts request metadata (IP address, User-Agent) and, when auth is
-wired up, the authenticated user's identity.  Returns a plain dict
+Extracts request metadata (IP address, User-Agent) and the authenticated
+user's identity from the JWT-validated request state.  Returns a plain dict
 that can be spread into ``AuditLogger.log_async()``::
 
     from app.middleware.audit import get_audit_context
@@ -33,8 +33,8 @@ def get_audit_context(request: Request) -> dict:
     - ``ip_address`` -- client IP (supports ``X-Forwarded-For`` behind
       a reverse proxy).
     - ``user_agent`` -- truncated to 500 characters.
-    - ``actor_email`` -- extracted from the request state if an auth
-      middleware has already run, otherwise ``None``.
+    - ``actor_email`` -- extracted from the request state after JWT
+      validation by ``get_current_user``, otherwise ``None``.
     - ``actor_role`` -- likewise sourced from request state.
     """
     # Prefer X-Forwarded-For when running behind a load balancer / proxy.
@@ -47,7 +47,7 @@ def get_audit_context(request: Request) -> dict:
 
     user_agent = request.headers.get("user-agent", "")[:500] or None
 
-    # Auth middleware (once implemented) will attach these to request.state.
+    # Auth dependency (get_current_user) attaches these to request.state.
     actor_email: str | None = getattr(request.state, "actor_email", None)
     actor_role: str | None = getattr(request.state, "actor_role", None)
 

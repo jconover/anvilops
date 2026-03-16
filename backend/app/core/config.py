@@ -56,6 +56,11 @@ class Settings(BaseSettings):
     PORT_ENABLED: bool = False
     PORT_WEBHOOK_SECRET: str = ""
 
+    # Cognito Configuration
+    COGNITO_USER_POOL_ID: str = ""
+    COGNITO_REGION: str = "us-east-1"
+    COGNITO_CLIENT_ID: str = ""
+
     model_config = {"env_file": ".env", "extra": "ignore"}
 
 

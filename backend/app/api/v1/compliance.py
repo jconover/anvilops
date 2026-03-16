@@ -13,6 +13,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.auth import CurrentUser
 from app.db.session import get_db
 from app.models.server import ServerRequest
 
@@ -120,6 +121,7 @@ async def _get_server_with_certname(
 
 @router.get("/summary")
 async def get_compliance_summary(
+    user: CurrentUser,
     db: AsyncSession = Depends(get_db),
 ) -> dict[str, Any]:
     """Fleet-wide compliance summary.
@@ -166,6 +168,7 @@ async def get_compliance_summary(
 
 @router.get("/nodes/{server_id}")
 async def get_node_compliance(
+    user: CurrentUser,
     server_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
 ) -> dict[str, Any]:
@@ -199,6 +202,7 @@ async def get_node_compliance(
 
 @router.get("/nodes/{server_id}/drift")
 async def get_node_drift(
+    user: CurrentUser,
     server_id: uuid.UUID,
     hours: int = Query(24, ge=1, le=720, description="Lookback period in hours"),
     db: AsyncSession = Depends(get_db),
@@ -236,6 +240,7 @@ async def get_node_drift(
 
 @router.get("/report")
 async def get_compliance_report(
+    user: CurrentUser,
     db: AsyncSession = Depends(get_db),
 ) -> dict[str, Any]:
     """Downloadable compliance report for all managed nodes.

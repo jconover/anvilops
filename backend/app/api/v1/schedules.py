@@ -12,6 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.auth import CurrentUser
 from app.db.session import get_db
 from app.models.schedule import BuildSchedule, ScheduleExecution
 from app.schemas.schedule import (
@@ -78,6 +79,7 @@ def _compute_next_run(schedule: BuildSchedule) -> datetime | None:
 
 @router.post("/", response_model=ScheduleResponse, status_code=201)
 async def create_schedule(
+    user: CurrentUser,
     request: ScheduleCreate,
     db: AsyncSession = Depends(get_db),
 ) -> ScheduleResponse:
@@ -141,6 +143,7 @@ async def create_schedule(
 
 @router.get("/", response_model=ScheduleListResponse)
 async def list_schedules(
+    user: CurrentUser,
     status: str | None = Query(None, description="Filter by status"),
     schedule_type: str | None = Query(None, description="Filter by type"),
     skip: int = Query(0, ge=0),
@@ -171,6 +174,7 @@ async def list_schedules(
 
 @router.get("/{schedule_id}", response_model=ScheduleDetailResponse)
 async def get_schedule(
+    user: CurrentUser,
     schedule_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
 ) -> ScheduleDetailResponse:
@@ -188,6 +192,7 @@ async def get_schedule(
 
 @router.put("/{schedule_id}", response_model=ScheduleResponse)
 async def update_schedule(
+    user: CurrentUser,
     schedule_id: uuid.UUID,
     request: ScheduleUpdate,
     db: AsyncSession = Depends(get_db),
@@ -245,6 +250,7 @@ async def update_schedule(
 
 @router.delete("/{schedule_id}", response_model=ScheduleResponse)
 async def delete_schedule(
+    user: CurrentUser,
     schedule_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
 ) -> ScheduleResponse:
@@ -286,6 +292,7 @@ async def delete_schedule(
 
 @router.post("/{schedule_id}/pause", response_model=ScheduleResponse)
 async def pause_schedule(
+    user: CurrentUser,
     schedule_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
 ) -> ScheduleResponse:
@@ -321,6 +328,7 @@ async def pause_schedule(
 
 @router.post("/{schedule_id}/resume", response_model=ScheduleResponse)
 async def resume_schedule(
+    user: CurrentUser,
     schedule_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
 ) -> ScheduleResponse:
@@ -356,6 +364,7 @@ async def resume_schedule(
 
 @router.post("/{schedule_id}/run-now", response_model=ExecutionResponse, status_code=202)
 async def run_schedule_now(
+    user: CurrentUser,
     schedule_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
 ) -> ExecutionResponse:
@@ -414,6 +423,7 @@ async def run_schedule_now(
 
 @router.get("/{schedule_id}/executions", response_model=ExecutionListResponse)
 async def list_executions(
+    user: CurrentUser,
     schedule_id: uuid.UUID,
     status: str | None = Query(None, description="Filter by execution status"),
     skip: int = Query(0, ge=0),

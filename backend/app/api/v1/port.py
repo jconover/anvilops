@@ -13,7 +13,9 @@ Additional endpoints support health checks and manual catalog sync triggers.
 import json
 import logging
 
-from fastapi import APIRouter, Header, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request
+
+from app.core.auth import CurrentUser
 
 from app.core.config import settings
 from app.schemas.port import PortWebhookPayload
@@ -105,7 +107,7 @@ async def port_webhook(
 
 
 @router.get("/health")
-async def port_health() -> dict:
+async def port_health(user: CurrentUser) -> dict:
     """Check Port integration health.
 
     Instantiates a PortService and calls ``health_check()`` to verify that
@@ -122,6 +124,7 @@ async def port_health() -> dict:
 
 @router.post("/sync/{server_request_id}")
 async def port_sync_server_endpoint(
+    user: CurrentUser,
     server_request_id: str,
     event_type: str = Query(default="server_updated"),
 ) -> dict:
@@ -141,7 +144,7 @@ async def port_sync_server_endpoint(
 
 
 @router.post("/sync")
-async def port_full_sync_endpoint() -> dict:
+async def port_full_sync_endpoint(user: CurrentUser) -> dict:
     """Manually trigger a full Port catalog sync.
 
     Enqueues a ``port_full_sync`` Celery task that syncs all AnvilOps

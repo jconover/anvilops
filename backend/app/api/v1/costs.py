@@ -9,8 +9,10 @@ before clicking "Build".
 import logging
 from typing import Literal
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
+
+from app.core.auth import CurrentUser
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -94,7 +96,7 @@ class CostEstimateResponse(BaseModel):
         "monthly and annual cost estimate with line-item breakdown."
     ),
 )
-async def estimate_cost(request: CostEstimateRequest) -> CostEstimateResponse:
+async def estimate_cost(user: CurrentUser, request: CostEstimateRequest) -> CostEstimateResponse:
     """Calculate a cost estimate for the given server configuration.
 
     The request only needs the pricing-relevant fields (instance size,
@@ -141,7 +143,7 @@ async def estimate_cost(request: CostEstimateRequest) -> CostEstimateResponse:
         "without making per-config estimate calls."
     ),
 )
-async def get_pricing_table() -> dict:
+async def get_pricing_table(user: CurrentUser) -> dict:
     """Return the complete pricing table for frontend display.
 
     This powers the pricing reference section of the server builder

@@ -15,6 +15,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.auth import CurrentUser
 from app.db.session import get_db
 from app.models.server import ServerRequest
 from app.services.puppet_classifier import get_certname
@@ -178,6 +179,7 @@ async def _resolve_certname(
     description="Return the current Puppet status for a managed server.",
 )
 async def get_node_status(
+    user: CurrentUser,
     server_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
 ) -> PuppetNodeStatus:
@@ -221,6 +223,7 @@ async def get_node_status(
     description="Return the most recent Puppet run report for a managed server.",
 )
 async def get_latest_report(
+    user: CurrentUser,
     server_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
 ) -> PuppetReport:
@@ -298,6 +301,7 @@ async def get_latest_report(
     description="Return key Puppet facts for a managed server (OS, networking, memory, etc.).",
 )
 async def get_node_facts(
+    user: CurrentUser,
     server_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
 ) -> PuppetFacts:
@@ -368,6 +372,7 @@ async def get_node_facts(
     description="Return aggregate Puppet compliance across all AnvilOps-managed servers.",
 )
 async def get_compliance_summary(
+    user: CurrentUser,
     db: AsyncSession = Depends(get_db),
 ) -> PuppetComplianceSummary:
     """Query PuppetDB for all AnvilOps-managed nodes and aggregate compliance."""
