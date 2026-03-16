@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import type { UserRole } from './roles';
 import { hasPermission, hasMinimumRole, canAccessEnvironment, type Permission } from './roles';
+import { signIn, signOut, getCurrentSession, getUserFromSession } from './cognito';
 
 interface User {
   id: string;
@@ -29,40 +30,61 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Check for existing session on mount
-    const stored = localStorage.getItem('anvilops_user');
-    if (stored) {
+    async function checkSession() {
       try {
-        setUser(JSON.parse(stored));
+        const session = await getCurrentSession();
+        if (session) {
+          const cognitoUser = getUserFromSession(session);
+          const idToken = session.getIdToken().getJwtToken();
+          await fetch('/api/auth/session', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token: idToken }),
+          });
+          setUser(cognitoUser);
+        } else {
+          setUser(null);
+        }
       } catch {
-        localStorage.removeItem('anvilops_user');
-        localStorage.removeItem('anvilops_token');
+        setUser(null);
+      } finally {
+        setIsLoading(false);
       }
     }
-    setIsLoading(false);
+    checkSession();
   }, []);
 
   const login = useCallback(async (email: string, password: string) => {
-    // TODO: Replace with real Cognito auth when configured
-    // For now, simulate auth for development
-    const mockUser: User = {
-      id: '1',
-      email,
-      name: email.split('@')[0],
-      role: 'admin', // Default to admin for dev
-    };
-    localStorage.setItem('anvilops_user', JSON.stringify(mockUser));
-    localStorage.setItem('anvilops_token', 'dev-token');
-    // Set cookie so Next.js middleware can read the token server-side
-    document.cookie = 'anvilops_token=dev-token; path=/; max-age=86400; SameSite=Lax';
-    setUser(mockUser);
+    try {
+      const session = await signIn(email, password);
+      const cognitoUser = getUserFromSession(session);
+      const idToken = session.getIdToken().getJwtToken();
+
+      const res = await fetch('/api/auth/session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: idToken }),
+      });
+      if (!res.ok) {
+        throw new Error('Failed to establish session');
+      }
+
+      setUser(cognitoUser);
+    } catch (error) {
+      if (error instanceof Error) {
+        throw new Error(`Login failed: ${error.message}`);
+      }
+      throw new Error('Login failed: An unexpected error occurred');
+    }
   }, []);
 
-  const logout = useCallback(() => {
-    localStorage.removeItem('anvilops_user');
-    localStorage.removeItem('anvilops_token');
-    document.cookie = 'anvilops_token=; path=/; max-age=0';
-    setUser(null);
+  const logout = useCallback(async () => {
+    try {
+      await signOut();
+    } finally {
+      await fetch('/api/auth/session', { method: 'DELETE' }).catch(() => {});
+      setUser(null);
+    }
   }, []);
 
   const value: AuthContextType = {

@@ -9,14 +9,14 @@
 
 **Resolves findings:** #1, #3, #4, #5, #6
 **Severity:** CRITICAL
-**Status:** [ ] Not Started
+**Status:** [x] Complete
 
 ### What to do
-- Remove the mock `login()` function that accepts any credentials and hardcodes `role: 'admin'`
-- Integrate AWS Cognito SDK (`amazon-cognito-identity-js` or `@aws-amplify/auth`) for real authentication
-- Roles must come from signed Cognito JWT claims (`cognito:groups`), not localStorage
-- Set auth cookies server-side with `Secure; HttpOnly; SameSite=Strict`
-- Remove `dev-token` hardcoded string and localStorage token storage
+- [x] Remove the mock `login()` function that accepts any credentials and hardcodes `role: 'admin'`
+- [x] Integrate AWS Cognito SDK (`amazon-cognito-identity-js` or `@aws-amplify/auth`) for real authentication
+- [x] Roles must come from signed Cognito JWT claims (`cognito:groups`), not localStorage
+- [x] Set auth cookies server-side with `Secure; HttpOnly; SameSite=Strict`
+- [x] Remove `dev-token` hardcoded string and localStorage token storage
 
 ### Files to modify
 - `frontend/src/lib/auth/context.tsx` — replace mock login with Cognito auth flow

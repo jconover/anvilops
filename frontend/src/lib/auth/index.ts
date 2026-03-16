@@ -8,3 +8,4 @@ export {
   hasMinimumRole,
   canAccessEnvironment,
 } from './roles';
+export { signIn, signOut, getCurrentSession, getUserFromSession } from './cognito';
