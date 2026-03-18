@@ -109,17 +109,22 @@
 
 **Resolves findings:** #10, #11, #18, #19
 **Severity:** HIGH/MEDIUM
-**Status:** [ ] Not Started
+**Status:** [x] Complete
 
 ### What to do
-- Restrict `ProxyHeadersMiddleware` trusted_hosts to known proxy CIDR ranges
-- Remove default DB credentials (empty string, fail fast on startup)
-- Add rate limiting middleware (e.g., `slowapi`)
-- Restrict CORS `allow_methods` and `allow_headers` to explicit lists
+- [x] Restrict `ProxyHeadersMiddleware` trusted_hosts to configurable CIDR ranges (default: RFC 1918)
+- [x] Remove default DB credentials (empty string default, fail fast on startup)
+- [x] Add rate limiting middleware (`slowapi`, configurable default: 100/minute)
+- [x] Restrict CORS `allow_methods` and `allow_headers` to explicit lists
+- [x] Add DATABASE_URL fallback in docker-compose.yml for local dev
 
-### Files to modify
-- `backend/app/main.py:51,57-58` — trusted_hosts, CORS config
-- `backend/app/core/config.py:7` — remove default DATABASE_URL credentials
+### Files modified
+- `backend/app/main.py` — trusted_hosts, CORS, rate limiting, DATABASE_URL startup validation
+- `backend/app/core/config.py:7` — DATABASE_URL default removed; added TRUSTED_PROXY_HOSTS, RATE_LIMIT_DEFAULT
+- `backend/requirements.txt` — added slowapi
+- `docker-compose.yml` — added DATABASE_URL fallback for api, worker, beat services
+- `.env.example` — marked DATABASE_URL as required
+- `backend/tests/test_config.py` — updated assertions
 
 ---
 

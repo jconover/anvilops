@@ -13,9 +13,27 @@ class TestSettingsDefaults:
     def test_database_url_default(self):
         from app.core.config import Settings
 
+        with patch.dict("os.environ", {}, clear=False):
+            # Remove DATABASE_URL if set so we test the actual default
+            import os
+            env = os.environ.copy()
+            env.pop("DATABASE_URL", None)
+            with patch.dict("os.environ", env, clear=True):
+                s = Settings()
+                assert s.DATABASE_URL == ""
+
+    def test_trusted_proxy_hosts_default(self):
+        from app.core.config import Settings
+
         s = Settings()
-        assert "postgresql+asyncpg" in s.DATABASE_URL
-        assert "anvilops" in s.DATABASE_URL
+        assert "127.0.0.1" in s.TRUSTED_PROXY_HOSTS
+        assert "10.0.0.0/8" in s.TRUSTED_PROXY_HOSTS
+
+    def test_rate_limit_default(self):
+        from app.core.config import Settings
+
+        s = Settings()
+        assert s.RATE_LIMIT_DEFAULT == "100/minute"
 
     def test_redis_url_default(self):
         from app.core.config import Settings

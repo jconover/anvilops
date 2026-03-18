@@ -10,6 +10,8 @@ services:
       - ./backend:/app
     env_file:
       - .env
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://anvilops:anvilops@db:5432/anvilops}
     depends_on:
       db:
         condition: service_healthy
@@ -41,6 +43,8 @@ services:
       - ./terraform:/terraform
     env_file:
       - .env
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://anvilops:anvilops@db:5432/anvilops}
     restart: unless-stopped
     deploy:
       resources:
@@ -71,6 +75,8 @@ services:
       - ./backend:/app
     env_file:
       - .env
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://anvilops:anvilops@db:5432/anvilops}
     depends_on:
       db:
         condition: service_healthy
