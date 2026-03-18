@@ -97,6 +97,32 @@ def verify_webhook_signature(
     return True
 
 
+def validate_webhook_timestamp(payload: dict) -> bool:
+    """Return False if the webhook timestamp is older than _MAX_TIMESTAMP_AGE seconds.
+
+    Prevents replay attacks by rejecting stale webhook requests.
+    When no timestamp is present the request is accepted (timestamp is optional).
+    """
+    raw_ts = payload.get("timestamp")
+    if raw_ts is None:
+        return True
+
+    try:
+        timestamp = int(raw_ts)
+    except (TypeError, ValueError):
+        logger.warning("Port webhook timestamp is not a valid integer: %r", raw_ts)
+        return False
+
+    age = abs(time.time() - timestamp)
+    if age > _MAX_TIMESTAMP_AGE:
+        logger.warning(
+            "Port webhook timestamp expired (age=%.0fs, max=%ds)", age, _MAX_TIMESTAMP_AGE
+        )
+        return False
+
+    return True
+
+
 # ---------------------------------------------------------------------------
 # Async client (for FastAPI endpoints)
 # ---------------------------------------------------------------------------

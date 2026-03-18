@@ -193,7 +193,7 @@ async def get_node_status(
         logger.error("Puppet API error fetching status for %s: %s", certname, exc)
         raise HTTPException(
             status_code=503,
-            detail=f"Failed to reach Puppet Enterprise: {exc}",
+            detail="Failed to reach Puppet Enterprise. Please try again later.",
         ) from exc
 
     if node_data is None:
@@ -237,7 +237,7 @@ async def get_latest_report(
         logger.error("Puppet API error fetching report for %s: %s", certname, exc)
         raise HTTPException(
             status_code=503,
-            detail=f"Failed to reach Puppet Enterprise: {exc}",
+            detail="Failed to reach Puppet Enterprise. Please try again later.",
         ) from exc
 
     if report_data is None:
@@ -335,7 +335,7 @@ async def get_node_facts(
         logger.error("Puppet API error fetching facts for %s: %s", certname, exc)
         raise HTTPException(
             status_code=503,
-            detail=f"Failed to reach Puppet Enterprise: {exc}",
+            detail="Failed to reach Puppet Enterprise. Please try again later.",
         ) from exc
 
     if facts_data is None:
@@ -405,7 +405,7 @@ async def get_compliance_summary(
         logger.error("Puppet API error fetching all nodes: %s", exc)
         raise HTTPException(
             status_code=503,
-            detail=f"Failed to reach Puppet Enterprise: {exc}",
+            detail="Failed to reach Puppet Enterprise. Please try again later.",
         ) from exc
 
     if all_nodes is None:

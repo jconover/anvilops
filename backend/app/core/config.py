@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     API_V1_PREFIX: str = "/api/v1"
     PROJECT_NAME: str = "AnvilOps"
     DEBUG: bool = False
+    SQL_ECHO: bool = False
     CORS_ORIGINS: list[str] = []
     TRUSTED_PROXY_HOSTS: list[str] = ["127.0.0.1", "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"]
     RATE_LIMIT_DEFAULT: str = "100/minute"

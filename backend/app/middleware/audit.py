@@ -21,7 +21,12 @@ that can be spread into ``AuditLogger.log_async()``::
 
 from __future__ import annotations
 
+import ipaddress
+import logging
+
 from fastapi import Request
+
+logger = logging.getLogger(__name__)
 
 
 def get_audit_context(request: Request) -> dict:
@@ -40,8 +45,17 @@ def get_audit_context(request: Request) -> dict:
     # Prefer X-Forwarded-For when running behind a load balancer / proxy.
     forwarded_for = request.headers.get("x-forwarded-for")
     if forwarded_for:
-        # Take the leftmost (original client) IP.
-        ip_address = forwarded_for.split(",")[0].strip()
+        # Take the leftmost (original client) IP, validated as a proper address.
+        candidate = forwarded_for.split(",")[0].strip()
+        try:
+            ipaddress.ip_address(candidate)
+            ip_address = candidate
+        except ValueError:
+            logger.warning(
+                "X-Forwarded-For contains an invalid IP %r; falling back to connection IP",
+                candidate,
+            )
+            ip_address = request.client.host if request.client else None
     else:
         ip_address = request.client.host if request.client else None
 
