@@ -67,20 +67,24 @@
 
 **Resolves findings:** #8, #9
 **Severity:** HIGH
-**Status:** [ ] Not Started
+**Status:** [x] Complete
 
 ### What to do
-- Change `AWX_VERIFY_SSL` default from `False` to `True`
-- Change `PUPPET_VERIFY_SSL` default from `False` to `True`
-- Change WinRM `ansible_winrm_server_cert_validation` from `"ignore"` to `"validate"`
-- Update `.env.example` to show `AWX_VERIFY_SSL=true` and `PUPPET_VERIFY_SSL=true`
-- Deploy proper CA certificates to AWX for WinRM validation
+- [x] Change `AWX_VERIFY_SSL` default from `False` to `True`
+- [x] Change `PUPPET_VERIFY_SSL` default from `False` to `True`
+- [x] Change WinRM `ansible_winrm_server_cert_validation` from `"ignore"` to `"validate"`
+- [x] Update `.env.example` to show `AWX_VERIFY_SSL=true` and `PUPPET_VERIFY_SSL=true`
+- [x] Wire `AWX_VERIFY_SSL` into both AWX httpx clients (was dead config — never passed to httpx)
+- [x] Update `ansible/group_vars/windows.yml` WinRM cert validation to `"validate"`
+- [ ] Deploy proper CA certificates to AWX for WinRM validation (infrastructure prerequisite)
 
-### Files to modify
-- `backend/app/core/config.py:21,29` — flip defaults to `True`
-- `backend/app/services/awx.py:45` — change to `"validate"`
-- `.env.example:19,27` — update example values
-- `backend/tests/test_config.py` — update assertions
+### Files modified
+- `backend/app/core/config.py:21,29` — flipped defaults to `True`
+- `backend/app/services/awx.py:45` — WinRM cert validation changed to `"validate"`
+- `backend/app/services/awx.py:91,595` — wired `verify=settings.AWX_VERIFY_SSL` into both httpx clients
+- `ansible/group_vars/windows.yml:8` — WinRM cert validation changed to `"validate"`
+- `.env.example:19,27` — updated example values
+- `backend/tests/test_config.py` — updated assertions
 
 ---
 

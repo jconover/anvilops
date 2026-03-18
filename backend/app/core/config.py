@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     AWX_BASE_URL: str = "http://awx:8052"
     AWX_USERNAME: str = ""
     AWX_PASSWORD: str = ""
-    AWX_VERIFY_SSL: bool = False
+    AWX_VERIFY_SSL: bool = True
     AWX_JOB_TIMEOUT: int = 600
     AWX_POLL_INTERVAL: int = 10
     AWX_ORGANIZATION_ID: int = 1
@@ -26,7 +26,7 @@ class Settings(BaseSettings):
     # Puppet Enterprise Configuration
     PUPPET_BASE_URL: str = "https://puppet:8140"
     PUPPET_API_TOKEN: str = ""
-    PUPPET_VERIFY_SSL: bool = False
+    PUPPET_VERIFY_SSL: bool = True
     PUPPET_CA_PORT: int = 8140
     PUPPET_CLASSIFIER_PORT: int = 4433
     PUPPET_PUPPETDB_PORT: int = 8081

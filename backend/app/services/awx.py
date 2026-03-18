@@ -42,7 +42,7 @@ WINDOWS_CONNECTION_VARS = {
     "ansible_connection": "winrm",
     "ansible_port": 5986,
     "ansible_winrm_transport": "ntlm",
-    "ansible_winrm_server_cert_validation": "ignore",
+    "ansible_winrm_server_cert_validation": "validate",
 }
 
 
@@ -90,6 +90,7 @@ class AWXService:
                 auth=self._auth,
                 timeout=self._timeout,
                 headers={"Content-Type": "application/json"},
+                verify=settings.AWX_VERIFY_SSL,
             )
         return self._client
 
@@ -591,6 +592,7 @@ class AWXServiceSync:
             auth=self._auth,
             timeout=self._timeout,
             headers={"Content-Type": "application/json"},
+            verify=settings.AWX_VERIFY_SSL,
         )
 
     def close(self) -> None:
