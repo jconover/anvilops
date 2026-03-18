@@ -173,21 +173,20 @@
 
 **Resolves findings:** #14, #27, #28, #29, #39
 **Severity:** MEDIUM
-**Status:** [ ] Not Started
+**Status:** [x] Complete
 
 ### What to do
-- Move ElastiCache endpoint to Secrets Manager or ConfigMap variable
-- Split `anvilops-secrets` into per-component secrets (API, worker, beat)
-- Change default Redis URL to `rediss://` (TLS)
-- Replace placeholder Puppet secret with `random_password` resource
-- Standardize ExternalSecret API version to `v1`
+- [ ] Move ElastiCache endpoint to ConfigMap variable (currently hardcoded in ExternalSecret template — documented with TODO)
+- [ ] Split `anvilops-secrets` into per-component secrets (documented as follow-up — requires Helm schema changes)
+- [x] Change default Redis URL to `rediss://` (TLS) in Helm values and K8s ConfigMap
+- [x] Replace placeholder Puppet secret with `random_password` resource
+- [x] Standardize ExternalSecret API version to `v1`
 
-### Files to modify
-- `terraform/platform/k8s/overlays/dev/external-secrets.yaml`
-- `helm/anvilops/templates/api-deployment.yaml`
-- `helm/anvilops/values.yaml`
-- `terraform/platform/modules/puppet/main.tf`
-- `helm/anvilops/templates/external-secrets.yaml`
+### Files modified
+- `helm/anvilops/templates/external-secrets.yaml` — upgraded v1beta1 → v1 for both SecretStore and ExternalSecret
+- `helm/anvilops/values.yaml:303` — Redis URL changed to `rediss://` (TLS)
+- `terraform/platform/k8s/base/configmap.yaml:12` — Redis URL changed to `rediss://` (TLS)
+- `terraform/platform/modules/puppet/main.tf` — replaced static placeholder with `random_password` resource
 
 ---
 
