@@ -92,16 +92,16 @@
 
 **Resolves findings:** #12, #31
 **Severity:** HIGH
-**Status:** [ ] Not Started
+**Status:** [x] Complete
 
 ### What to do
-- Replace all `uses: actions/checkout@v4` style references with full SHA pins
-- Fork or replace `lewagon/wait-on-check-action` with an SHA-pinned version or `gh` CLI alternative
-- Add version comments next to SHA pins for maintainability
+- [x] Replace all `uses: actions/checkout@v4` style references with full SHA pins
+- [x] Pin `lewagon/wait-on-check-action` to commit SHA (marked as third-party)
+- [x] Add version comments next to SHA pins for maintainability
 
-### Files to modify
-- `.github/workflows/ci.yml` — all `uses:` lines
-- `.github/workflows/deploy.yml` — all `uses:` lines
+### Files modified
+- `.github/workflows/ci.yml` — all 20 `uses:` lines pinned to commit SHAs
+- `.github/workflows/deploy.yml` — all 7 `uses:` lines pinned to commit SHAs
 
 ---
 
