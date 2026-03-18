@@ -14,13 +14,23 @@ variable "environment" {
 }
 
 variable "callback_urls" {
-  description = "List of allowed callback URLs for the Cognito user pool client."
+  description = "List of allowed callback URLs for the Cognito user pool client. Must use HTTPS (http://localhost allowed for dev)."
   type        = list(string)
+
+  validation {
+    condition     = alltrue([for url in var.callback_urls : can(regex("^https://", url)) || can(regex("^http://localhost", url))])
+    error_message = "All callback URLs must use HTTPS. Only http://localhost is allowed for local development."
+  }
 }
 
 variable "logout_urls" {
-  description = "List of allowed logout URLs for the Cognito user pool client."
+  description = "List of allowed logout URLs for the Cognito user pool client. Must use HTTPS (http://localhost allowed for dev)."
   type        = list(string)
+
+  validation {
+    condition     = alltrue([for url in var.logout_urls : can(regex("^https://", url)) || can(regex("^http://localhost", url))])
+    error_message = "All logout URLs must use HTTPS. Only http://localhost is allowed for local development."
+  }
 }
 
 variable "enable_deletion_protection" {
@@ -47,8 +57,8 @@ variable "mfa_configuration" {
   default     = "ON"
 
   validation {
-    condition     = contains(["ON", "OPTIONAL"], var.mfa_configuration)
-    error_message = "MFA configuration must be one of: ON, OPTIONAL."
+    condition     = var.mfa_configuration == "ON"
+    error_message = "MFA configuration must be ON. OPTIONAL is not allowed for security compliance."
   }
 }
 

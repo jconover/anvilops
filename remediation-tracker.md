@@ -152,17 +152,20 @@
 
 **Resolves findings:** #23, #24, #25, #26
 **Severity:** MEDIUM
-**Status:** [ ] Not Started
+**Status:** [x] Complete
 
 ### What to do
-- Enable `advanced_security_mode = "ENFORCED"` on the user pool
-- Add `validation` blocks requiring HTTPS on callback/logout URLs
-- Lock `mfa_configuration` to `"ON"` only (remove `OPTIONAL`)
-- Reduce refresh token validity from 30 days to 7 days
+- [x] Enable `advanced_security_mode = "ENFORCED"` on the user pool
+- [x] Add `validation` blocks requiring HTTPS on callback/logout URLs (http://localhost allowed for dev)
+- [x] Lock `mfa_configuration` to `"ON"` only (remove `OPTIONAL`)
+- [x] Reduce refresh token validity from 30 days to 7 days
+- [x] Update dev tfvars to use MFA "ON"
 
-### Files to modify
-- `terraform/platform/modules/cognito/main.tf` — add `user_pool_add_ons`, reduce refresh token
-- `terraform/platform/modules/cognito/variables.tf` — add URL validation, lock MFA
+### Files modified
+- `terraform/platform/modules/cognito/main.tf` — added `user_pool_add_ons`, reduced refresh token to 7 days
+- `terraform/platform/modules/cognito/variables.tf` — HTTPS URL validation, MFA locked to "ON"
+- `terraform/platform/terraform.dev.tfvars` — MFA changed to "ON"
+- `terraform/platform/terraform.dev.tfvars.example` — MFA changed to "ON"
 
 ---
 
