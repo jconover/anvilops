@@ -194,15 +194,15 @@
 
 **Resolves findings:** #30, #32
 **Severity:** MEDIUM
-**Status:** [ ] Not Started
+**Status:** [x] Complete
 
 ### What to do
-- Move `id-token: write` from workflow-level to only the deploy job that needs it
-- Remove `latest` tag from ECR image pushes; use only immutable SHA-based tags
+- [x] Move `id-token: write` from workflow-level to only the deploy job that needs it
+- [x] Remove `latest` tag from ECR image pushes; use only immutable SHA-based tags
 
-### Files to modify
-- `.github/workflows/deploy.yml:25` — scope permissions per-job
-- `.github/workflows/deploy.yml:106,121` — remove `latest` tag
+### Files modified
+- `.github/workflows/deploy.yml:23-24` — scoped `id-token: write` to `deploy-dev` job only
+- `.github/workflows/deploy.yml:104,118` — removed `latest` tag from both ECR pushes
 
 ---
 
