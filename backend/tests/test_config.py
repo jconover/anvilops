@@ -65,7 +65,7 @@ class TestSettingsDefaults:
 
         s = Settings()
         assert s.AWX_BASE_URL == "http://awx:8052"
-        assert s.AWX_VERIFY_SSL is False
+        assert s.AWX_VERIFY_SSL is True
         assert s.AWX_JOB_TIMEOUT == 600
         assert s.AWX_POLL_INTERVAL == 10
         assert s.AWX_ORGANIZATION_ID == 1
@@ -75,7 +75,7 @@ class TestSettingsDefaults:
 
         s = Settings()
         assert s.PUPPET_BASE_URL == "https://puppet:8140"
-        assert s.PUPPET_VERIFY_SSL is False
+        assert s.PUPPET_VERIFY_SSL is True
         assert s.PUPPET_CA_PORT == 8140
         assert s.PUPPET_CLASSIFIER_PORT == 4433
         assert s.PUPPET_PUPPETDB_PORT == 8081
