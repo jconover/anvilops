@@ -133,6 +133,10 @@ resource "aws_cognito_user_pool" "this" {
     email_subject        = "AnvilOps - Email Verification Code"
   }
 
+  user_pool_add_ons {
+    advanced_security_mode = "ENFORCED"
+  }
+
   tags = merge(var.tags, { Name = "${local.name_prefix}-cognito" })
 }
 
@@ -209,7 +213,7 @@ resource "aws_cognito_user_pool_client" "web" {
 
   access_token_validity  = 1
   id_token_validity      = 1
-  refresh_token_validity = 30
+  refresh_token_validity = 7
 
   token_validity_units {
     access_token  = "hours"

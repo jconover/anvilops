@@ -76,7 +76,7 @@ redis_num_cache_clusters = 1
 # Cognito — MFA optional for dev workflow convenience
 # -----------------------------------------------------------------------------
 
-cognito_mfa_configuration = "OPTIONAL"
+cognito_mfa_configuration = "ON"
 
 cognito_callback_urls = [
   "https://anvilops.example.com/api/auth/callback",
