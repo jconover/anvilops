@@ -8,6 +8,11 @@ from sqlalchemy.ext.asyncio import (
 
 from app.core.config import settings
 
+if not settings.DATABASE_URL:
+    raise RuntimeError(
+        "DATABASE_URL is not set. Set DATABASE_URL in the environment or .env file."
+    )
+
 engine = create_async_engine(
     settings.DATABASE_URL,
     echo=settings.DEBUG,

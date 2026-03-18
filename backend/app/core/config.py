@@ -4,7 +4,7 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    DATABASE_URL: str = "postgresql+asyncpg://anvilops:anvilops@db:5432/anvilops"
+    DATABASE_URL: str = ""
     REDIS_URL: str = "redis://redis:6379/0"
     TERRAFORM_WORK_DIR: str = "/tmp/terraform"
     AWS_DEFAULT_REGION: str = "us-east-1"
@@ -13,6 +13,8 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "AnvilOps"
     DEBUG: bool = False
     CORS_ORIGINS: list[str] = []
+    TRUSTED_PROXY_HOSTS: list[str] = ["127.0.0.1", "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"]
+    RATE_LIMIT_DEFAULT: str = "100/minute"
 
     # AWX Configuration
     AWX_BASE_URL: str = "http://awx:8052"
