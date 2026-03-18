@@ -22,7 +22,6 @@ concurrency:
 
 permissions:
   contents: read
-  id-token: write  # Required for OIDC authentication with AWS
 
 jobs:
   # ---------------------------------------------------------------------------
@@ -50,6 +49,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     needs: [ci-check]
+    permissions:
+      contents: read
+      id-token: write  # Required for OIDC authentication with AWS
     environment:
       name: dev
       # TODO: Configure environment protection rules in GitHub Settings:
@@ -101,9 +103,7 @@ jobs:
           context: backend/
           file: backend/Dockerfile
           push: true
-          tags: |
-            ${{ secrets.ECR_REGISTRY }}/anvilops-api:${{ steps.meta.outputs.tag }}
-            ${{ secrets.ECR_REGISTRY }}/anvilops-api:latest
+          tags: ${{ secrets.ECR_REGISTRY }}/anvilops-api:${{ steps.meta.outputs.tag }}
           cache-from: type=gha,scope=backend
           cache-to: type=gha,mode=max,scope=backend
           # TODO: Add build args if needed:
@@ -116,9 +116,7 @@ jobs:
           context: frontend/
           file: frontend/Dockerfile
           push: true
-          tags: |
-            ${{ secrets.ECR_REGISTRY }}/anvilops-frontend:${{ steps.meta.outputs.tag }}
-            ${{ secrets.ECR_REGISTRY }}/anvilops-frontend:latest
+          tags: ${{ secrets.ECR_REGISTRY }}/anvilops-frontend:${{ steps.meta.outputs.tag }}
           cache-from: type=gha,scope=frontend
           cache-to: type=gha,mode=max,scope=frontend
           build-args: |
