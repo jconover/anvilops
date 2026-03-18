@@ -331,11 +331,33 @@ resource "kubectl_manifest" "awx_instance" {
   ]
 }
 
+# -----------------------------------------------------------------------------
+# KMS Customer Managed Key — Secrets Manager encryption
+# -----------------------------------------------------------------------------
+
+resource "aws_kms_key" "secrets" {
+  description             = "CMK for AnvilOps AWX Secrets Manager secrets"
+  deletion_window_in_days = 30
+  enable_key_rotation     = true
+
+  tags = {
+    Environment = var.environment
+    Project     = var.project_name
+    ManagedBy   = "terraform"
+  }
+}
+
+resource "aws_kms_alias" "secrets" {
+  name          = "alias/${var.project_name}-${var.environment}-awx-secrets"
+  target_key_id = aws_kms_key.secrets.key_id
+}
+
 # Store AWX credentials in Secrets Manager (feeds the ExternalSecret in anvilops namespace)
 resource "aws_secretsmanager_secret" "awx" {
   name                    = "anvilops/awx"
   description             = "AWX credentials for AnvilOps integration"
   recovery_window_in_days = 7
+  kms_key_id              = aws_kms_key.secrets.arn
 }
 
 resource "aws_secretsmanager_secret_version" "awx" {

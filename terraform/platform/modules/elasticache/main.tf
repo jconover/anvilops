@@ -63,6 +63,22 @@ resource "aws_elasticache_parameter_group" "this" {
 }
 
 # -----------------------------------------------------------------------------
+# KMS Customer Managed Key — Secrets Manager encryption
+# -----------------------------------------------------------------------------
+
+resource "aws_kms_key" "secrets" {
+  description             = "CMK for AnvilOps ElastiCache Secrets Manager secrets"
+  deletion_window_in_days = 30
+  enable_key_rotation     = true
+  tags                    = var.tags
+}
+
+resource "aws_kms_alias" "secrets" {
+  name          = "alias/${var.project_name}-${var.environment}-elasticache-secrets"
+  target_key_id = aws_kms_key.secrets.key_id
+}
+
+# -----------------------------------------------------------------------------
 # AUTH Token stored in Secrets Manager
 # -----------------------------------------------------------------------------
 
@@ -79,6 +95,7 @@ resource "aws_secretsmanager_secret" "redis_auth_token" {
   name                    = "${var.project_name}/${var.environment}/redis-auth-token"
   description             = "AUTH token for AnvilOps ${var.environment} ElastiCache Redis"
   recovery_window_in_days = var.environment == "production" ? 30 : 7
+  kms_key_id              = aws_kms_key.secrets.arn
 
   tags = merge(var.tags, { Name = "${local.replication_group_id}-redis-auth" })
 }

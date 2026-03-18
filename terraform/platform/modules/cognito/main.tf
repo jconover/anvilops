@@ -36,6 +36,32 @@ locals {
 data "aws_region" "current" {}
 
 # -----------------------------------------------------------------------------
+# KMS Customer Managed Key — Secrets Manager encryption
+# -----------------------------------------------------------------------------
+
+resource "aws_kms_key" "secrets" {
+  description             = "CMK for AnvilOps Cognito Secrets Manager secrets"
+  deletion_window_in_days = 30
+  enable_key_rotation     = true
+  tags                    = var.tags
+}
+
+resource "aws_kms_alias" "secrets" {
+  name          = "alias/${var.project_name}-${var.environment}-cognito-secrets"
+  target_key_id = aws_kms_key.secrets.key_id
+}
+
+# -----------------------------------------------------------------------------
+# CloudWatch Log Group — Cognito user activity logs
+# -----------------------------------------------------------------------------
+
+resource "aws_cloudwatch_log_group" "cognito_user_activity" {
+  name              = "/aws/cognito/userpools/${local.name_prefix}/user-activity"
+  retention_in_days = 365
+  tags              = merge(var.tags, { Name = "${local.name_prefix}-cognito-user-activity" })
+}
+
+# -----------------------------------------------------------------------------
 # User Pool
 # -----------------------------------------------------------------------------
 
@@ -141,6 +167,23 @@ resource "aws_cognito_user_pool" "this" {
 }
 
 # -----------------------------------------------------------------------------
+# Cognito Event Logging — user activity to CloudWatch
+# -----------------------------------------------------------------------------
+
+resource "aws_cognito_user_pool_log_delivery_configuration" "this" {
+  user_pool_id = aws_cognito_user_pool.this.id
+
+  log_configurations {
+    log_level    = "INFO"
+    event_source = "userActivity"
+
+    cloud_watch_logs_configuration {
+      log_group_arn = "${aws_cloudwatch_log_group.cognito_user_activity.arn}:*"
+    }
+  }
+}
+
+# -----------------------------------------------------------------------------
 # User Pool Domain (hosted UI)
 # -----------------------------------------------------------------------------
 
@@ -234,6 +277,7 @@ resource "aws_secretsmanager_secret" "client_secret" {
   name                    = "${local.name_prefix}/cognito/client-secret"
   description             = "Cognito client secret for ${local.name_prefix} web application"
   recovery_window_in_days = var.environment == "production" ? 30 : 7
+  kms_key_id              = aws_kms_key.secrets.arn
 
   tags = merge(var.tags, { Name = "${local.name_prefix}-cognito-secret" })
 }

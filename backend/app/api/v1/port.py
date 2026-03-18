@@ -19,7 +19,7 @@ from app.core.auth import CurrentUser
 
 from app.core.config import settings
 from app.schemas.port import PortWebhookPayload
-from app.services.port import get_port_service, verify_webhook_signature
+from app.services.port import get_port_service, validate_webhook_timestamp, verify_webhook_signature
 from app.tasks.port import port_full_sync, port_sync_server
 
 logger = logging.getLogger(__name__)
@@ -64,6 +64,13 @@ async def port_webhook(
     except (json.JSONDecodeError, ValueError) as exc:
         logger.error("Failed to parse Port webhook payload: %s", exc)
         raise HTTPException(status_code=400, detail="Invalid payload")
+
+    # ------------------------------------------------------------------
+    # Timestamp validation (replay-attack prevention)
+    # ------------------------------------------------------------------
+    if not validate_webhook_timestamp(raw_data):
+        logger.warning("Port webhook timestamp expired or invalid")
+        raise HTTPException(status_code=401, detail="Webhook timestamp expired")
 
     logger.info(
         "Received Port self-service action: action=%s blueprint=%s triggered_by=%s",
