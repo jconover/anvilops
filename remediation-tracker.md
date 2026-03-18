@@ -132,15 +132,19 @@
 
 **Resolves findings:** #16, #17
 **Severity:** MEDIUM
-**Status:** [ ] Not Started
+**Status:** [x] Complete
 
 ### What to do
-- Add `headers()` config to `next.config.mjs` with CSP, HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy
-- Validate `callbackUrl` as a relative path before redirect (reject absolute URLs, `//` prefix)
+- [x] Add `headers()` config to `next.config.mjs` with CSP, HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy
+- [x] Validate `callbackUrl` as a relative path before redirect (reject absolute URLs, `//` prefix, `://`)
+- [x] HSTS conditional on NODE_ENV=production to avoid breaking local dev
+- [x] CSP includes `connect-src` for Cognito endpoints
+- [x] Security headers exclude proxied `/api/*` routes
+- [x] Login page wrapped in Suspense boundary for Next.js 15 compatibility
 
-### Files to modify
-- `frontend/next.config.mjs` — add `headers()` function
-- `frontend/src/app/(auth)/login/page.tsx` — validate callbackUrl
+### Files modified
+- `frontend/next.config.mjs` — added `headers()` function with 6 security headers
+- `frontend/src/app/(auth)/login/page.tsx` — read and validate callbackUrl, Suspense boundary
 
 ---
 
