@@ -96,9 +96,14 @@ resource "aws_secretsmanager_secret" "puppet_api_token" {
   tags = merge(var.tags, { Name = "${var.project_name}-${var.environment}-puppet-api-token" })
 }
 
+resource "random_password" "puppet_api_token_initial" {
+  length  = 40
+  special = false
+}
+
 resource "aws_secretsmanager_secret_version" "puppet_api_token_initial" {
   secret_id     = aws_secretsmanager_secret.puppet_api_token.id
-  secret_string = jsonencode({ api_token = "placeholder-will-be-replaced-by-user-data" })
+  secret_string = jsonencode({ api_token = random_password.puppet_api_token_initial.result })
 
   lifecycle {
     ignore_changes = [secret_string]
