@@ -1,7 +1,7 @@
 # AnvilOps Security Remediation Tracker
 
 **Created:** 2026-03-16
-**Last Updated:** 2026-03-16
+**Last Updated:** 2026-04-10
 
 ---
 
@@ -213,8 +213,8 @@
 **Status:** [x] Complete
 
 ### What to do
-- [x] Implement webhook timestamp validation in `port.py`
-- [x] Sanitize error responses to strip upstream details in `puppet.py`
+- [x] Implement webhook timestamp validation in `port.py` (**VERIFIED** — `validate_webhook_timestamp()` implemented in `backend/app/services/port.py`, called at `backend/app/api/v1/port.py:71`)
+- [x] Sanitize error responses to strip upstream details in `puppet.py` (**VERIFIED COMPLETE** — global exception handler in `backend/app/main.py` sanitizes all error responses when `DEBUG=False`; Finding #21 fully resolved)
 - [x] Decouple SQL echo from DEBUG flag (new `SQL_ECHO` config setting)
 - [x] Disable Swagger UI in production (gated on `DEBUG` flag)
 - [x] Validate X-Forwarded-For as IP format in `audit.py`
@@ -235,3 +235,38 @@
 - `terraform/platform/modules/puppet/main.tf` — KMS CMK for both secrets
 - `terraform/platform/modules/elasticache/main.tf` — KMS CMK for Redis auth token
 - `terraform/platform/helm/install-charts.tf` — KMS CMK for AWX secret
+
+---
+
+## Priority 12 — Observability, Reliability, and Developer Experience
+
+**Resolves findings:** #21 (global handler), #20 (webhook replay — verified), plus observability and reliability gaps
+**Severity:** MEDIUM/LOW
+**Status:** [x] Complete
+
+### What to do
+- [x] Remove hardcoded Grafana default password; add 12-character minimum validation
+- [x] Add global exception handler to sanitize error responses in production (Finding #21)
+- [x] Add structured JSON logging with correlation IDs (request ID middleware)
+- [x] Add Celery task retry config with exponential backoff to `terraform_plan`, `terraform_apply`, `terraform_destroy`, `awx_configure`, and `puppet_enroll`
+- [x] Add dependency vulnerability scanning (`pip-audit` + `npm audit`) to CI pipeline
+- [x] Create `SECURITY.md` vulnerability disclosure policy
+- [x] Add frontend service to `docker-compose.yml` for complete local dev environment
+
+### Finding status updates
+- **Finding #20 (webhook replay protection):** VERIFIED COMPLETE — `validate_webhook_timestamp()` is implemented in `backend/app/services/port.py` and called at `backend/app/api/v1/port.py:71`
+- **Finding #21 (error response leakage):** VERIFIED COMPLETE — global exception handler in `backend/app/main.py` sanitizes all error responses when `DEBUG=False`; puppet.py error responses also sanitized in Priority 11
+
+### Files modified
+- `terraform/platform/variables.tf` — added 12-char minimum `validation` block for `grafana_admin_password`
+- `terraform/platform/helm/install-charts.tf` — removed hardcoded Grafana default password
+- `terraform/platform/terraform.dev.tfvars` — added explicit `grafana_admin_password` value
+- `backend/app/main.py` — global exception handler, request ID middleware, structured logging setup
+- `backend/app/core/logging.py` — new: JSON formatter with correlation ID injection
+- `backend/app/tasks/terraform.py` — retry config with exponential backoff on `terraform_plan`, `terraform_apply`, `terraform_destroy`
+- `backend/app/tasks/awx.py` — retry config with exponential backoff on `awx_configure`
+- `backend/app/tasks/puppet.py` — retry config with exponential backoff on `puppet_enroll`
+- `.github/workflows/ci.yml` — added `dependency-scan` job running `pip-audit` and `npm audit`
+- `docker-compose.yml` — added `frontend` service for complete local dev stack
+- `README.md` — complete rewrite with accurate setup, architecture, and runbook sections
+- `SECURITY.md` — new: vulnerability disclosure policy, reporting contact, response SLA, scope

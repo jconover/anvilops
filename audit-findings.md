@@ -43,8 +43,8 @@
 | 17 | **Potential open redirect via unvalidated `callbackUrl`** | `frontend/src/middleware.ts:25` |
 | 18 | **No rate limiting on any backend endpoint** | `backend/app/main.py` |
 | 19 | **CORS allows all methods and all headers** (`*`) | `backend/app/main.py:57-58` |
-| 20 | **Webhook timestamp replay protection declared but not implemented** | `backend/app/services/port.py:39,60-97` |
-| 21 | **Error responses may leak upstream service details** (hostnames, response bodies) | `puppet.py:176`, `awx.py:135`, `port.py:169` |
+| 20 | [x] FIXED **Webhook timestamp replay protection declared but not implemented** — Implementation verified at `backend/app/services/port.py:100-123` (validate_webhook_timestamp) and called at `backend/app/api/v1/port.py:71` | `backend/app/services/port.py:39,60-97` |
+| 21 | [x] FIXED **Error responses may leak upstream service details** (hostnames, response bodies) — Global exception handler added to `backend/app/main.py` that sanitizes upstream service errors and unhandled exceptions when DEBUG=False. Returns generic 503 for upstream errors, generic 500 for others. | `puppet.py:176`, `awx.py:135`, `port.py:169` |
 | 22 | **SQL echo tied to DEBUG flag** — if DEBUG leaks to prod, all queries logged | `backend/app/db/session.py:13` |
 | 23 | **No Cognito Advanced Security features** (no credential stuffing detection) | `cognito/main.tf` |
 | 24 | **No HTTPS validation on Cognito callback/logout URLs** | `cognito/variables.tf:16-24` |
@@ -55,7 +55,7 @@
 | 29 | **Placeholder Puppet secret committed** — may never be rotated | `terraform/platform/modules/puppet/main.tf:101` |
 | 30 | **`id-token: write` too broadly scoped** in deploy workflow | `.github/workflows/deploy.yml:25` |
 | 31 | **Third-party action `lewagon/wait-on-check-action`** receives GITHUB_TOKEN without SHA pin | `.github/workflows/deploy.yml:37` |
-| 32 | **`latest` tag used for production container images** — mutable, ambiguous provenance | `.github/workflows/deploy.yml:106,121` |
+| 32 | [x] FIXED **`latest` tag used for production container images** — mutable, ambiguous provenance — Deploy workflow now tags with `github.sha`; `latest` is never used in staging/production. | `.github/workflows/deploy.yml:106,121` |
 | 33 | **Approvals page fetches data before permission check** — data in memory even when "Access Denied" renders | `frontend/src/app/dashboard/approvals/page.tsx:18-34` |
 
 ---

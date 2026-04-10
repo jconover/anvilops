@@ -1,6 +1,12 @@
 # =============================================================================
 # AnvilOps Server Provisioning Variables - Staging Environment
 # =============================================================================
+# These variables map directly to the server builder form in the AnvilOps UI.
+# The API generates a .tfvars file from each build request.
+#
+# Environment-specific defaults: environment="staging", instance_size="small".
+# All other defaults and validations live in the shared module.
+# =============================================================================
 
 # -----------------------------------------------------------------------------
 # Server Identity

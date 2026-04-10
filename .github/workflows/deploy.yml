@@ -190,31 +190,291 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
   # ---------------------------------------------------------------------------
-  # Future: Deploy to Staging (uncomment and configure when ready)
+  # 2. Deploy to Staging Environment
   # ---------------------------------------------------------------------------
-  # deploy-staging:
-  #   name: Deploy to Staging
-  #   runs-on: ubuntu-latest
-  #   timeout-minutes: 30
-  #   needs: [deploy-dev]
-  #   environment:
-  #     name: staging
-  #     url: https://staging.anvilops.example.com
-  #   steps:
-  #     - name: Placeholder
-  #       run: echo "TODO: Implement staging deployment (mirrors deploy-dev steps with staging secrets)"
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: [deploy-dev]
+    concurrency:
+      group: deploy-staging
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      id-token: write  # Required for OIDC authentication with AWS
+    environment:
+      name: staging
+      # Configure environment protection rules in GitHub Settings:
+      #   - Required reviewers (recommended for staging)
+      #   - Deployment branch restrictions (main only)
+      url: https://staging.anvilops.example.com  # TODO: Replace with actual staging URL
+
+    env:
+      ENVIRONMENT: staging
+      # Set these in your GitHub "staging" environment secrets:
+      #   AWS_ROLE_ARN_STAGING  - IAM role ARN for OIDC federation (staging account)
+      #   AWS_REGION            - Target AWS region (e.g., us-east-1)
+      #   ECR_REGISTRY          - ECR registry URL (may differ from dev if cross-account)
+      #   EKS_CLUSTER_NAME      - EKS cluster name (staging)
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+
+      # -- AWS Authentication via OIDC ----------------------------------------
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a  # v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN_STAGING }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: ecr-login
+        uses: aws-actions/amazon-ecr-login@c962da2960ed15f492addc26fffa274485265950  # v2
+
+      # -- Build and Push Container Images ------------------------------------
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f  # v3
+
+      - name: Compute image tag
+        id: meta
+        env:
+          COMMIT_SHA: ${{ github.sha }}
+        run: |
+          SHA_SHORT=$(echo "$COMMIT_SHA" | cut -c1-7)
+          echo "tag=${SHA_SHORT}" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push backend image
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8  # v6
+        with:
+          context: backend/
+          file: backend/Dockerfile
+          push: true
+          tags: ${{ secrets.ECR_REGISTRY }}/anvilops-api:${{ steps.meta.outputs.tag }}
+          cache-from: type=gha,scope=backend
+          cache-to: type=gha,mode=max,scope=backend
+
+      - name: Build and push frontend image
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8  # v6
+        with:
+          context: frontend/
+          file: frontend/Dockerfile
+          push: true
+          tags: ${{ secrets.ECR_REGISTRY }}/anvilops-frontend:${{ steps.meta.outputs.tag }}
+          cache-from: type=gha,scope=frontend
+          cache-to: type=gha,mode=max,scope=frontend
+          build-args: |
+            NEXT_PUBLIC_API_URL=/api/v1
+            BACKEND_URL=http://anvilops-api:80
+
+      # -- Deploy to EKS via Kustomize ----------------------------------------
+      - name: Configure kubectl
+        env:
+          EKS_CLUSTER: ${{ secrets.EKS_CLUSTER_NAME }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+        run: |
+          aws eks update-kubeconfig \
+            --name "$EKS_CLUSTER" \
+            --region "$AWS_REGION"
+
+      - name: Set image tags in Kustomize overlay
+        env:
+          ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}
+          IMAGE_TAG: ${{ steps.meta.outputs.tag }}
+        working-directory: terraform/platform/k8s/overlays/staging
+        run: |
+          kustomize edit set image \
+            "anvilops-api=${ECR_REGISTRY}/anvilops-api:${IMAGE_TAG}" \
+            "anvilops-frontend=${ECR_REGISTRY}/anvilops-frontend:${IMAGE_TAG}"
+
+      - name: Deploy with Kustomize
+        run: |
+          kustomize build terraform/platform/k8s/overlays/staging | kubectl apply -f -
+
+      - name: Wait for rollout to complete
+        run: |
+          kubectl rollout status deployment/anvilops-api \
+            --namespace anvilops-staging \
+            --timeout=300s
+
+          kubectl rollout status deployment/anvilops-frontend \
+            --namespace anvilops-staging \
+            --timeout=300s
+
+      # -- Post-Deployment Verification ----------------------------------------
+      - name: Run smoke tests
+        run: |
+          # TODO: Replace with actual staging endpoint
+          # bash scripts/smoke-test.sh --env staging
+          echo "Smoke tests placeholder -- configure scripts/smoke-test.sh for CI"
+
+      - name: Deployment summary
+        if: always()
+        env:
+          IMAGE_TAG: ${{ steps.meta.outputs.tag }}
+          DEPLOY_ENV: staging
+          ACTOR: ${{ github.actor }}
+          COMMIT_SHA: ${{ github.sha }}
+          RUN_ID: ${{ github.run_id }}
+          SERVER_URL: ${{ github.server_url }}
+          REPO: ${{ github.repository }}
+        run: |
+          {
+            echo "## Deployment Summary"
+            echo ""
+            echo "| Field | Value |"
+            echo "|-------|-------|"
+            echo "| Environment | \`${DEPLOY_ENV}\` |"
+            echo "| Commit | \`${COMMIT_SHA}\` |"
+            echo "| Image Tag | \`${IMAGE_TAG}\` |"
+            echo "| Triggered By | ${ACTOR} |"
+            echo "| Workflow Run | [${RUN_ID}](${SERVER_URL}/${REPO}/actions/runs/${RUN_ID}) |"
+          } >> "$GITHUB_STEP_SUMMARY"
 
   # ---------------------------------------------------------------------------
-  # Future: Deploy to Production (uncomment and configure when ready)
+  # 3. Deploy to Production Environment
   # ---------------------------------------------------------------------------
-  # deploy-production:
-  #   name: Deploy to Production
-  #   runs-on: ubuntu-latest
-  #   timeout-minutes: 30
-  #   needs: [deploy-staging]
-  #   environment:
-  #     name: production
-  #     url: https://anvilops.example.com
-  #   steps:
-  #     - name: Placeholder
-  #       run: echo "TODO: Implement production deployment with canary/blue-green strategy"
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: [deploy-staging]
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      id-token: write  # Required for OIDC authentication with AWS
+    environment:
+      name: production
+      # Configure environment protection rules in GitHub Settings:
+      #   - Required reviewers (mandatory for production -- enables manual approval gate)
+      #   - Deployment branch restrictions (main only)
+      #   - Wait timer (optional cool-down after staging)
+      url: https://anvilops.example.com  # TODO: Replace with actual production URL
+
+    env:
+      ENVIRONMENT: production
+      # Set these in your GitHub "production" environment secrets:
+      #   AWS_ROLE_ARN_PRODUCTION - IAM role ARN for OIDC federation (production account)
+      #   AWS_REGION              - Target AWS region (e.g., us-east-1)
+      #   ECR_REGISTRY            - ECR registry URL (may differ from staging if cross-account)
+      #   EKS_CLUSTER_NAME        - EKS cluster name (production)
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+
+      # -- AWS Authentication via OIDC ----------------------------------------
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a  # v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN_PRODUCTION }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: ecr-login
+        uses: aws-actions/amazon-ecr-login@c962da2960ed15f492addc26fffa274485265950  # v2
+
+      # -- Build and Push Container Images ------------------------------------
+      # Images are rebuilt here so the production ECR registry (which may live
+      # in a separate AWS account) receives the push. Layer caches from earlier
+      # jobs keep build times minimal.
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f  # v3
+
+      - name: Compute image tag
+        id: meta
+        env:
+          COMMIT_SHA: ${{ github.sha }}
+        run: |
+          SHA_SHORT=$(echo "$COMMIT_SHA" | cut -c1-7)
+          echo "tag=${SHA_SHORT}" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push backend image
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8  # v6
+        with:
+          context: backend/
+          file: backend/Dockerfile
+          push: true
+          tags: ${{ secrets.ECR_REGISTRY }}/anvilops-api:${{ steps.meta.outputs.tag }}
+          cache-from: type=gha,scope=backend
+          cache-to: type=gha,mode=max,scope=backend
+
+      - name: Build and push frontend image
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8  # v6
+        with:
+          context: frontend/
+          file: frontend/Dockerfile
+          push: true
+          tags: ${{ secrets.ECR_REGISTRY }}/anvilops-frontend:${{ steps.meta.outputs.tag }}
+          cache-from: type=gha,scope=frontend
+          cache-to: type=gha,mode=max,scope=frontend
+          build-args: |
+            NEXT_PUBLIC_API_URL=/api/v1
+            BACKEND_URL=http://anvilops-api:80
+
+      # -- Deploy to EKS via Kustomize ----------------------------------------
+      - name: Configure kubectl
+        env:
+          EKS_CLUSTER: ${{ secrets.EKS_CLUSTER_NAME }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+        run: |
+          aws eks update-kubeconfig \
+            --name "$EKS_CLUSTER" \
+            --region "$AWS_REGION"
+
+      - name: Set image tags in Kustomize overlay
+        env:
+          ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}
+          IMAGE_TAG: ${{ steps.meta.outputs.tag }}
+        working-directory: terraform/platform/k8s/overlays/production
+        run: |
+          kustomize edit set image \
+            "anvilops-api=${ECR_REGISTRY}/anvilops-api:${IMAGE_TAG}" \
+            "anvilops-frontend=${ECR_REGISTRY}/anvilops-frontend:${IMAGE_TAG}"
+
+      - name: Deploy with Kustomize
+        run: |
+          kustomize build terraform/platform/k8s/overlays/production | kubectl apply -f -
+
+      - name: Wait for rollout to complete
+        run: |
+          kubectl rollout status deployment/anvilops-api \
+            --namespace anvilops-production \
+            --timeout=300s
+
+          kubectl rollout status deployment/anvilops-frontend \
+            --namespace anvilops-production \
+            --timeout=300s
+
+      # -- Post-Deployment Verification ----------------------------------------
+      - name: Run smoke tests
+        run: |
+          # TODO: Replace with actual production endpoint
+          # bash scripts/smoke-test.sh --env production
+          echo "Smoke tests placeholder -- configure scripts/smoke-test.sh for CI"
+
+      - name: Deployment summary
+        if: always()
+        env:
+          IMAGE_TAG: ${{ steps.meta.outputs.tag }}
+          DEPLOY_ENV: production
+          ACTOR: ${{ github.actor }}
+          COMMIT_SHA: ${{ github.sha }}
+          RUN_ID: ${{ github.run_id }}
+          SERVER_URL: ${{ github.server_url }}
+          REPO: ${{ github.repository }}
+        run: |
+          {
+            echo "## Deployment Summary"
+            echo ""
+            echo "| Field | Value |"
+            echo "|-------|-------|"
+            echo "| Environment | \`${DEPLOY_ENV}\` |"
+            echo "| Commit | \`${COMMIT_SHA}\` |"
+            echo "| Image Tag | \`${IMAGE_TAG}\` |"
+            echo "| Triggered By | ${ACTOR} |"
+            echo "| Workflow Run | [${RUN_ID}](${SERVER_URL}/${REPO}/actions/runs/${RUN_ID}) |"
+          } >> "$GITHUB_STEP_SUMMARY"

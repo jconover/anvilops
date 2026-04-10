@@ -51,7 +51,9 @@ spec:
                 name: {{ include "anvilops.fullname" . }}-config
             {{- if .Values.externalSecrets.enabled }}
             - secretRef:
-                name: {{ include "anvilops.fullname" . }}-secrets
+                name: {{ include "anvilops.fullname" . }}-worker-secrets
+            - secretRef:
+                name: {{ include "anvilops.fullname" . }}-shared-secrets
             {{- end }}
           resources:
             {{- toYaml .Values.worker.resources | nindent 12 }}
