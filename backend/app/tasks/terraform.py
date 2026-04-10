@@ -27,7 +27,15 @@ def _get_terraform_service(environment: str) -> TerraformService:
     return TerraformService(work_dir=work_dir, environment=environment)
 
 
-@celery_app.task(bind=True, name="tasks.terraform_plan")
+@celery_app.task(
+    bind=True,
+    name="tasks.terraform_plan",
+    max_retries=2,
+    default_retry_delay=30,
+    autoretry_for=(RuntimeError, OSError),
+    retry_backoff=True,
+    retry_backoff_max=120,
+)
 def terraform_plan(
     self, server_request_id: str, build_step_id: str | None = None
 ) -> dict:
@@ -87,7 +95,15 @@ def terraform_plan(
         return {"exit_code": 1, "output": str(exc)}
 
 
-@celery_app.task(bind=True, name="tasks.terraform_apply")
+@celery_app.task(
+    bind=True,
+    name="tasks.terraform_apply",
+    max_retries=1,
+    default_retry_delay=60,
+    autoretry_for=(RuntimeError, OSError),
+    retry_backoff=True,
+    retry_backoff_max=180,
+)
 def terraform_apply(
     self, server_request_id: str, build_step_id: str | None = None
 ) -> dict:
@@ -142,7 +158,15 @@ def terraform_apply(
         return {"exit_code": 1, "output": str(exc), "outputs": {}}
 
 
-@celery_app.task(bind=True, name="tasks.terraform_destroy")
+@celery_app.task(
+    bind=True,
+    name="tasks.terraform_destroy",
+    max_retries=2,
+    default_retry_delay=30,
+    autoretry_for=(RuntimeError, OSError),
+    retry_backoff=True,
+    retry_backoff_max=120,
+)
 def terraform_destroy(self, server_request_id: str) -> dict:
     """Run terraform destroy -auto-approve for rollback or decommission."""
     logger.info("terraform_destroy starting for %s", server_request_id)

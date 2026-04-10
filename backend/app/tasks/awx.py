@@ -67,7 +67,15 @@ def _summarise_jobs(jobs: list[dict]) -> str:
 # ---------------------------------------------------------------------------
 
 
-@celery_app.task(bind=True, name="tasks.awx_configure")
+@celery_app.task(
+    bind=True,
+    name="tasks.awx_configure",
+    max_retries=2,
+    default_retry_delay=30,
+    autoretry_for=(ConnectionError, TimeoutError, OSError),
+    retry_backoff=True,
+    retry_backoff_max=120,
+)
 def awx_configure(
     self, server_request_id: str, build_step_id: str | None = None
 ) -> dict:

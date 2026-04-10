@@ -141,7 +141,43 @@ jobs:
         run: pytest tests/ -v --tb=short
 
   # ---------------------------------------------------------------------------
-  # 4. Docker Image Build Validation (build only, no push)
+  # 4. Dependency Vulnerability Scanning (pip-audit + npm audit)
+  # ---------------------------------------------------------------------------
+  dependency-scan:
+    name: Dependency Scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5
+        with:
+          python-version: "3.12"
+
+      - name: Install pip-audit
+        run: pip install pip-audit
+
+      - name: Audit Python dependencies
+        run: pip-audit -r backend/requirements.txt --desc
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        run: cd frontend && npm ci
+
+      - name: Audit npm dependencies
+        run: cd frontend && npm audit --omit=dev --audit-level=high
+
+  # ---------------------------------------------------------------------------
+  # 5. Docker Image Build Validation (build only, no push)
   # ---------------------------------------------------------------------------
   build-images:
     name: Build Docker Images
@@ -177,7 +213,7 @@ jobs:
           cache-to: type=gha,mode=max,scope=frontend
 
   # ---------------------------------------------------------------------------
-  # 5. Security Scan (Trivy container vulnerability scanning)
+  # 6. Security Scan (Trivy container vulnerability scanning)
   # ---------------------------------------------------------------------------
   security-scan:
     name: Security Scan (Trivy)
@@ -251,7 +287,7 @@ jobs:
           category: trivy-frontend
 
   # ---------------------------------------------------------------------------
-  # 6. Terraform Validation (init, validate, format check)
+  # 7. Terraform Validation (init, validate, format check)
   # ---------------------------------------------------------------------------
   terraform-validate:
     name: Terraform Validate

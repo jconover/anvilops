@@ -254,8 +254,12 @@ variable "awx_git_repo_url" {
 }
 
 variable "grafana_admin_password" {
-  description = "Grafana admin password for kube-prometheus-stack."
+  description = "Grafana admin password for kube-prometheus-stack. Must be set explicitly — no default."
   type        = string
-  default     = "admin"
   sensitive   = true
+
+  validation {
+    condition     = length(var.grafana_admin_password) >= 12
+    error_message = "grafana_admin_password must be at least 12 characters."
+  }
 }

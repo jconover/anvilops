@@ -58,7 +58,15 @@ def _get_puppet_service() -> "PuppetEnterpriseServiceSync":
 # ---------------------------------------------------------------------------
 
 
-@celery_app.task(bind=True, name="tasks.puppet_enroll")
+@celery_app.task(
+    bind=True,
+    name="tasks.puppet_enroll",
+    max_retries=2,
+    default_retry_delay=30,
+    autoretry_for=(ConnectionError, TimeoutError, OSError),
+    retry_backoff=True,
+    retry_backoff_max=120,
+)
 def puppet_enroll(
     self, server_request_id: str, build_step_id: str | None = None
 ) -> dict:

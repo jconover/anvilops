@@ -83,7 +83,6 @@ variable "project_name" {
 variable "grafana_admin_password" {
   description = "Grafana admin password for kube-prometheus-stack."
   type        = string
-  default     = "admin"
   sensitive   = true
 }
 
